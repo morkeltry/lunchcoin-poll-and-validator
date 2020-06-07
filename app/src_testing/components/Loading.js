@@ -1,5 +1,8 @@
 import React from 'react';
 
+
+
+
 const Loading = props => {
 return(
     <div className={'loader'}>
@@ -9,5 +12,6 @@ return(
         </div> </div>
 )
 }
+
 
 export default Loading;

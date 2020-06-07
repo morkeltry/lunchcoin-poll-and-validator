@@ -1415,12 +1415,12 @@
         }
       },
       "links": {},
-      "address": "0x3326932aB9961b8720a1dA86DB527bC10efAc088",
-      "transactionHash": "0xa161eb2dfb071f544055a0460de8d080f85b2acb3f47078eb3e80d68a2d0fd41"
+      "address": "0xe23c56150c4569168aCa8a3caf73C22879907257",
+      "transactionHash": "0x78005160bd999bec77319a809ed6fbad3f4df98881326f49eeb86015f8a6b81a"
     }
   },
   "schemaVersion": "3.2.0",
-  "updatedAt": "2020-06-07T10:33:11.370Z",
+  "updatedAt": "2020-06-07T16:39:32.384Z",
   "networkType": "ethereum",
   "devdoc": {
     "author": "Arvind Kalra (github.com/arvindkalra) and Pranav Singhal (github.com/pranav-singhal)",

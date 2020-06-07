@@ -8,3 +8,5 @@ build
 
 # Migration artifacts
 src/contracts
+src_lunchcoin/contracts
+src_testing/contracts

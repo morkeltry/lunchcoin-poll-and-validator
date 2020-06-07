@@ -32,14 +32,14 @@ contract MutualAgreement {
 
     address owner;  // is set by TokenStorage.. but retain types and order.
 
-    struct timeRange {
+    struct TimeRange {
       uint start;
       uint end;
     }
 
-    struct stake {
+    struct Stake {
       uint rep;
-      timeRange[] available;
+      TimeRange[] available;
       uint availabilityExpires;
     }
 
@@ -48,9 +48,21 @@ contract MutualAgreement {
       uint minStake;
       uint venueCost;
       uint8 minParticipants;
-      timeRange eventTime;
-      mapping (address => stake) staked;
+      TimeRange eventTime;
+      mapping (address => Stake) staked;
       mapping (address => bytes32[]) committedProofs;
+    }
+
+    struct PollExternal {
+      address initiator;
+      uint minStake;
+      uint venueCost;
+      uint8 minParticipants;
+      TimeRange eventTime;
+      // NB external view of Poll can never correctly represent committedProofs (a mapping to a dynamic array).
+      // Need to either make it indicative, or fixed size.
+      bytes32[5][] committedProofs;
+      address[] provers;
     }
 
     // shared across contracts
@@ -125,49 +137,6 @@ contract MutualAgreement {
 
 
     }
-    //
-    // function getMaOK() public view returns (uint8) {
-    //   return ok;
-    // }
-    //
-    // function setMaOK (uint8 _ok) public {
-    //   ok = _ok;
-    // }
-    //
-    // function getMaResult() public view returns (uint8) {
-    //   return result;
-    // }
-    //
-    // function setMaResult (uint8 _result) public {
-    //   result = _result;
-    // }
-    //
-    // function getMyMap(uint idx) public view returns (uint) {
-    //   return myMap[idx];
-    // }
-    //
-    // function setMyMap (uint idx, uint _myMap) public {
-    //   myMap[idx] = _myMap;
-    // }
-
-    // function getOwner() public view returns (address) {
-    //   return owner;
-    // }
-    //
-    // event pollAddressSet();
-    // function setPollAddress (address newAddy) public returns (bool) {
-    //     pollAddress = newAddy;
-    //     emit pollAddressSet();
-    //     return true;
-    // }
-    //
-    // function getPollAddress () public view returns (address) {
-    //     return pollAddress;
-    // }
-    //
-    // function getStateVars () public view returns (uint256, uint8, string memory, address, int8) {
-    //     return (notes, vType, vDesc, pollAddress, constructed);
-    // }
 
     event logStuff (string);
 
@@ -181,6 +150,28 @@ contract MutualAgreement {
 
     function setFlag(int160 _flag) public {
       flag = _flag;
+    }
+
+    function getPoll(string memory poll) public view returns (
+        address initiator,
+        uint stake,
+        uint venueCost,
+        uint8 minParticipants,
+        uint8 participants,
+        uint start,
+        uint end,
+        bytes32[5][] memory committedProofs ) {
+
+        // initiator = new address(0x0);
+        stake = 1000;
+        venueCost = 40000;
+        minParticipants = 3;
+        participants = 3;
+        start = 1591535900000;
+        end = 1591536000000;
+
+
+      return (initiator, stake, venueCost, minParticipants, participants, start, end, committedProofs);
     }
 
     event RetrievedDataCache(string, uint256, bytes32[]);

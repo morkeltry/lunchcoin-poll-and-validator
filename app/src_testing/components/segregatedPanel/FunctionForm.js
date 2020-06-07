@@ -4,7 +4,7 @@ import Row from "react-bootstrap/Row";
 import Col from "react-bootstrap/Col";
 import Button from "react-bootstrap/Button";
 
-import { callTransaction, sendTransaction } from "../../Web3/accessChain";
+import { callTransaction, sendTransaction } from "../../Web3/adminPanel";
 
 import { globalDefaults, byFuncDefaults } from './formConfig'
 import "./functionForm.css";
