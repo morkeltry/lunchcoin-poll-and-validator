@@ -1,0 +1,10 @@
+.env
+.mnemonic
+
+node_modules
+
+# build artifacts
+build
+
+# Migration artifacts
+src/contracts
