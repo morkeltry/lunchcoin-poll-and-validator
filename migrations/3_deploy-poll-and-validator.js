@@ -1,7 +1,3 @@
-/*
-@author Arvind Kalra (github.com/arvindkalra) and Pranav Singhal (github.com/pranav-singhal)
-*/
-
 const Poll = artifacts.require("./PollReference.sol");
 const Validator = artifacts.require("./MutualAgreement.sol");
 

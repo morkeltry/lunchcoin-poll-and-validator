@@ -1,15 +1,15 @@
 {
   "contractName": "stringcast",
   "abi": [],
-  "metadata": "{\"compiler\":{\"version\":\"0.5.16+commit.9c3226ce\"},\"language\":\"Solidity\",\"output\":{\"abi\":[],\"devdoc\":{\"methods\":{}},\"userdoc\":{\"methods\":{}}},\"settings\":{\"compilationTarget\":{\"/home/teide/randomCode/truffletings/proxyBox/contracts/stringCasting.sol\":\"stringcast\"},\"evmVersion\":\"istanbul\",\"libraries\":{},\"optimizer\":{\"enabled\":false,\"runs\":200},\"remappings\":[]},\"sources\":{\"/home/teide/randomCode/truffletings/proxyBox/contracts/stringCasting.sol\":{\"keccak256\":\"0xbcf1f1fd27495c7da82386e1d839f1ceb3588d3952730ceeb98c48cf68ef83bb\",\"urls\":[\"bzz-raw://f2533feb92d31654589a78dd658fef38f096035da21403692893fed7bb0e552a\",\"dweb:/ipfs/QmRVdo3Lva7QfX9JBxuCWD589sN63w2beykgu86QCWJivH\"]}},\"version\":1}",
-  "bytecode": "0x60556023600b82828239805160001a607314601657fe5b30600052607381538281f3fe73000000000000000000000000000000000000000030146080604052600080fdfea265627a7a7231582002fe4ef5f39e97aa97d70e6d40a18887bf8b2bdf7a6e4032be548b69d3d5c55164736f6c63430005100032",
-  "deployedBytecode": "0x73000000000000000000000000000000000000000030146080604052600080fdfea265627a7a7231582002fe4ef5f39e97aa97d70e6d40a18887bf8b2bdf7a6e4032be548b69d3d5c55164736f6c63430005100032",
+  "metadata": "{\"compiler\":{\"version\":\"0.5.16+commit.9c3226ce\"},\"language\":\"Solidity\",\"output\":{\"abi\":[],\"devdoc\":{\"methods\":{}},\"userdoc\":{\"methods\":{}}},\"settings\":{\"compilationTarget\":{\"/home/teide/randomCode/lunchcoin/contracts.v1/contracts/stringCasting.sol\":\"stringcast\"},\"evmVersion\":\"istanbul\",\"libraries\":{},\"optimizer\":{\"enabled\":false,\"runs\":200},\"remappings\":[]},\"sources\":{\"/home/teide/randomCode/lunchcoin/contracts.v1/contracts/stringCasting.sol\":{\"keccak256\":\"0xbcf1f1fd27495c7da82386e1d839f1ceb3588d3952730ceeb98c48cf68ef83bb\",\"urls\":[\"bzz-raw://f2533feb92d31654589a78dd658fef38f096035da21403692893fed7bb0e552a\",\"dweb:/ipfs/QmRVdo3Lva7QfX9JBxuCWD589sN63w2beykgu86QCWJivH\"]}},\"version\":1}",
+  "bytecode": "0x60556023600b82828239805160001a607314601657fe5b30600052607381538281f3fe73000000000000000000000000000000000000000030146080604052600080fdfea265627a7a72315820475339562050a9f913a70e1210629c048070783e9c1b7ff6799b284d955bd9c564736f6c63430005100032",
+  "deployedBytecode": "0x73000000000000000000000000000000000000000030146080604052600080fdfea265627a7a72315820475339562050a9f913a70e1210629c048070783e9c1b7ff6799b284d955bd9c564736f6c63430005100032",
   "sourceMap": "34:3686:11:-;;132:2:-1;166:7;155:9;146:7;137:37;255:7;249:14;246:1;241:23;235:4;232:33;222:2;;269:9;222:2;293:9;290:1;283:20;323:4;314:7;306:22;347:7;338;331:24",
   "deployedSourceMap": "34:3686:11:-;;;;;;;;",
   "source": "pragma solidity >=0.4.21 <0.6.0;\n\nlibrary stringcast{\n\n    function toLower(string memory str) pure internal returns (string memory) {\n\t\tbytes memory bStr = bytes(str);\n\t\tbytes memory bLower = new bytes(bStr.length);\n\t\tfor (uint i = 0; i < bStr.length; i++) {\n\t\t\tif ((uint8(bStr[i]) >= 65) && (uint8(bStr[i]) <= 90)) {\n\t\t\t\tbLower[i] = byte(uint8(bStr[i]) + 32);\n\t\t\t} else {\n\t\t\t\tbLower[i] = bStr[i];\n\t\t\t}\n\t\t}\n\t\treturn string(bLower);\n    }\n\n    function toUpper(string memory str) pure internal returns (string memory) {\n\t\tbytes memory bStr = bytes(str);\n\t\tbytes memory bUpper = new bytes(bStr.length);\n\t\tfor (uint i = 0; i < bStr.length; i++) {\n\t\t\tif ((uint8(bStr[i]) >= 97) && (uint8(bStr[i]) <= 122)) {\n\t\t\t\tbUpper[i] = byte(uint8(bStr[i]) - 32);\n\t\t\t} else {\n\t\t\t\tbUpper[i] = bStr[i];\n\t\t\t}\n\t\t}\n\t\treturn string(bUpper);\n    }\n\n    function toAddress(string memory self) pure internal returns (address){\n        bytes memory tmp = bytes(self);\n\n        uint addr = 0;\n        uint8 b;\n        uint8 b2;\n\n        for (uint i=2; i<2+2*20; i+=2){\n\n            addr *= 256;\n\n            b = uint8(tmp[i]);\n            b2 = uint8(tmp[i+1]);\n\n            if ((uint8(b) >= 97)&&(uint8(b) <= 102)) b -= 87;\n            else if ((uint8(b) >= 48)&&(uint8(b) <= 57)) b -= 48;\n            else if ((uint8(b) >= 65)&&(uint8(b) <= 70)) b -= 55;\n\n            if ((uint8(b2) >= 97)&&(uint8(b2) <= 102)) b2 -= 87;\n            else if ((uint8(b2) >= 48)&&(uint8(b2) <= 57)) b2 -= 48;\n            else if ((uint8(b2) >= 65)&&(uint8(b2) <= 70)) b2 -= 55;\n\n            addr += (b*16+b2);\n\n        }\n\n        return address(addr);\n    }\n\n    function stringToAddress(string memory str) pure internal returns (address){\n        bytes memory tmp = bytes(str);\n\n        uint160 addr = 0;\n        uint160 b;\n        uint160 b2;\n\n        for (uint i=2; i<2+2*20; i+=2){\n\n            addr *= 256;\n\n            b = uint160(uint8(tmp[i]));\n            b2 = uint160(uint8(tmp[i+1]));\n\n            if ((uint8(b) >= 97)&&(uint8(b) <= 102)) b -= 87;\n            else if ((uint8(b) >= 48)&&(uint8(b) <= 57)) b -= 48;\n            else if ((uint8(b) >= 65)&&(uint8(b) <= 70)) b -= 55;\n\n            if ((b2 >= 97)&&(uint8(b2) <= 102)) b2 -= 87;\n            else if ((uint8(b2) >= 48)&&(uint8(b2) <= 57)) b2 -= 48;\n            else if ((uint8(b2) >= 65)&&(uint8(b2) <= 70)) b2 -= 55;\n\n            addr += (b*16+b2);\n\n        }\n\n        return address(addr);\n    }\n\n    function toUint(string memory self) pure internal returns (uint result) {\n        bytes memory b = bytes(self);\n        uint i;\n        result = 0;\n        for (i = 0; i < b.length; i++) {\n            uint c = uint(uint8(b[i]));\n            if (c >= 48 && c <= 57) {\n                result = result * 10 + (c - 48);\n            }\n        }\n    }\n\n    //important -> hex string to bytes\n    function toBytes(string memory self) pure internal returns (bytes memory)\n    {\n        bytes memory bArray = new bytes((bytes(self).length-2)/2);\n\n        uint8 b;\n        uint8 b1;\n\n        for (uint i=2;i<bytes(self).length;i+=2)\n        {\n            b = uint8(bytes(self)[i]);\n            b1 = uint8(bytes(self)[i+1]);\n\n            //left digit\n            if(b>=48 && b<=57)\n                b -= 48;\n            //A-F\n            else if(b>=65 && b<=70)\n                b -= 55;\n            //a-f\n            else if(b>=97 && b<=102)\n                b -= 87;\n\n\n            //right digit\n            if (b1>=48 && b1<=57)\n                b1 -= 48;\n            //A-F\n            else if(b1>=65 && b1<=70)\n                b1 -= 55;\n            //a-f\n            else if(b1>=97 && b1<=102)\n                b1 -= 87;\n\n            bArray[i/2-1]=byte(16*b+b1);\n        }\n\n        return bArray;\n    }\n\n}\n",
-  "sourcePath": "/home/teide/randomCode/truffletings/proxyBox/contracts/stringCasting.sol",
+  "sourcePath": "/home/teide/randomCode/lunchcoin/contracts.v1/contracts/stringCasting.sol",
   "ast": {
-    "absolutePath": "/home/teide/randomCode/truffletings/proxyBox/contracts/stringCasting.sol",
+    "absolutePath": "/home/teide/randomCode/lunchcoin/contracts.v1/contracts/stringCasting.sol",
     "exportedSymbols": {
       "stringcast": [
         4224
@@ -10990,7 +10990,7 @@
     "src": "0:3721:11"
   },
   "legacyAST": {
-    "absolutePath": "/home/teide/randomCode/truffletings/proxyBox/contracts/stringCasting.sol",
+    "absolutePath": "/home/teide/randomCode/lunchcoin/contracts.v1/contracts/stringCasting.sol",
     "exportedSymbols": {
       "stringcast": [
         4224
@@ -21976,7 +21976,7 @@
   },
   "networks": {},
   "schemaVersion": "3.2.0",
-  "updatedAt": "2020-06-07T09:28:55.689Z",
+  "updatedAt": "2020-06-07T10:33:05.531Z",
   "devdoc": {
     "methods": {}
   },

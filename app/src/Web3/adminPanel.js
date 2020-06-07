@@ -1,7 +1,5 @@
 import Web3 from "web3";
 import TokenProxyArtifacts from "../contracts/TokenProxy.json";
-import TokenV0Artifacts from "../contracts/Token_V0.json";
-import TokenV1Artifacts from "../contracts/Token_V1.json";
 import PollArtifacts from "../contracts/PollReference.json";
 import ValidatorArtifacts from "../contracts/MutualAgreement.json";
 
@@ -17,15 +15,9 @@ if (!web3.eth.net)
   console.log(`Did not get web3.eth.net from ${providerUrl}. Maybe check the port number?`);
 
 let NETWORK_ID;
-let TokenV0ABI;
-let TokenV1ABI;
-let TokenV0Address;
-let TokenV1Address;
 let ProxyABI;
 let ProxyAddress;
 let ProxyInstance;
-let TokenV0Instance;
-let TokenV1Instance;
 let PollABI;
 let PollAddress;
 let PollInstance;
@@ -45,14 +37,16 @@ export function connectToWeb3() {
     let unImplementedAddress;
         web3.eth.net.getId(function (err, Id) {
             if (err) reject(err);
+        console.log('err',err);
+        console.log('Id',Id);
             NETWORK_ID = Id;
             console.log(`NETWORK_ID = ${NETWORK_ID}`);
             if (!TokenProxyArtifacts.networks[NETWORK_ID])
               console.log(`TokenProxyArtifacts does not have the current network! ${NETWORK_ID}`);
-            if (!TokenV0Artifacts.networks[NETWORK_ID])
-              console.log(`TokenV0Artifacts does not have the current network! ${NETWORK_ID}`);
-            if (!TokenV1Artifacts.networks[NETWORK_ID])
-              console.log(`TokenV1Artifacts does not have the current network! ${NETWORK_ID}`);
+            // if (!TokenV0Artifacts.networks[NETWORK_ID])
+            //   console.log(`TokenV0Artifacts does not have the current network! ${NETWORK_ID}`);
+            // if (!TokenV1Artifacts.networks[NETWORK_ID])
+            //   console.log(`TokenV1Artifacts does not have the current network! ${NETWORK_ID}`);
             if (!PollArtifacts.networks[NETWORK_ID])
               console.log(`PollArtifacts does not have the current network! ${NETWORK_ID}`);
             if (!ValidatorArtifacts.networks[NETWORK_ID])
@@ -69,47 +63,30 @@ export function connectToWeb3() {
             // console.log(Object.keys(ValidatorArtifacts.networks));
 
             ProxyAddress = TokenProxyArtifacts.networks[NETWORK_ID].address;
-            TokenV0Address = TokenV0Artifacts.networks[NETWORK_ID].address;
-            TokenV1Address = TokenV1Artifacts.networks[NETWORK_ID].address;
             PollAddress = PollArtifacts.networks[NETWORK_ID].address;
             ValidatorAddress = ValidatorArtifacts.networks[NETWORK_ID].address;
 
             ProxyABI = TokenProxyArtifacts.abi;
-            TokenV0ABI = TokenV0Artifacts.abi;
-            TokenV1ABI = TokenV1Artifacts.abi;
             PollABI = PollArtifacts.abi;
             ValidatorABI = ValidatorArtifacts.abi;
 
             ProxyInstance = new web3.eth.Contract(ProxyABI, ProxyAddress);
-            TokenV0Instance = new web3.eth.Contract(TokenV0ABI, ProxyAddress);
-            TokenV1Instance = new web3.eth.Contract(TokenV1ABI, ProxyAddress);
             PollInstance = new web3.eth.Contract(PollABI, ProxyAddress);
             ValidatorInstance = new web3.eth.Contract(ValidatorABI, ProxyAddress);
             getImplementationAddress().then(implementationAddress => {
                 switch (implementationAddress) {
-                    case TokenV0Address:
-                        IMPLEMENTATION_ABI = TokenV0ABI;
-                        IMPLEMENTATION_ADDRESS = TokenV0Address;
-                        IMPLEMENTATION_INSTANCE = TokenV0Instance;
-                        unImplementedAddress = TokenV1Address;
-                        break;
-                    case TokenV1Address:
-                        IMPLEMENTATION_ABI = TokenV1ABI;
-                        IMPLEMENTATION_ADDRESS = TokenV1Address;
-                        IMPLEMENTATION_INSTANCE = TokenV1Instance;
-                        unImplementedAddress = TokenV0Address;
-                        break;
+                    case 'TokenV0Address':
                     case PollAddress:
                         IMPLEMENTATION_ABI = PollABI;
                         IMPLEMENTATION_ADDRESS = PollAddress;
                         IMPLEMENTATION_INSTANCE = PollInstance;
-                        unImplementedAddress = TokenV0Address;
+                        unImplementedAddress = ValidatorAddress;
                         break;
                     case ValidatorAddress:
                         IMPLEMENTATION_ABI = ValidatorABI;
                         IMPLEMENTATION_ADDRESS = ValidatorAddress;
                         IMPLEMENTATION_INSTANCE = ValidatorInstance;
-                        unImplementedAddress = TokenV0Address;
+                        unImplementedAddress = PollAddress;
                         break;
                     default:
                         break;

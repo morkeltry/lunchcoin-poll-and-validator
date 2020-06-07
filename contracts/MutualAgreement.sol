@@ -383,7 +383,7 @@ contract MutualAgreement {
 
     //     for (uint i = 0; i < 32; i++) {
     //         out |= bytes32(b[offset + i] & 0xFF) >> (i * 8);
-    //     }~/randomCode/truffletings/proxyBox
+    //     }
     //     return out;
     // }
 
