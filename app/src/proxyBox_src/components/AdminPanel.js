@@ -1,6 +1,6 @@
 import React, {useEffect, useState} from "react";
 // import {connectToWeb3, getImplementationFunctions, getImplementationEvents, setEventWatchers, switchTo} from "../Web3/adminPanel";
-import {connectToWeb3, getImplementationFunctions, getImplementationEvents, switchTo} from "../Web3/adminPanel";
+import {connectToWeb3, getImplementationFunctions, getImplementationEvents, switchTo} from "../../Web3/accessChain";
 import SegregatedPanel from "./segregatedPanel/SegregatedPanel";
 import Button from "react-bootstrap/Button";
 import Container from "react-bootstrap/Container";

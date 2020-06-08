@@ -6,8 +6,6 @@ export const globalDefaults = {
 
 const twelveZeroes = "000000000000000000000000";
 
-const owner = "0x6AdFCEaDe0262fF9edf074BfD6834520B7999A92"
-
 export const byFuncDefaults = {
   set : {
     _fnName : 'serialiseStakers',
@@ -16,7 +14,7 @@ export const byFuncDefaults = {
   },
   add : {
     _fnName : 'serialiseProofs',
-    _newMember : owner, newMember : owner,
+    _newMember : "0x370164874A0B14470470D04945513E4F4E66478F", newMember : "0x370164874A0B14470470D04945513E4F4E66478F",
   },
   validate : {
     _pollContract : '0xaB4367Bd45a8812996B0d34a8141326235FBAE87',
@@ -41,6 +39,10 @@ const dontShow = {
 'xcValidate', 'crossContractCall', 'crossContractValidateCall', 'callValidator_MututalAgreement'
 ].forEach (name => {dontShow[name]=true;} );
 
-console.log(dontShow);
-console.log(dontShow['set']);
+export const clearAfterSubmit = {
+  checkIn : [
+    "_newMember", "newMember"
+  ],
+}
+
 export const doNotShowFuncs = dontShow;

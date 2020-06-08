@@ -1,6 +1,6 @@
 import React, {useEffect, useState} from "react";
 import {connectToWeb3, getImplementationFunctions, getImplementationEvents, callTransaction, switchTo} from "../Web3/accessChain";
-import SegregatedPanel from "./segregatedPanel/SegregatedPanel";
+// import SegregatedPanel from "./segregatedPanel/SegregatedPanel";
 import Button from "react-bootstrap/Button";
 import Container from "react-bootstrap/Container";
 import Row from "react-bootstrap/Row";
@@ -15,7 +15,7 @@ import {Form} from "react-bootstrap";
 import "../App.scss";
 
 
-import { owner } from './segregatedPanel/formConfig'
+// import { owner } from './segregatedPanel/formConfig'
 const pollUrls = ['doodle.com/poll/h7phtw5u2thhz9k4'];
 const eventsObj = {};
 

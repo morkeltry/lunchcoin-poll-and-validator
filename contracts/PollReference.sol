@@ -33,11 +33,13 @@ contract PollReference {
 
     // shared across contracts
     mapping (bytes32 => bytes32[]) allTheData;
+    mapping (bytes32 => Poll) pollData;
     mapping (bytes32 => bool) resultsCache;
 
     // used only in Poll
     mapping(uint8 => address) public validators;
     mapping(uint8 => string) public validatorNames;
+    mapping(address => uint) public cashBalance;
     address selfAddy ;
     int flag;
 

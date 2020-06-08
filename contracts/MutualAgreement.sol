@@ -3,7 +3,7 @@ pragma solidity ^0.5.0;
 import "./strings.sol";
 import "./stringCasting.sol";
 // import "./BytesLib.sol";
-
+import "./SafeMath.sol";
 
 /* empty contract - the real one is depolyed at an address which will be passed as param to validate */
 
@@ -41,37 +41,51 @@ contract MutualAgreement {
       uint rep;
       TimeRange[] available;
       uint availabilityExpires;
+      mapping (address => uint) venueContribution;
+    }
+
+    struct dibs {
+      address payer;
+      address recipient;
+      uint amount;
     }
 
     struct Poll {
       address initiator;
       uint minStake;
       uint venueCost;
+      uint venuePot;
       uint8 minParticipants;
       TimeRange eventTime;
+      bool proofsWindowClosed;
       mapping (address => Stake) staked;
       mapping (address => bytes32[]) committedProofs;
+      dibs[] dibsCalled;
     }
 
     struct PollExternal {
       address initiator;
       uint minStake;
       uint venueCost;
+      uint venuePot;
       uint8 minParticipants;
       TimeRange eventTime;
       // NB external view of Poll can never correctly represent committedProofs (a mapping to a dynamic array).
       // Need to either make it indicative, or fixed size.
       bytes32[5][] committedProofs;
       address[] provers;
+      dibs[] dibsCalled;
     }
 
     // shared across contracts
     mapping (bytes32 => bytes32[]) allTheData;
+    mapping (string => Poll) pollData;
     mapping (bytes32 => bool) resultsCache;
 
     // used only in Poll
-    mapping(uint8 => address) public __validators;
-    mapping(uint8 => string) public __validatorNames;
+    mapping(uint8 => address) internal __validators;
+    mapping(uint8 => string) internal __validatorNames;
+    mapping(address => uint) internal __cashBalance;
     address __selfAddy ;
 
 
@@ -100,6 +114,7 @@ contract MutualAgreement {
 
     using strings for *;
     using stringcast for string;
+    using SafeMath for uint;
 
     function () payable external {
         _fallback();
@@ -140,6 +155,19 @@ contract MutualAgreement {
 
     event logStuff (string);
 
+    modifier isStaker(string memory _poll) {
+      address[] memory stakers = getStakerAddresses(_poll);
+      bool senderIsPresent;
+
+      for(uint i = 0; i < stakers.length; i++) {
+        if (stakers[i] == msg.sender) {
+          senderIsPresent = true;
+        }
+      }
+      require(senderIsPresent, "Function may only be called by a staker on this poll");
+      _;
+    }
+
     function doEmit (string memory message) public {
       emit logStuff (message);
     }
@@ -174,22 +202,149 @@ contract MutualAgreement {
       return (initiator, stake, venueCost, minParticipants, participants, start, end, committedProofs);
     }
 
-    event RetrievedDataCache(string, uint256, bytes32[]);
-    function retrieve (string memory _poll, string memory _fnName, uint8 _vt) public view returns (bytes32[] memory) {
-        bytes32 hash = keccak256(abi.encodePacked(_poll, encodeFunctionName(_fnName), _vt));
-        // emit RetrievedDataCache("Poll context:", notes, allTheData[hash]);
+    function get (string memory _poll, string memory _fnName) public view returns (bytes32[] memory) {
+        bytes32 hash = keccak256(abi.encodePacked(_poll, encodeFunctionName(_fnName), vType));
         return (allTheData[hash]);
     }
 
-    function set (string memory _poll, string memory _fnName, uint8 _vt, bytes32[] memory data) public {
+    function getStakerAddresses (string memory _poll ) public view returns (address[] memory) {
+      bytes32[] memory rawStakers = get(_poll, "serialiseStakers");
+      address[] memory stakers = new address[](rawStakers.length);
+      for(uint16 i=0; i < rawStakers.length; i++) {
+          stakers[i] = bytesToAddress(bytes32ToBytes(rawStakers[i]));
+      }
+      return stakers;
+    }
+
+    function getproofsAsAddresses (string memory _poll ) public view returns (address[] memory) {
+      bytes32[] memory rawProofs = get(_poll, "serialiseProofs");
+      address[] memory proofs = new address[](rawProofs.length);
+      for(uint16 i=0; i < rawProofs.length; i++) {
+          proofs[i] = bytesToAddress(bytes32ToBytes(rawProofs[i]));
+      }
+      return proofs;
+    }
+
+    function setcheckedIn (string memory _poll, string memory _fnName, uint8 _vt, bytes32[] memory data) public {
       bytes32 hash = keccak256(abi.encodePacked(_poll, encodeFunctionName(_fnName), _vt));
-      emit RetrievedDataCache("Validator context:", 424242, allTheData[hash]);
       allTheData[hash] = data;
     }
 
-    function add (string memory _poll, string memory _fnName, uint8 _vt, address newMember) public {
+    function add (string memory _poll, string memory _fnName, uint8 _vt, address _newMember) public {
       bytes32 hash = keccak256(abi.encodePacked(_poll, encodeFunctionName(_fnName), _vt));
-      allTheData[hash].push (bytes32(bytes20(newMember)));
+      allTheData[hash].push (bytes32(bytes20(_newMember)));
+    }
+
+    function checkIn (string memory _poll, address _newMember) public {
+      add (_poll, "serialiseStakers", vType, _newMember);
+    }
+
+    function addProof (string memory _poll, address _newMember) public {
+      add (_poll, "serialiseProofs", vType, _newMember);
+    }
+
+    function closeProofsWindow (string memory _poll) public {
+      // require (isElibgible(msg.sender), "msg.sender did not stake in this poll");
+      // require (time.now()>.pollData[_poll].eventTime.end || AllstakersSubmittedProofs(), "Not all stakers have submitted proofs and the event is not yet over");
+      // require (, "");
+      pollData[_poll].proofsWindowClosed = true;
+
+      // NB here assuming that poll can be closed once all stakers have submitted a proof.
+      // The alternative would allow a non-attending staker to hold up refunds (by refusing to submit 'I can't make it')
+      // but this way means that early provers cannot necessarily revise rpoofs which turn out not to fit consensus
+      // This policy may be better left to differ between validators.
+    }
+
+    function totalRepStaked (string memory _poll, address _staker) public view returns (uint) {
+      return pollData[_poll].staked[_staker].rep;
+    }
+
+    function totalVenueContribs (string memory _poll, address _staker) public view returns (uint total) {
+      // dibs[] memory dibsList = allDibsPaidBy(_staker);
+      total = pollData[_poll].staked[_staker].venueContribution[_staker] + pollData[_poll].staked[_staker].venueContribution[address(0)];
+      // for(uint16 i = 0; i < dibsList.length; i++) {
+      //   total += dibsList[i].amount;
+      // }
+      return total;
+    }
+
+    // NB these require returning complex type.
+    // Keep the commented code, but integrate it direct into functions which need it (and eventually use new ABI encoder on it ;)
+
+    // function allDibsPaidBy(string memory _poll, address _staker) public view returns (dibs[] memory) {
+    //   uint16 size=0;
+    //   uint16 i;
+    //   for(i = 0; i < pollData[_poll].dibsCalled.length; i++) {
+    //     if (pollData[_poll].dibsCalled[i].payer == _staker)
+    //       size++;
+    //   }
+    //   dibs[size] memory dibsList = new dibs[](size);
+    //   for(uint16 i = 0; i < pollData[_poll].dibsCalled.length; i++) {
+    //     if (pollData[_poll].dibsCalled[i].payer == _staker)
+    //       dibsList.push(pollData[_poll].dibsCalled[i]);
+    //   }
+    //   return dibsList;
+    // }
+    //
+    // function allDibsPaidFor(string memory _poll, address _recipient) public view returns (dibs[] memory) {
+    //   uint16 size=0;
+    //   uint16 i;
+    //   for(i = 0; i < pollData[_poll].dibsCalled.length; i++) {
+    //     if (pollData[_poll].dibsCalled[i].recipient == _recipient)
+    //       size++;
+    //   }
+    //   dibs[size] memory dibsList = new dibs[](size);
+    //   for(i = 0; i < pollData[_poll].dibsCalled.length; i++) {
+    //     if (pollData[_poll].dibsCalled[i].recipient == _recipient)
+    //       dibsList.push(pollData[_poll].dibsCalled[i]);
+    //   }
+    //   return dibsList;
+    // }
+
+    event venuePotDisbursed (string _poll, address to, address by, int amount);
+    // Any staker can call refund of excess venue pot.
+    // Disbursement to venue payer must wait until initiator has actively set venue payer (eg to self);
+    function refundVenueStakes(string memory _poll) public isStaker(_poll) {
+      address[] memory stakers = getStakerAddresses(_poll);
+      uint equalShare = (pollData[_poll].venueCost).div(stakers.length);
+      uint spareCash = pollData[_poll].venuePot-pollData[_poll].venueCost;
+      // // proportional refunds:
+      // // allows recipients of gifted contributions to get a refund too
+      // for stakers
+      //   refund = 0
+      //   for (stakes = allDibsPaidBy(staker).concat(staker.stake[staker]).concat(staker.stake[0x0]))
+      //     refund += stake*proportion
+      //     remove stake
+      //   refund (refund)
+      //   emit
+      //
+      // // covering refunds:
+      // // gifted contributions are used only to top up recipients'
+      // for stakers
+      //   totalPaid = staker.stake[staker].amount + staker.stake[0x0].amount
+      //   if totalPaid < equalShare
+      //     for (stakes = allDibsPaidFor(staker).concat(staker.stake[staker]).concat(staker.stake[0x0]))
+      //       if amount>=shortfall
+      //         totalPaid += shortfall
+      //         shorten(stake)
+      //       else
+      //         totalPaid += amount
+      //         remove(stake) including own stake!
+      //     refund(0)
+      // for stakers
+      //   if exists(stake) (ie those who were not removed in last round)
+      //     for (stakes = allDibsPaidBy(staker).concat(staker.stake[staker]).concat(staker.stake[0x0]))
+      //       if amount>=shortfall
+      //         totalPaid += shortfall
+      //         refund += rest
+      //       else
+      //         totalPaid += amount
+      //       remove(stake)
+      //     refund (refund)
+      //     emit
+      //
+
+
     }
 
     function setString (string memory _poll, string memory _fnName, uint8 _vt, string memory data) public {
@@ -198,29 +353,21 @@ contract MutualAgreement {
       allTheData[hash] = stringToBytes32Array(data);
     }
 
-    event whatTheFuck (string, uint16, uint, address, address, address);
-    event cool (uint16, uint);
     event numberLoggerLikeImUsingFuckingJava (string, uint);
     /* simplest possible validator - checks that a majority of poll.stakers(), including sender, are contained in poll.serialiseProofs() */
     function validate(address _pollContract, string memory _poll, bytes32 _reveal) public view returns (bool) {
         // require (_pollContract==howeverYoullIdentifySelf, 'wrong Poll contract - something needs upgrading');
 
-        bytes32[] memory rawStakers = retrieve(_poll, "serialiseStakers", vType);
-        bytes32[] memory rawProofs = retrieve(_poll, "serialiseProofs", vType);
-
-        // address[] memory stakers = splitToAddresses( bytes32ArrayToString(rawStakers));
-        // address[] memory proofs = splitToAddresses( bytes32ArrayToString(rawProofs));
-
-        address[] memory stakers = new address[](rawStakers.length);
-        address[] memory proofs = new address[](rawProofs.length);
+        address[] memory stakers = getStakerAddresses(_poll);
+        address[] memory proofs = getproofsAsAddresses(_poll);
         uint16 i;
 
-        for(i = 0; i < rawStakers.length; i++) {
-            stakers[i] = bytesToAddress(bytes32ToBytes(rawStakers[i]));
-        }
-        for(i = 0; i < rawProofs.length; i++) {
-            proofs[i] = bytesToAddress(bytes32ToBytes(rawProofs[i]));
-        }
+        // for(i = 0; i < rawStakers.length; i++) {
+        //     stakers[i] = bytesToAddress(bytes32ToBytes(rawStakers[i]));
+        // }
+        // for(i = 0; i < rawProofs.length; i++) {
+        //     proofs[i] = bytesToAddress(bytes32ToBytes(rawProofs[i]));
+        // }
         uint8 threshold = 1 ;
         // emit numberLoggerLikeImUsingFuckingJava('stakers',stakers.length);
         // emit numberLoggerLikeImUsingFuckingJava('proofs',proofs.length);
@@ -275,6 +422,13 @@ contract MutualAgreement {
         // emit numberLoggerLikeImUsingFuckingJava ('fakeProofs',pc.fakeProofs);
         // emit numberLoggerLikeImUsingFuckingJava ('proofs.length',proofs.length);
         return true;
+    }
+
+    function deserialiseStakers(string calldata _poll) external pure returns (address[] memory) {
+        // return something which will make it obvious that you have accidentally delegated this context!
+        address[] memory ret = new address[](4);
+        (ret[0], ret[1], ret[2], ret[3]) = (address(5), address(0), address(5), address(0));
+        return ret;
     }
 
     function serialiseStakers(string calldata _poll, uint8 validationType) external pure returns (address[] memory) {
