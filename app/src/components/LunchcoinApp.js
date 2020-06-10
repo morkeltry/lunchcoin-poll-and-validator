@@ -22,7 +22,7 @@ const eventsObj = {};
 const LunchcoinApp = props => {
   const [polls, setPolls] = useState([]);
   const [livePolls, setLivePolls] = useState([]);
-  const [currentPoll, setCurrentPoll] = useState(null);
+  const [currentPoll, setCurrentPoll] = useState('doodle.com/poll/h7phtw5u2thhz9k4');
   const [choosePoll, setChoosePoll] = useState(true);
   // const [, set] = useState();
   // const [, set] = useState();
@@ -35,6 +35,10 @@ const LunchcoinApp = props => {
   const [loadingStatus, setLoadingStatus] = useState(false);
   const [currentContractAddress, setCurrentContractAddress] = useState('');
   const [alternateContractAddress, setAlternateContractAddress] = useState('');
+
+  const chainEventListeners = {
+    getPoll : eventResponse => { console.log(eventResponse); },
+  }
 
   const getLocalCache =()=> {
 
@@ -116,7 +120,7 @@ const LunchcoinApp = props => {
       return true
     }).then( ()=> {
       fetchAndUpdatePolls(pollUrls);
-      getImplementationEvents({ setWatchers:true })
+      getImplementationEvents({ setWatchers:true }, chainEventListeners)
         .then (foundEvents=> {
           console.log(foundEvents);
           foundEvents.forEach( event=> {
@@ -139,10 +143,10 @@ const LunchcoinApp = props => {
   }
 
   return (
-      <Container fluid={"true"}>
+      <Container fluid={"true"} className={"height-100vh"} >
         { currentPoll
           // ? <LiveEvent event={currentPoll} />
-          ? <LiveEvent event={currentPoll} />
+          ? <LiveEvent pollUrl={currentPoll} />
           : choosePoll
             ? livePolls.map((poll,idx)=>(
                 <Row>

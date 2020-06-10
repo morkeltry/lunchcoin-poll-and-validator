@@ -1,33 +1,79 @@
-.container-fluid{
 
-  h1{
+@font-face {
+  font-family: 'Neon';
+  font-style: bold;
+  font-weight : 900;
+  src:
+    local('Neon'), url('./assets/Clip.ttf') format('truetype');
+}
+
+@font-face {
+  font-family: 'Cinema';
+  src:
+    local('Cinema'), url('./assets/Showtime.ttf') format('truetype');
+}
+
+.container-fluid {
+
+  h1 {
     text-align: center;
   }
 
+    // background-color: #222222;
+    // background: repeating-linear-gradient(45deg, #2b2b2b 0%, #2b2b2b 10%, #222222 0%, #222222 50%) 0 / 15px 15px;
+
 };
 
-.function-form{
+.height-100vh {
+  height: 98vh;
+}
+
+.align-left {
+  width: 100%;
+  margin: 0 auto;
+  text-align: left;
+}
+
+.align-right {
+  width: 100%;
+  margin: 0 auto;
+  text-align: right;
+}
+
+.align-centre {
+  width: 100%;
+  margin: 0 auto;
+  text-align: center;
+}
+
+// .vert-align-centre {
+//   height: 100%;
+//   // margin: 2.5vw auto;
+//   vertical-align: middle;
+// }
+
+.function-form {
   margin-top: 5%;
   background-color: rgba(40, 34, 34, 0.06);
   padding: 20px;
   border-radius: 10px;
 
-  .function-name{
+  .function-name {
     background-color: rgba(40, 34, 34, 0.18);
     padding: 7px;
     border-radius: 5px;
     margin-bottom: 20px;
   }
 
-  .function-arg{
+  .function-arg {
     margin-bottom: 10px;
   }
 
-  .function-call-button{
+  .function-call-button {
     width: 100%;
   }
 
-  .response{
+  .response {
     background: rgba(34, 34, 34, 0.9);
     color: white;
     padding: 5px;
@@ -35,7 +81,7 @@
     border-radius: 5px;
   }
 
-  .error{
+  .error {
     background: red;
     color: white;
     padding: 5px;
@@ -54,13 +100,13 @@
   }
 };
 
-*{
+* {
   box-sizing: border-box;
   font-family: 'Dosis', sans-serif;
 
 }
 
-button{
+button {
 
   &:hover, &:focus, &:active{
     border: none;
@@ -68,7 +114,7 @@ button{
     outline: none;
   }
 }
-.navbar{
+.navbar {
   z-index: 10;
   a{
     color: black;
@@ -76,7 +122,7 @@ button{
       text-decoration: none;
     }
   }
-  .btn{
+  .btn {
     color:black;
     background: transparent;
     border: none;

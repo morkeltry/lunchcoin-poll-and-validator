@@ -96,6 +96,7 @@ export function connectToWeb3() {
 
                     resolve({
                       IMPLEMENTATION_ADDRESS,
+                      OWN_ADDRESS,
                       unImplementedAddress,
                       PollAddress,
                       ValidatorAddress
@@ -130,15 +131,17 @@ export async function updateKnownPolls( options ) {
 }
 
 
-export async function getImplementationEvents( options={ setWatchers:false } ) {
+export async function getImplementationEvents( options={ setWatchers:false }, eventListeners={} ) {
     // returns the list of events that are in the latest version of the contract
     let rv = [];
+    console.log(options);
+    console.log(eventListeners);
     const { setWatchers } = options;
     console.log(IMPLEMENTATION_ABI);
     console.log(IMPLEMENTATION_INSTANCE.events);
     IMPLEMENTATION_ABI.forEach(ele => {
         if (ele.type === "event") {
-            console.log(`Found event`, ele);
+            // console.log(`Found event`, ele);
             let objectToBeAppended = {};
             objectToBeAppended["eventName"] = ele["name"];
             let argsObject = [];
@@ -146,9 +149,9 @@ export async function getImplementationEvents( options={ setWatchers:false } ) {
             ele.inputs.forEach(input => {
                 argsObject.push(`${input.name} (${input.type})`);
             });
-            if (setWatchers)
-              setEventWatcher(ele["name"]);
-
+            if (setWatchers){
+              setEventWatcher(ele["name"], eventListeners[ele["name"]]);
+            }
             objectToBeAppended["signature"] = ele["signature"];
 
             rv.push(objectToBeAppended);
@@ -167,8 +170,8 @@ export async function setEventWatcher(event, action) {
       // console.log(result);
       console.log('Event returning:',result.returnValues);
     });
-    console.log(`Will set watch on ${event} with ${action.toString()}`);
-    console.log(`IMPLEMENTATION_INSTANCE.events[${event}]()`,IMPLEMENTATION_INSTANCE.events[event]);
+    // console.log(`Will set watch on ${event} with ${action.toString()}`);
+    // console.log(`IMPLEMENTATION_INSTANCE.events[${event}]()`,IMPLEMENTATION_INSTANCE.events[event]);
     IMPLEMENTATION_INSTANCE.events[event](action);
 };
 
@@ -214,6 +217,7 @@ async function checkFunctionFormatting(functionName, args) {
             if (!nowFound)
               console.log(`${functionName} was not found. Did you rename it?`);
             // Function present in Implementation Contract
+            console.log('checkWithABI', nowFound, functionName, args);
             checkWithABI(nowFound, functionName, args, resolve, reject);
         }
     });
@@ -229,8 +233,11 @@ function checkWithABI(currentFunc, functionName, args, resolve, reject) {
   console.log(currentFunc.inputs);
   console.log(functionName, args);
     currentFunc.inputs.forEach(input => {
-        if (!args[input.name])
+        console.log(input.name, args, args[input.name]);
+        if (!args[input.name]) {
+            console.log(`Will reject from checkWithABI: ${input.name} not found in ${functionName}'s args`,args);
             reject(new Error("INVALID ARGUMENTS: Invalid Number of arguments"));
+        }
         let callValue = args[input.name];
         let inputType = input.type;
         if (inputType.substr(0, 4) === "uint") {
@@ -269,6 +276,28 @@ function checkWithABI(currentFunc, functionName, args, resolve, reject) {
     resolve({rv, outputs: currentFunc.outputs });
 }
 
+
+export function getFromStorage(storageName, idx) {
+  return new Promise((resolve, reject) => {
+    console.log(`Read to:`,IMPLEMENTATION_INSTANCE);
+    IMPLEMENTATION_INSTANCE[storageName]
+      .call(idx)
+      .then(result => {
+        console.log(typeof result, result);
+          // outputs = outputs.forEach ((output,idx)=> {
+          //   console.log('output',output);
+          //   if (output && output["type"].substr(0, 4) === "uint") {
+          //     if (typeof result==="object")
+          //       result[idx] = (parseInt(result[idx].valueOf()));
+          //     else if (typeof result==="object")
+          //       result = (parseInt(result[idx].valueOf()));
+          //     // handleExponentialNumber(result[idx].valueOf(), resolve);
+          // }});
+          resolve(result);
+      })
+      .catch(reject);
+  });
+}
 
 export function callTransaction(functionName, args) {
     return new Promise((resolve, reject) => {

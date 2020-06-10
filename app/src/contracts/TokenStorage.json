@@ -7671,12 +7671,12 @@
     "1591524599898": {
       "events": {},
       "links": {},
-      "address": "0xc1485Ed413AdfBbbe7125344C40bB25917d268f4",
-      "transactionHash": "0x44415daab4597a1474dca820facfbc782881215b38eda454acf6dba67c98a5d4"
+      "address": "0xeb1f61EB1C9a9c8e60Eda4Eb9C21abe8DAB09145",
+      "transactionHash": "0xe1f24ad16a3eb8d3c7cf7f3a013382223dc175e5778ea257d2d1ba12099eb23a"
     }
   },
   "schemaVersion": "3.2.0",
-  "updatedAt": "2020-06-08T18:53:06.767Z",
+  "updatedAt": "2020-06-09T16:03:32.019Z",
   "networkType": "ethereum",
   "devdoc": {
     "author": "Arvind Kalra (github.com/arvindkalra) and Pranav Singhal (github.com/pranav-singhal)",

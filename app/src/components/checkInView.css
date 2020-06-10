@@ -1,0 +1,208 @@
+ .full-height {
+   height : 100%;
+ }
+
+.checkin-view{
+  height : 100%;
+  background-color: #222222;
+  color : #dcc;
+}
+
+.header {
+  height: 24%;
+  background-color: #222222;
+  box-shadow:inset 0 -1vh 3vw 1vh #222;
+  background: repeating-linear-gradient(45deg, #2b2b2b 0%, #2b2b2b 10%, #222222 0%, #222222 50%) 0 / 15px 15px;
+
+}
+
+.header a h1 {
+    font-family : 'Cinema';
+    color : #ccc;
+    text-decoration: none;
+    /* border-bottom: 1px white dotted; */
+  }
+
+.thin-section {
+  padding: 2vw;
+  font-size: 2.5vh;
+}
+
+.logo-section {
+  position : absolute;
+  height: 20vh;
+  width: 100%;
+  margin: 0 auto;
+  text-align: center;
+  bottom: 2vh;
+}
+
+.section {
+  padding: 2vw;
+  /* border: 1px solid grey; */
+  font-size: 3vh;
+  width : 99%;
+  height: 13%;
+  max-height: 13%;
+  overflow-wrap: break-word;
+  display: flex;
+  flex-direction : row;
+}
+
+.section-child-left {
+  /* border: 1px solid grey; */
+  width : 70%;
+  height: 100%;
+  flex: 0 0.5 70vw;
+}
+
+.section-child-right {
+  /* border: 1px solid grey; */
+  width : 30%;
+  height: 100%;
+  padding-right : 1.5%;
+  flex: 0.3 0 30vw;
+}
+
+.section-child-right button {
+  width : 96%;
+  right: 2%;
+}
+
+.error {
+  background-color : #511;
+  border: 3px solid #a26;
+  border-radius: 4.5vw;
+  padding: 2vw;
+  /* border: 1px solid grey; */
+  font-size: 2.75vh;
+  height: 13%;
+  max-height: 13%;
+  overflow-wrap: break-word;
+  display: flex;
+  flex-direction : row;
+}
+
+button {
+  width: 100%;
+  margin-bottom: 1.5vh;
+  padding-bottom: 1vh;
+  width: 100%;
+  text-align: center;
+  font-size: 2.25vh;
+  border-radius: 1vw;
+  box-shadow: none;
+  border : 0px;
+  background-color : orange;
+}
+
+button:active {
+  color : #000;
+  position: relative;
+  width : 100%;
+  top : 10%;
+  right : 2%;
+
+  box-shadow: 0 0 15px 5px orange;
+  /* border: solid orange 5px; */
+}
+
+button:active:disabled{
+  color : black;
+  background-color : grey;
+  position: relative;
+  width : 96%;
+  top : 0%;
+  right : 0%;
+}
+
+.button__disabled {
+  opacity : 0.4;
+  /* background-color : red; */
+}
+
+/*
+button :hover {
+  color: inherit;
+  background-color: inherit;
+} */
+
+.error button   {
+  background-color : #915;
+  border: 4px solid #4f6;
+  border-radius : 2vw;
+}
+
+.primary-button {
+    background-color: #af4;
+}
+
+.address42 {
+  font-size : 2.5vw;
+}
+
+.hype{
+  font-size : 4vh;
+}
+
+.hype-small{
+  font-size : 2.5vh;
+}
+
+.hanging {
+  vertical-align : top;
+}
+
+.button-super-text {
+  margin : 1vw 0 5% 0;
+  text-align : center;
+  font-size : 1.5vh;
+  padding-bottom : 0;
+  margin-bottom : 0;
+}
+.bar-horiz {
+  width: 90%;
+  height: 1vh;
+
+}
+
+.settings-gear {
+  position: absolute;
+  top: 2.5vw;
+  right: 2.5vw;
+}
+
+.live {
+  margin: 0 auto;
+  text-align: center;
+  display: block;
+  width: 100vw;
+  /* background-color: #222222;
+  background: repeating-linear-gradient(45deg, #2b2b2b 0%, #2b2b2b 10%, #222222 0%, #222222 50%) 0 / 15px 15px; */
+
+  font-family: 'Neon';
+  /* font-family: Monoton; */
+  font-size : 8vh;
+  text-align : center;
+  text-shadow: 0 0 5px #fff, 0 0 10px #fff, 0 0 15px #fff, 0 0 20px #FF1177, 0 0 35px #FF1177, 0 0 40px #FF1177, 0 0 50px #FF1177, 0 0 75px #FF1177;
+
+  text-decoration: none;
+  -webkit-transition: all 0.5s;
+  -moz-transition: all 0.5s;
+  transition: all 0.5s;
+
+  color: #fff;
+color:red;
+  -webkit-animation: neon1 1.5s ease-in-out infinite alternate;
+  -moz-animation: neon1 1.5s ease-in-out infinite alternate;
+  animation: neon1 1.5s ease-in-out infinite alternate;
+}
+
+@-webkit-keyframes neon1 {
+  from {
+    text-shadow: 0 0 10px #fff, 0 0 20px #fff, 0 0 30px #fff, 0 0 40px #FF1177, 0 0 70px #FF1177, 0 0 80px #FF1177, 0 0 100px #FF1177, 0 0 150px #FF1177;
+  }
+  to {
+    text-shadow: 0 0 5px #fff, 0 0 10px #fff, 0 0 15px #fff, 0 0 20px #FF1177, 0 0 35px #FF1177, 0 0 40px #FF1177, 0 0 50px #FF1177, 0 0 75px #FF1177;
+  }
+}
