@@ -30,6 +30,7 @@ const LiveEvent = props => {
   const [proofs, setProofs] = useState([]);
   const [ownProof, setOwnProof] = useState([]);
   const [repStaked, setRepStaked] = useState();
+  const [repEverStaked, setRepEverStaked] = useState();
   const [venueCost, setVenueCost] = useState(0);
   const [youPaidForVenue, setYouPaidForVenue] = useState(0);
   const [mismatchedProofs, setMismatchedProofs] = useState([]);
@@ -40,6 +41,9 @@ const LiveEvent = props => {
   const [validator1PeerCheckedIn, setValidator1PeerCheckedIn] = useState([[ OWN_ADDRESS, true ]]);
 
   const proofMismatchMessage = ()=> 'attendees are not in your check-in proof!'
+
+
+// ----------------------- functions for useEffect
 
   const getLocalCache =()=> {
 
@@ -54,29 +58,34 @@ const LiveEvent = props => {
   }
 
 
-  const fetchAndUpdate = (freshAddy)=> {
-    console.log(`callTransaction('getproofsAsAddresses', _poll :${ pollUrl})`);
+  const fetchAndUpdate = (freshAddy = ownAddy )=> {
     callTransaction('getproofsAsAddresses', {_poll : pollUrl})
       .then(response=>{
-        console.log(response);
-        // setProofs
-        // setCheckedIn
-      });
+        console.log('getproofsAsAddresses', response);
+        setProofs(response);
+        if (response.includes(freshAddy))
+          setCheckedIn(true);
+      })
+      .catch(err=>{console.log(err);});
     callTransaction('getStakerAddresses', {_poll : pollUrl})
       .then(response=>{
-        console.log(response);
-        // setStakers
-      });
+        console.log('getStakerAddresses', response);
+        setStakers (response);
+      })
+      .catch(err=>{console.log(err);});
     callTransaction('totalRepStaked', {_poll : pollUrl, _staker : freshAddy || ownAddy })
       .then(response=>{
-        console.log(response);
-        // setRepStaked
-      });
+        console.log('totalRepStaked', response);
+        setRepStaked(response);
+        setRepEverStaked(response);
+      })
+      .catch(err=>{console.log(err);});
     callTransaction('totalVenueContribs', {_poll : pollUrl, _staker : freshAddy || ownAddy })
       .then(response=>{
-        console.log(response);
-        // setYouPaidForVenue
-      });
+        console.log('totalVenueContribs', response);
+        setYouPaidForVenue(response);
+      })
+      .catch(err=>{console.log('err:',err);});
     // callTransaction('', {_poll : pollUrl})
     //   .then(response=>{
     //     console.log(response);
@@ -113,6 +122,10 @@ const LiveEvent = props => {
 
   }
 
+
+
+// ----------------------- chain access functions (other than those above for useEffect)
+
   const submitProof = ()=> {
     // Not yet implemented in contract!
     sendTransaction('addProof', {_poll: pollUrl, addProof: ownAddy })   // ownAddy is hack for demo - validator will be more complex than this!
@@ -128,13 +141,16 @@ const LiveEvent = props => {
 
 
   const closeCheckin = ()=> {
+    console.log('Click!');
     sendTransaction('closeProofsWindow', {_poll : pollUrl })
       .then(response=>{
-        getFromStorage('pollData', ownAddy)
-      })
-      .then(response=>{
-        const isClosed = response.summat;
-        setCheckInIsClosed(isClosed);
+        console.log('closeProofsWindow',response);
+        getFromStorage('pollData', pollUrl)
+        .then(response=>{
+          console.log('getFromStorage: pollData(pollUrl)',response);
+        // const isClosed = response.summat;
+        // setCheckInIsClosed(isClosed);
+        });
       });
   }
 
@@ -148,42 +164,6 @@ const LiveEvent = props => {
             setRepStaked( response )
           })
       })
-  }
-
-
-  const rekey = keyedByNum=> {
-    const result = {};
-    Object.keys(keyedByNum)
-      .filter (key=>Number(key).isNan())
-      .forEach(key=>
-        result[key] = keyedByNum.find(x=> x==keyedByNum[key] ) || keyedByNum[key]
-        // All about the readable code :P
-      )
-    return result
-  }
-
-  const toUnixTime = x=>x;
-
-  const unixifyTimes = resp=>
-    Object.assign (resp,
-      { start : resp.start ? toUnixTime(resp.start) : resp.start },
-      { end : resp.end ? toUnixTime(resp.end) : resp.end },
-    );
-
-  const niceNum = (num=0) =>
-    (Math.round(num*1000)/1000).toString() ;
-
-  const niceTime = (time=498705720) =>
-    time < Infinity
-      ? new Date(time).toTimeString().slice(0,14)
-      : 'Never' ;
-
-  const checkInClosingIn = checkinCloses=>
-    Math.max (checkinCloses-Date.now(), 0) ;
-
-
-  const venueRefundDue = ()=>{
-
   }
 
   const doVenueRefund = ()=>{
@@ -206,6 +186,8 @@ const LiveEvent = props => {
     });
   }
 
+// ----------------------- useEffect
+
   useEffect(()=> {
     getLocalCache();
     fetchOnlinePoll(pollUrl);
@@ -220,6 +202,48 @@ const LiveEvent = props => {
     })
 
   }, []);
+
+
+
+// ----------------------- helpers
+
+    const toUnixTime = x=>x;
+
+    const unixifyTimes = resp=>
+      Object.assign (resp,
+        { start : resp.start ? toUnixTime(resp.start) : resp.start },
+        { end : resp.end ? toUnixTime(resp.end) : resp.end },
+      );
+
+    const niceNum = (num=0) =>
+      (Math.round(num*1000)/1000).toString() ;
+
+    const niceTime = (time=498705720) =>
+      time < Infinity
+        ? new Date(time).toTimeString().slice(0,14)
+        : 'Never' ;
+
+    const checkInClosingIn = checkinCloses=>
+      Math.max (checkinCloses-Date.now(), 0) ;
+
+
+    // Make it pure?
+    const venueRefundDue = ()=>{
+
+    }
+
+    const rekey = keyedByNum=> {
+      const result = {};
+      Object.keys(keyedByNum)
+        .filter (key=>Number(key).isNan())
+        .forEach(key=>
+          result[key] = keyedByNum.find(x=> x==keyedByNum[key] ) || keyedByNum[key]
+          // All about the readable code :P
+        )
+      return result
+    }
+
+
 console.log((checkInCloses));
 console.log(checkInClosingIn(checkInCloses));
 return(
@@ -277,7 +301,7 @@ return(
           buttonSuper= { checkInClosingIn(checkInCloses) ? 'Close check-in cannot be undone' : '' }
           buttonText= { 'Close check-in' }
           buttonAction= { closeCheckin }
-          buttonDisabled= { checkInIsClosed || proofs.length < stakers.length }
+          buttonDisabled= { null && (checkInIsClosed || proofs.length < stakers.length )}
           buttonHidden= { !checkInClosingIn(checkInCloses) }
         >
           <div className="left-align">
@@ -295,7 +319,7 @@ return(
           buttonText= { 'Unstake me now' }
           buttonAction= { claimRep }
           buttonDisabled= { !checkedIn || !checkInClosingIn(checkInCloses) }
-          sectionHidden= { !repStaked }
+          sectionHidden= { !repEverStaked }
         >
           <div className="strong right-align">
             You staked <span className="hype hanging"> { niceNum(repStaked) } Rep </span>

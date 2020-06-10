@@ -13,13 +13,17 @@ import "../App.scss";
 import './checkInView.css';
 
 const Section = props => {
-  const { buttonText, buttonSuper, buttonStyles, buttonAction, buttonDisabled, buttonHidden,
+  const { buttonText, buttonSuper, buttonStyles, buttonAction,
+    buttonDisabled, buttonHidden, sectionHidden,
     error, id,
 
   children } = props;
 console.log(id);
   return(
-    <div className={ cN('section', error && 'error' ) }>
+    <div className={ cN(
+        'section',
+        error && 'error',
+        sectionHidden && 'hidden' ) }>
       <div className="full-height section-child-left">
         { children }
       </div>
@@ -29,10 +33,11 @@ console.log(id);
         </div>
         <button
           disabled= { buttonDisabled }
-          type= {"submit"}
+          onClick= { buttonAction }
           className= {cN(
             id==='checkin' && 'primary-button',
-            buttonDisabled && 'button__disabled'
+            buttonDisabled && 'button__disabled',
+            buttonHidden && 'hidden'
           )}
         >
           { props.buttonText }

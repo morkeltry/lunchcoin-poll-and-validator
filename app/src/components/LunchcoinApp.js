@@ -49,7 +49,7 @@ const LunchcoinApp = props => {
 
   const fetchAndUpdatePolls = (pollUrls)=>
     Promise.all( pollUrls.map (poll=> new Promise(resolve=>{
-      callTransaction('getPoll', { poll })
+      callTransaction('getPoll', { _poll: poll })
         .then (async response=> {
           response.url = poll;
           await setPolls (

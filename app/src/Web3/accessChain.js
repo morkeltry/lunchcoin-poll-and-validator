@@ -277,25 +277,47 @@ function checkWithABI(currentFunc, functionName, args, resolve, reject) {
 }
 
 
+function unpackRVs (result, outputs) {
+  console.log(typeof result, result);
+    outputs = outputs.forEach ((output,idx)=> {
+      console.log('output',output);
+      if (output && output["type"].substr(0, 4) === "uint") {
+        if (typeof result==="object")
+          result[idx] = (parseInt(result[idx].valueOf()));
+        else if (typeof result==="object")        // why is this unreachable code here?
+          result = (parseInt(result[idx].valueOf()));
+        // handleExponentialNumber(result[idx].valueOf(), resolve);
+        if (output && output["type"].substr(0, 5) === "tuple")
+            result[idx] = `Can't yet handle retunred tuples, sorry!`;
+    }});
+    console.log(typeof result, result);
+    return result;
+}
+
+// works for web3 1.28, sol 0.5.7
 export function getFromStorage(storageName, idx) {
   return new Promise((resolve, reject) => {
-    console.log(`Read to:`,IMPLEMENTATION_INSTANCE);
-    IMPLEMENTATION_INSTANCE[storageName]
-      .call(idx)
-      .then(result => {
-        console.log(typeof result, result);
-          // outputs = outputs.forEach ((output,idx)=> {
-          //   console.log('output',output);
-          //   if (output && output["type"].substr(0, 4) === "uint") {
-          //     if (typeof result==="object")
-          //       result[idx] = (parseInt(result[idx].valueOf()));
-          //     else if (typeof result==="object")
-          //       result = (parseInt(result[idx].valueOf()));
-          //     // handleExponentialNumber(result[idx].valueOf(), resolve);
-          // }});
-          resolve(result);
-      })
-      .catch(reject);
+    const args= (idx===undefined ? undefined : {'':idx})
+    
+    console.log('getFromStorage',storageName, idx);
+    console.log(('args',args));
+
+    checkFunctionFormatting(storageName, args )
+      .then(({rv, outputs}) => {
+        // Look at this ugliness! Apparently fn(undefined) != fn() :/
+        const getter = (args===undefined)
+          ? IMPLEMENTATION_INSTANCE.methods[storageName]()
+          : IMPLEMENTATION_INSTANCE.methods[storageName](args) ;
+
+        // console.log(`Read to: ${storageName} of`,IMPLEMENTATION_INSTANCE);
+        getter
+          .call()
+          .then(result => {
+              unpackRVs (result, outputs);
+              resolve(result);
+          })
+          .catch(err=>{console.log(err); reject(err);});
+      });
   });
 }
 
@@ -303,21 +325,11 @@ export function callTransaction(functionName, args) {
     return new Promise((resolve, reject) => {
         checkFunctionFormatting(functionName, args)
             .then(({rv, outputs}) => {
-
-                console.log(`Call to:`,IMPLEMENTATION_INSTANCE,args);
+                console.log(`Call to:`,IMPLEMENTATION_INSTANCE,args,rv);
                 IMPLEMENTATION_INSTANCE.methods[functionName](...rv)
                     .call({from: OWN_ADDRESS})
                     .then(result => {
-                      console.log(typeof result, result);
-                        outputs = outputs.forEach ((output,idx)=> {
-                          console.log('output',output);
-                          if (output && output["type"].substr(0, 4) === "uint") {
-                            if (typeof result==="object")
-                              result[idx] = (parseInt(result[idx].valueOf()));
-                            else if (typeof result==="object")
-                              result = (parseInt(result[idx].valueOf()));
-                            // handleExponentialNumber(result[idx].valueOf(), resolve);
-                        }});
+                        unpackRVs (result, outputs);
                         resolve(result);
                     })
                     .catch(reject);
