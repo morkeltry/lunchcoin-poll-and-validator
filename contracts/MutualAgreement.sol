@@ -211,6 +211,14 @@ contract MutualAgreement {
       return returnPoll;
     }
 
+    function setByHash (bytes32 _hash, bytes32[] memory _data) public {
+      allTheData[_hash] = _data;
+    }
+
+    function getByHash (bytes32 _hash) public view returns (bytes32[] memory) {
+      return (allTheData[_hash]);
+    }
+
     function get (string memory _poll, string memory _fnName) public view returns (bytes32[] memory) {
         bytes32 hash = keccak256(abi.encodePacked(_poll, encodeFunctionName(_fnName), vType));
         return (allTheData[hash]);
@@ -218,13 +226,27 @@ contract MutualAgreement {
 
     event whassahash(bytes);
     event whassakeccack(bytes32);
-    function getProof (string memory _poll, string memory _fnName, address _staker) public returns (bytes32[] memory) {
+    function getProofIgnoringStaker (string memory _poll, string memory _fnName, address _staker) public returns (bytes32[] memory) {
       bytes32 hash = keccak256(abi.encodePacked(_poll, encodeFunctionName(_fnName), vType));
       emit whassahash(abi.encodePacked(_poll, encodeFunctionName(_fnName), vType));
       emit whassakeccack(hash);
       return (allTheData[hash]);
     }
-    //  bytes32 hash = keccak256(abi.encodePacked(_poll, encodeFunctionName(_fnName), _stakerOrZero, _vt));
+
+    function getProofProperUsingStaker (string memory _poll, string memory _fnName, address _staker) public returns (bytes32[] memory) {
+      bytes32 hash = keccak256(abi.encodePacked(_poll, encodeFunctionName(_fnName), _staker, vType));
+      emit whassahash(abi.encodePacked(_poll, encodeFunctionName(_fnName), _staker, vType));
+      emit whassakeccack(hash);
+      return (allTheData[hash]);
+    }
+
+    function getProofEmitHashesOnlyWithStaker (string memory _poll, string memory _fnName, address _stakerOrZero, uint8 _vt, bytes32[] memory data) public {
+      bytes32 hash = keccak256(abi.encodePacked(_poll, encodeFunctionName(_fnName), _stakerOrZero, _vt));
+      emit whassahash(abi.encodePacked(_poll, encodeFunctionName(_fnName), _stakerOrZero, _vt));
+      emit whassakeccack(hash);
+
+      emit gpResult(_poll, _fnName, _stakerOrZero, _vt, getProofProperUsingStaker(_poll, _fnName, _stakerOrZero));
+    }
 
     function getStakerAddresses (string memory _poll ) public view returns (address[] memory) {
       bytes32[] memory rawStakers = get(_poll, "serialiseStakers");
@@ -235,26 +257,37 @@ contract MutualAgreement {
       return stakers;
     }
 
+//NB This is returning a WRONG result, but of the right type. You've probably got indices mixed up.
     function getproofsAsAddresses (string memory _poll ) public returns (address[][] memory) {
       address[] memory stakers = getStakerAddresses(_poll);
       address[][] memory proofs = new address[][](stakers.length);
+      bytes32[] memory rawProof;
+
       for(uint16 i=0; i < stakers.length; i++) {
-        bytes32[] memory rawProof = getProof(_poll, "serialiseProofs", stakers[i]);
-        address[] memory proof = new address[](rawProof.length);
+        rawProof = getProofProperUsingStaker(_poll, "serialiseProofs", stakers[i]);
+        proofs[i] = new address[](rawProof.length);
         for(uint16 j=0; j < rawProof.length; j++) {
-            proofs[i][j] = bytesToAddress(bytes32ToBytes(rawProof[i]));
+            proofs[i][j]=(bytesToAddress(bytes32ToBytes(rawProof[i])));
         }
       }
-      return proofs;
+      return (proofs);
     }
 
     event gpResult(string, string, address, uint8, bytes32[]);
-    function setChickedIn (string memory _poll, string memory _fnName, address _stakerOrZero, uint8 _vt, bytes32[] memory data) public {
+    function setCheckedInNoStaker (string memory _poll, string memory _fnName, address _stakerOrZero, uint8 _vt, bytes32[] memory data) public {
       bytes32 hash = keccak256(abi.encodePacked(_poll, encodeFunctionName(_fnName), _vt));
       emit whassahash(abi.encodePacked(_poll, encodeFunctionName(_fnName), _vt));
       emit whassakeccack(hash);
       allTheData[hash] = data;
-      emit gpResult(_poll, _fnName, _stakerOrZero, _vt, getProof(_poll, _fnName, _stakerOrZero));
+      emit gpResult(_poll, _fnName, _stakerOrZero, _vt, getProofIgnoringStaker(_poll, _fnName, _stakerOrZero));
+    }
+
+    function setCheckedInWithStaker (string memory _poll, string memory _fnName, address _stakerOrZero, uint8 _vt, bytes32[] memory data) public {
+      bytes32 hash = keccak256(abi.encodePacked(_poll, encodeFunctionName(_fnName), _stakerOrZero, _vt));
+      emit whassahash(abi.encodePacked(_poll, encodeFunctionName(_fnName), _stakerOrZero, _vt));
+      emit whassakeccack(hash);
+      allTheData[hash] = data;
+      emit gpResult(_poll, _fnName, _stakerOrZero, _vt, getProofProperUsingStaker(_poll, _fnName, _stakerOrZero));
     }
 
     function set (string memory _poll, string memory _fnName, address _stakerOrZero, uint8 _vt, bytes32[] memory _data) public {

@@ -270,8 +270,13 @@ function checkWithABI(currentFunc, functionName, args, resolve, reject) {
         } else if ((inputType === "string" || inputType.substr(0, 5) === "bytes") && !inputType.endsWith(']')) {
             // Nothing to do here bz everything is acceptable
             rv.push(callValue);
-        } else if (inputType.endsWith(']'))
-            rv.push(JSON.parse(callValue));   //Hacky! will work only for exact format ["v4l1dD4t4",0xetc], will not sanity check contents, etc..
+        } else if (inputType.endsWith(']')) {
+            console.log('Will parse:',callValue);
+            rv.push( Array.isArray(callValue)
+                      ? callValue
+                      : JSON.parse(callValue)   //Hacky! will work only for exact format ["v4l1dD4t4",0xetc], will not sanity check contents, etc..
+            );
+          }
     });
     resolve({rv, outputs: currentFunc.outputs });
 }
@@ -329,10 +334,11 @@ export function callTransaction(functionName, args) {
                 IMPLEMENTATION_INSTANCE.methods[functionName](...rv)
                     .call({from: OWN_ADDRESS})
                     .then(result => {
+                        console.log(result);
                         unpackRVs (result, outputs);
                         resolve(result);
                     })
-                    .catch(reject);
+                    .catch(e=>{console.log(e);reject(e)});
 
             })
             .catch(err => {
@@ -345,7 +351,7 @@ export function sendTransaction(functionName, args) {
     return new Promise((resolve, reject) => {
         checkFunctionFormatting(functionName, args)
             .then(({rv, output}) => {
-                console.log(`Send to:`,IMPLEMENTATION_INSTANCE);
+                console.log(`Send to (${functionName}):`,IMPLEMENTATION_INSTANCE);
                 console.log('got back from checkFF ready to send:',{rv, output});
                 IMPLEMENTATION_INSTANCE.methods[functionName](...rv)
                     .send({from: OWN_ADDRESS})

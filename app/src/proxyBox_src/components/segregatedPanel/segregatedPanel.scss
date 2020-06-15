@@ -1,5 +1,4 @@
 
-
 .form-heading{
   h1{
     text-transform: capitalize;
@@ -17,8 +16,9 @@
 
   .function-form{
 
-
     h3.function-name{
+      max-width: 95vw;
+
       span{
         font-style: italic;
       }

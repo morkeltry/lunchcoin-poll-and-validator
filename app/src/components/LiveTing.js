@@ -147,6 +147,8 @@ const LiveEvent = props => {
     console.log({_poll: pollUrl, _newProof: ownProof, _impersonatedStaker });
     sendTransaction('addProof', {_poll: pollUrl, _newProof: ownProof, _impersonatedStaker })   // ownAddy is hack for demo - validator will be more complex than this!
       .then(response=>{
+        let getproofsAsAddressesIsOK = false;
+        if (getproofsAsAddressesIsOK)
         callTransaction('getproofsAsAddresses', {_poll : pollUrl})
           .then(response=>{
             console.log(response);
@@ -388,7 +390,7 @@ return(<>
                 <div className="">Check in your friends</div>
                 <form>
                   { stakers.map((staker,idx)=>
-                    <div>
+                    <div key={staker}>
                       <span className="address42">
                         { staker }
                       </span>
@@ -397,7 +399,7 @@ return(<>
                         selected= { ownProof[idx] }
                         onClick= {()=>{
                           ownProof[idx] = !ownProof[idx];
-                          setOwnProof(ownProof);
+                          setOwnProof( ownProof.map((tick,idx)=>tick&&stakers[idx]).filter(Boolean) );
                         }}
                       />
                     </div>
