@@ -34,10 +34,11 @@ contract TokenStorage  is Ownable{
       uint8 minParticipants;
       timeRange eventTime;
       mapping (address => stake) staked;
-      mapping (address => bytes32[]) committedProofs;
+      mapping (address => int16) ownProofIndex;           // 1-indexed: ownProofIndex[0] = nothing there.
     }
 
     // shared across contracts
+    mapping (address => uint) rep;
     mapping (bytes32 => bytes32[]) allTheData;
     mapping (bytes32 => Poll) pollData;
     mapping (bytes32 => bool) resultsCache;

@@ -102,7 +102,6 @@ export function connectToWeb3() {
                       ValidatorAddress
                     });
                 });
-
             });
         });
     });
@@ -192,6 +191,7 @@ export async function getImplementationFunctions() {
             objectToBeAppended.outputs = ele.outputs.map(e=>e.type);
 
             objectToBeAppended["mutates"] = ele.stateMutability === "nonpayable" || ele.stateMutability === "payable";
+            objectToBeAppended["returns"] = !!ele.outputs.length;
             objectToBeAppended["args"] = argsObject;
 
             rv.push(objectToBeAppended);
@@ -298,7 +298,7 @@ function unpackRVs (result, outputs) {
 export function getFromStorage(storageName, idx) {
   return new Promise((resolve, reject) => {
     const args= (idx===undefined ? undefined : {'':idx})
-    
+
     console.log('getFromStorage',storageName, idx);
     console.log(('args',args));
 
@@ -346,7 +346,7 @@ export function sendTransaction(functionName, args) {
         checkFunctionFormatting(functionName, args)
             .then(({rv, output}) => {
                 console.log(`Send to:`,IMPLEMENTATION_INSTANCE);
-                console.log('got:',{rv, output});
+                console.log('got back from checkFF ready to send:',{rv, output});
                 IMPLEMENTATION_INSTANCE.methods[functionName](...rv)
                     .send({from: OWN_ADDRESS})
                     .then(result => {
@@ -373,3 +373,11 @@ export function switchTo(address) {
     })
 
 }
+
+export const getDeets = ()=> ({
+  NETWORK_ID,
+  ProxyAddress, PollAddress, ValidatorAddress,
+  ProxyABI, PollABI, ValidatorABI,
+  ProxyInstance, PollInstance, ValidatorInstance,
+  IMPLEMENTATION_ABI, IMPLEMENTATION_ADDRESS, IMPLEMENTATION_INSTANCE,
+})

@@ -16,12 +16,11 @@ const showtimeify = text=>
   text ? `[${text.replace(/ /g,'_')}]` : text ;
 
 const InfoModal = props => {
-return props.modalIsForm
-  ? <InfoModal {...props} />
-  : (
-    <div className={'modal'}>
+return (
+    <div className={'modal info-modal'}>
+      INFO MODAL here yo...
     </div>
-    )
+  )
 }
 
 export default InfoModal;

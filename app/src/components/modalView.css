@@ -1,9 +1,37 @@
-.modal {
+.modal-form {
   position: fixed;
-  height: 85vh;
+  height: 87vh;     /* NB header text size is in vw => variable :/ */
   width: 92vw;
-  top: 7.5vh;
+  top: 10vh;
   left: 4vw;
-  background-color: #624a;
+  padding : 6vh 4.5vh;
+  background-color: #624e;
+  /* border: 1.5vw solid #936e; */
+  box-shadow: 0 0 5px #936e, 0 0 10px #936e, 0 0 15px #fff, 0 0 20px #FF1177, 0 0 35px #FF1177, 0 0 40px #FF1177, 0 0 50px #FF1177, 0 0 75px #FF1177;
+  box-shadow:inset 0 0 5px #936e, 0 0 10px #936e, 0 0 20px #FF1177, 0 0 35px #FF1177, 0 0 40px #FF1177, 0 0 50px #FF1177, 0 0 75px #FF1177;
+  border-radius: 5vw;
   z-index: 5;
+}
+
+.modal-form form {
+  height: 100%;
+}
+
+.modal-button  {
+  position: absolute;
+  bottom: 20vh;          /*  height of .logo-section */
+  background-color: #8d3;
+  font-size : 4vh;
+  width : 80%;
+  left: 10%;
+}
+
+.modal-button__form-button {
+
+}
+
+.modal-form button:active {
+  color : #000;
+  position: absolute;
+  bottom : 23vh;
 }

@@ -1,6 +1,7 @@
 import React from 'react';
 
 import cN from 'classnames';
+import Media from 'react-media';
 
 // import {  } from "./";
 // import {  } from "./";
@@ -16,15 +17,23 @@ const showtimeify = text=>
   text ? `[${text.replace(/ /g,'_')}]` : text ;
 
 const Header = props => {
+  // let { narrowBreak } = props;
 
-  return (
-    <div className={'header'}>
+  return (<>
+    <div className={ cN('header') }>
       <a href={ props.pollUrl || '#' }>
-        <h1 className="align-centre" >
-          { showtimeify(props.pollName) }
-        </h1>
+        <Media queries={{ small: "(max-width: 599px)" }}>
+          {matches =>
+            matches.small
+              ? <h1 className="align-centre narrow-break" >
+                  { showtimeify(props.pollName) }
+                </h1>
+              : <h1 className="align-centre" >
+                  { showtimeify(props.pollName) }
+                </h1>
+          }
+        </Media>
       </a>
-
       <div className="bar-horiz" >
       </div>
 
@@ -34,7 +43,7 @@ const Header = props => {
         </span>
       </div>
     </div>
-  )
+  </>)
 }
 
 export default Header;

@@ -56,7 +56,7 @@ const AdminPanel = props => {
     }).then(implementationFunctions => {
       console.log(implementationFunctions);
       implementationFunctions.forEach(func => {
-        if (func.mutates) {
+        if (!func.returns) {
           tempWrite.push(func);
         } else {
           tempRead.push(func);
@@ -88,6 +88,7 @@ const AdminPanel = props => {
   }
 
   return (
+    <div className='admin-panel'>
       <Container fluid={"true"}>
         <Navbar expand="lg">
 
@@ -162,6 +163,7 @@ const AdminPanel = props => {
             </Row>
         )}
       </Container>
+    </div>
   );
 };
 

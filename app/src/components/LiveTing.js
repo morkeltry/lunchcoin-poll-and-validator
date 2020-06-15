@@ -1,10 +1,12 @@
 import React, { useState, useEffect } from 'react';
+import cN from 'classnames';
 
 import Header from "./Header";
 import Section from "./Section";
 import InfoModal from "./InfoModal";
 import FormModal from "./FormModal";
 import LogoBottom from "./LogoBottom";
+import AdminLogger from "./AdminLogger";
 
 import "../App.scss";
 import './checkInView.css';
@@ -32,6 +34,7 @@ const LiveEvent = props => {
   const [repStaked, setRepStaked] = useState();
   const [repEverStaked, setRepEverStaked] = useState();
   const [venueCost, setVenueCost] = useState(0);
+  const [venuePot, setVenuePot] = useState(0);
   const [youPaidForVenue, setYouPaidForVenue] = useState(0);
   const [mismatchedProofs, setMismatchedProofs] = useState([]);
   const [repWas, setRepWas] = useState(0);
@@ -41,7 +44,6 @@ const LiveEvent = props => {
   const [validator1PeerCheckedIn, setValidator1PeerCheckedIn] = useState([[ OWN_ADDRESS, true ]]);
 
   const proofMismatchMessage = ()=> 'attendees are not in your check-in proof!'
-
 
 // ----------------------- functions for useEffect
 
@@ -86,6 +88,12 @@ const LiveEvent = props => {
         setYouPaidForVenue(response);
       })
       .catch(err=>{console.log('err:',err);});
+    getFromStorage('pollData', pollUrl)
+      .then(response=>{
+        console.log('getFromStorage: pollData(pollUrl)',response);
+        setVenueCost(response.venueCost);
+        setVenuePot(response.venuePot);
+      });
     // callTransaction('', {_poll : pollUrl})
     //   .then(response=>{
     //     console.log(response);
@@ -106,6 +114,7 @@ const LiveEvent = props => {
     //           .sort( byStartEndSort )
     //       );
     //     });
+
     //     resolve();
     // })))
     // .then(async ()=> {
@@ -126,9 +135,17 @@ const LiveEvent = props => {
 
 // ----------------------- chain access functions (other than those above for useEffect)
 
-  const submitProof = ()=> {
+  // NB proof (_newProof) will eventually be more complex than an addy;
+  // NB _impersonatedStaker is a temporary expedient for testing which will be removed
+  const submitProof = ev=> {
+    // ev.preventDefault();
+    // const _newProof; // not!!
+    const _newProof = ownProof;
+    const _impersonatedStaker = ownAddy;   // !!
     // Not yet implemented in contract!
-    sendTransaction('addProof', {_poll: pollUrl, addProof: ownAddy })   // ownAddy is hack for demo - validator will be more complex than this!
+    setModalView(null);
+    console.log({_poll: pollUrl, _newProof: ownProof, _impersonatedStaker });
+    sendTransaction('addProof', {_poll: pollUrl, _newProof: ownProof, _impersonatedStaker })   // ownAddy is hack for demo - validator will be more complex than this!
       .then(response=>{
         callTransaction('getproofsAsAddresses', {_poll : pollUrl})
           .then(response=>{
@@ -141,22 +158,24 @@ const LiveEvent = props => {
 
 
   const closeCheckin = ()=> {
-    console.log('Click!');
     sendTransaction('closeProofsWindow', {_poll : pollUrl })
       .then(response=>{
         console.log('closeProofsWindow',response);
         getFromStorage('pollData', pollUrl)
         .then(response=>{
           console.log('getFromStorage: pollData(pollUrl)',response);
-        // const isClosed = response.summat;
-        // setCheckInIsClosed(isClosed);
+          setCheckInIsClosed(response.proofsWindowClosed);
         });
       });
   }
 
+  const emptyBytes32 = '0x00';
+ // refundStake (string memory _poll, bytes32 _reveal)
+
   const claimRep = ()=> {
     // Not yet implemented in contract!
-    sendTransaction('', {_poll: pollUrl, _staker: ownAddy })
+    setSentTransaction([Date.now(),'reclaim rep']);
+    sendTransaction('refundStake', {_poll: pollUrl, _reveal: emptyBytes32 })
       .then(response=>{
         callTransaction('totalRepStaked', {_poll: pollUrl, _staker: ownAddy })
           .then(response=>{
@@ -168,8 +187,8 @@ const LiveEvent = props => {
 
   const doVenueRefund = ()=>{
     setModalView('venue refund');
-    setSentTransaction([Date.now(),'venue refund'])
-    sendTransaction('refundVenueStakes', {_poll: pollUrl} )
+    setSentTransaction([Date.now(),'venue refund']);
+    sendTransaction('refundVenueStakes', {_poll: pollUrl } )
       .then (response => {
         // ignore response.transactionHash
         [0,250,500].forEach(ms=> {
@@ -243,10 +262,21 @@ const LiveEvent = props => {
       return result
     }
 
+    const asSubmit = fn=> ev=> {
+      ev.preventDefault();
+
+      console.log(ev);
+       // you're accessing the property `target` on a released/nullified synthetic event.
+       // This is set to null. If you must keep the original synthetic event around,
+       //  use event.persist().
+      fn (ev.formArgs);
+    }
+
+
 
 console.log((checkInCloses));
 console.log(checkInClosingIn(checkInCloses));
-return(
+return(<>
     <div className={'checkin-view'}>
 
         <Header
@@ -347,11 +377,11 @@ return(
         <LogoBottom/>
 
         { modalView &&
-            modalView==='check in'
+          ( modalView==='check in'
             ? <FormModal
                 modal = { modalView }
                 clearModal= { ()=>{ setModalView(null) } }
-                submit= { submitProof }
+                submit= { submitProof  /*NB not yet implemented in FormModal - see submit below */ }
               >
                 <div>{ ownAddy }</div>
                 <div className=""><span className="">Validator:</span><span className=""> Mutual Agreement</span></div>
@@ -373,7 +403,8 @@ return(
                     </div>
                   )}
                   <button
-                    onClick = { submitProof }
+                    className = { cN('modal-button', 'modal-button__form-button') }
+                    onClick = { asSubmit(submitProof) }
                   >
                     Check In
                   </button>
@@ -403,12 +434,16 @@ return(
 
               }
               </InfoModal>
+          )
         }
 
 
 
     </div>
-  )
+    { true &&
+      <AdminLogger { ...OWN_ADDRESS } />
+    }
+  </>)
 }
 
 export default LiveEvent;

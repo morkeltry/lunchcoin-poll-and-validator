@@ -56,6 +56,17 @@
   display: hidden
 }
 
+.admin-logger {
+  height: 30vh;
+  top: 100vh;
+}
+
+.admin-panel {
+  position: absolute;
+  height: 100%;
+  top: 130vh;
+}
+
 .function-form {
   margin-top: 5%;
   background-color: rgba(40, 34, 34, 0.06);

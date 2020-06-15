@@ -188,7 +188,7 @@ const FunctionForm = props => {
                 </div>
               ) : null}
               {error.length !== 0 ? (
-                <div className={"error"}>{error}</div>
+                <div className={"form-error"}>{error}</div>
               ) : null}
               {link.length !== 0 ? (
                 <div className={"link"}>Hash {link}</div>
