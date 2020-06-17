@@ -1,5 +1,6 @@
 import React, {useEffect, useState} from "react";
-import {connectToWeb3, getImplementationFunctions, getImplementationEvents, callTransaction, switchTo} from "../Web3/accessChain";
+import {connectToWeb3, getImplementationFunctions, getImplementationEvents,
+  callTransaction, myAccounts, setOwnAddy, switchTo} from "../Web3/accessChain";
 // import SegregatedPanel from "./segregatedPanel/SegregatedPanel";
 import Button from "react-bootstrap/Button";
 import Container from "react-bootstrap/Container";
@@ -32,12 +33,15 @@ const LunchcoinApp = props => {
   // events as in 'locations where humans gather by arrangement' will be known as 'polls',
   // except where the object name unambiguosuly could not refer to a computery event.
   const [events, setEvents] = useState(eventsObj);
+  const [caughtEvents, setCaughtEvents] = useState([]);
+  const [checkInIsClosed, setCheckInIsClosed] = useState(false);
   const [loadingStatus, setLoadingStatus] = useState(false);
   const [currentContractAddress, setCurrentContractAddress] = useState('');
   const [alternateContractAddress, setAlternateContractAddress] = useState('');
 
   const chainEventListeners = {
     getPoll : eventResponse => { console.log(eventResponse); },
+    proofsWindowClosed : eventResponse => { console.log('proofsWindowClosed', eventResponse); },
   }
 
   const getLocalCache =()=> {
@@ -146,7 +150,7 @@ const LunchcoinApp = props => {
       <Container fluid={"true"} className={"height-100vh"} >
         { currentPoll
           // ? <LiveEvent event={currentPoll} />
-          ? <LiveEvent pollUrl={currentPoll} />
+          ? <LiveEvent pollUrl={currentPoll} checkInIsClosed={true} x={'y'}/>
           : choosePoll
             ? livePolls.map((poll,idx)=>(
                 <Row>

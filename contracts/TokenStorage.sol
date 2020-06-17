@@ -1,4 +1,5 @@
-pragma solidity >=0.4.21 <0.6.0;
+pragma solidity ^0.5.7;
+pragma experimental ABIEncoderV2;
 
 import "openzeppelin-solidity/contracts/math/SafeMath.sol";
 import './Ownable.sol';
@@ -11,49 +12,81 @@ contract TokenStorage  is Ownable{
     using SafeMath for uint256;
 
     // Common storage structure for ALL contacts using this storage.
-    // Rename identifiers, eg to _, __, __ , etc. but retain types and order.
+    // _, __, __ , etc are unused in this contract, but must remain to occupy their slots.
 
-    // Access Modifier for Storage contract
     address internal _registryContract;
 
-    struct timeRange {
+    struct TimeRange {
       uint start;
       uint end;
     }
 
-    struct stake {
+    struct Stake {
       uint rep;
-      timeRange[] available;
+      TimeRange[] available;
       uint availabilityExpires;
+      mapping (address => uint) venueContribution;
     }
+
+    struct dibs {
+      address payer;
+      address recipient;
+      uint amount;
+    }
+
+
+
 
     struct Poll {
       address initiator;
       uint minStake;
       uint venueCost;
+      uint venuePot;
       uint8 minParticipants;
-      timeRange eventTime;
-      mapping (address => stake) staked;
-      mapping (address => int16) ownProofIndex;           // 1-indexed: ownProofIndex[0] = nothing there.
+      TimeRange eventTime;
+      bool proofsWindowClosed;
+      mapping (address => Stake) staked;
+      mapping (address => uint16) ownCheckInIndex;           // 1-indexed: ownCheckInIndex[s]==0 => nothing there.
+      dibs[] dibsCalled;
+    }
+
+
+    struct PollExternal {
+      address initiator;
+      uint minStake;
+      uint venueCost;
+      uint venuePot;
+      uint8 minParticipants;
+      uint8 participants;
+      TimeRange eventTime;
+      bool proofsWindowClosed;
+      // NB external view of Poll can never correctly represent ownCheckInIndex (a mapping to a dynamic array).
+      // Need to either make it indicative, or fixed size.
+
+      // getting arrays with web3 is weird. Possibly claims ABI error?
+      // bytes32[5][] cantremember;
+      // address[] provers;
+      // dibs[] dibsCalled;
     }
 
     // shared across contracts
-    mapping (address => uint) rep;
-    mapping (bytes32 => bytes32[]) allTheData;
-    mapping (bytes32 => Poll) pollData;
-    mapping (bytes32 => bool) resultsCache;
+    mapping (address => uint) __rep;
+    mapping (bytes32 => bytes32[]) __allTheData;
+    mapping (string => Poll) public __pollData;
+    mapping (bytes32 => bool) __resultsCache;
 
     // used only in Poll
-    mapping(uint8 => address) public __validators;
-    mapping(uint8 => string) public __validatorNames;
-    mapping(address => uint) public cashBalance;
+    mapping(uint8 => address) internal __validators;
+    mapping(uint8 => string) internal __validatorNames;
+    mapping(address => uint) internal __cashBalance;
     address __selfAddy ;
+
 
     // unused - previously for Storage Proxy
     //    mapping (address => bool) internal _allowedAccess;
 
     // used only in Validators
-    int flag;
+    mapping (address => uint16) __stakerPresentIn;
 
       // used for testing only - will be deleted.
       address __pollAddress = 0x9D26a8a5Db7dC10689692caF8d52C912958409CF;

@@ -12,20 +12,25 @@ import "../App.scss";
 import './checkInView.css';
 
 import { connectToWeb3, getImplementationFunctions, getImplementationEvents,
-  callTransaction, sendTransaction, getFromStorage } from "../Web3/accessChain";
+  callTransaction, sendTransaction, getFromStorage,
+  myAccounts, setOwnAddy } from "../Web3/accessChain";
 
 const LiveEvent = props => {
-  const { pollUrl } = props;
+  const { pollUrl, events,  } = props;
   if (!pollUrl)
     throw ('Attempted to render LiveEvent with pollUrl='+pollUrl);
-  let OWN_ADDRESS;
+  let OWN_ADDRESS = '0x000';
 
   const [modalView, setModalView] = useState(null);
+  const [burgerView, setBurgerView] = useState(false);
+  const [hideFunctions, setHideFunctions] = useState(true);
   const [pollName, setPollName] = useState('');
-  const [ownAddy, setOwnAddy] = useState(OWN_ADDRESS);
+  const [availableAccounts, setAvailableAccounts] = useState(['0x1234','0x5678']);
+  const [contractAddy, setContractAddy] = useState(OWN_ADDRESS);
+  const [ownAddy, setOwnAddyinComponent] = useState(OWN_ADDRESS);
   const [caughtEvents, setCaughtEvents] = useState([]);
   const [sentTransaction, setSentTransaction] = useState();
-  const [checkedIn, setCheckedIn] = useState(true);
+  const [checkedIn, setCheckedIn] = useState(false);
   const [checkInCloses, setCheckInCloses] = useState(Infinity);
   const [checkInIsClosed, setCheckInIsClosed] = useState(null);
   const [stakers, setStakers] = useState([]);
@@ -43,9 +48,16 @@ const LiveEvent = props => {
   // const [, set] = useState();
   const [validator1PeerCheckedIn, setValidator1PeerCheckedIn] = useState([[ OWN_ADDRESS, true ]]);
 
+// TODO: setCheckedIn setOwnProof setRepWas setInfoModalResult
+
   const proofMismatchMessage = ()=> 'attendees are not in your check-in proof!'
 
 // ----------------------- functions for useEffect
+
+  const setOwnAddyForApp = addy=> {
+    setOwnAddy(addy);
+    setOwnAddyinComponent(addy);
+  }
 
   const getLocalCache =()=> {
 
@@ -65,10 +77,12 @@ const LiveEvent = props => {
       .then(response=>{
         console.log('getproofsAsAddresses', response);
         setProofs(response);
-        if (response.includes(freshAddy))
+        if (response.includes(freshAddy))   // makes no sense with new structure.
           setCheckedIn(true);
       })
       .catch(err=>{console.log(err);});
+
+    // Instead get proof(OwnAddy) from storage
     callTransaction('getStakerAddresses', {_poll : pollUrl})
       .then(response=>{
         console.log('getStakerAddresses', response);
@@ -85,15 +99,27 @@ const LiveEvent = props => {
     callTransaction('totalVenueContribs', {_poll : pollUrl, _staker : freshAddy || ownAddy })
       .then(response=>{
         console.log('totalVenueContribs', response);
-        setYouPaidForVenue(response);
+        console.log(`Initial fetchandupdate gave setYouPaidForVenue= ${youPaidForVenue} (${response.total},${response[0]},${response})`);
+        setYouPaidForVenue(response.total || (Array.isArray(response) && (response[0])) || response);
       })
       .catch(err=>{console.log('err:',err);});
-    getFromStorage('pollData', pollUrl)
+    callTransaction('getPoll', {_poll : pollUrl })
       .then(response=>{
-        console.log('getFromStorage: pollData(pollUrl)',response);
+        console.log('getPoll', response);
+        console.log(`Initial fetchandupdate gave getPoll= ${youPaidForVenue} (${response.total},${response[0]},${response})`);
         setVenueCost(response.venueCost);
         setVenuePot(response.venuePot);
-      });
+        setCheckInIsClosed(response.proofsWindowClosed);
+      })
+      .catch(err=>{console.log('err:',err);});
+
+      // NB getFromStorage failing!
+    // getFromStorage('pollData', pollUrl)
+    //   .then(response=>{
+    //     console.log('getFromStorage: pollData(pollUrl)',response);
+    //     setVenueCost(response.venueCost);
+    //     setVenuePot(response.venuePot);
+    //   });
     // callTransaction('', {_poll : pollUrl})
     //   .then(response=>{
     //     console.log(response);
@@ -137,24 +163,26 @@ const LiveEvent = props => {
 
   // NB proof (_newProof) will eventually be more complex than an addy;
   // NB _impersonatedStaker is a temporary expedient for testing which will be removed
-  const submitProof = ev=> {
-    // ev.preventDefault();
-    // const _newProof; // not!!
+  const submitProof = ()=> {
     const _newProof = ownProof;
     const _impersonatedStaker = ownAddy;   // !!
     // Not yet implemented in contract!
     setModalView(null);
-    console.log({_poll: pollUrl, _newProof: ownProof, _impersonatedStaker });
     sendTransaction('addProof', {_poll: pollUrl, _newProof: ownProof, _impersonatedStaker })   // ownAddy is hack for demo - validator will be more complex than this!
       .then(response=>{
-        let getproofsAsAddressesIsOK = false;
+
+        // getfrom storage proofs(ownaddy)
+        //     setCheckedIn(true);
+
+        let getproofsAsAddressesIsOK = true;
         if (getproofsAsAddressesIsOK)
         callTransaction('getproofsAsAddresses', {_poll : pollUrl})
           .then(response=>{
-            console.log(response);
-            // setProofs
-            // setCheckedIn
-          });
+            console.log('setting CheckedIn');
+            setProofs(response);
+            setCheckedIn(true);
+          })
+          .catch(err=>{ console.log(`getproofsAsAddresses failed`, err); });
       });
   }
 
@@ -163,9 +191,9 @@ const LiveEvent = props => {
     sendTransaction('closeProofsWindow', {_poll : pollUrl })
       .then(response=>{
         console.log('closeProofsWindow',response);
-        getFromStorage('pollData', pollUrl)
+        callTransaction('isProofsWindowClosed', {_poll : pollUrl })
         .then(response=>{
-          console.log('getFromStorage: pollData(pollUrl)',response);
+          console.log('isProofsWindowClosed: pollData(pollUrl)',response);
           setCheckInIsClosed(response.proofsWindowClosed);
         });
       });
@@ -179,11 +207,13 @@ const LiveEvent = props => {
     setSentTransaction([Date.now(),'reclaim rep']);
     sendTransaction('refundStake', {_poll: pollUrl, _reveal: emptyBytes32 })
       .then(response=>{
+        setTimeout(()=>{
         callTransaction('totalRepStaked', {_poll: pollUrl, _staker: ownAddy })
           .then(response=>{
             console.log(response);
             setRepStaked( response )
           })
+        },500)
       })
   }
 
@@ -213,10 +243,11 @@ const LiveEvent = props => {
     getLocalCache();
     fetchOnlinePoll(pollUrl);
     connectToWeb3().then(addressObj => {
-      console.log(addressObj)
-      console.log('which one is OWN_ADDRESS, which is IMPLEMENTATION_ADDRESS?' );
-
-      setOwnAddy(addressObj.IMPLEMENTATION_ADDRESS)
+      console.log(addressObj);
+      console.log('which one is ownAddy, which is IMPLEMENTATION_ADDRESS?' );
+      setOwnAddyForApp(addressObj.OWN_ADDRESS);
+      setContractAddy(addressObj.IMPLEMENTATION_ADDRESS);
+      setAvailableAccounts(addressObj.availableAccounts);
       return addressObj.IMPLEMENTATION_ADDRESS
     }).then(addy=> {
       fetchAndUpdate(addy);
@@ -236,8 +267,10 @@ const LiveEvent = props => {
         { end : resp.end ? toUnixTime(resp.end) : resp.end },
       );
 
-    const niceNum = (num=0) =>
-      (Math.round(num*1000)/1000).toString() ;
+    const niceNum = num=>
+      (num || num===0)
+        ? (Math.round(num*1000)/1000).toString()
+        : '_' ;
 
     const niceTime = (time=498705720) =>
       time < Infinity
@@ -264,6 +297,11 @@ const LiveEvent = props => {
       return result
     }
 
+    const unpackStringResponseToNum = response=>
+      typeof response==='string)'
+        ? Number(response)
+        : response ;
+
     const asSubmit = fn=> ev=> {
       ev.preventDefault();
 
@@ -274,23 +312,39 @@ const LiveEvent = props => {
       fn (ev.formArgs);
     }
 
+    const accountSetters = (availableAccounts,n)=>{
+      const result = {};
+      const accounts = new Array(n)
+        .fill()
+        .map((_,idx)=> availableAccounts[idx])
+        .forEach(address=>{ result[address]=()=>{ setOwnAddyForApp(address); console.log(address); } }) ;
+      return result
+    }
 
-
-console.log((checkInCloses));
-console.log(checkInClosingIn(checkInCloses));
 return(<>
     <div className={'checkin-view'}>
 
         <Header
-          live={true}
-          pollName={pollName}
-          pollUrl={pollUrl}
+          live={ true }
+          pollName={ pollName }
+          pollUrl={ pollUrl }
+          burger= {{
+            show : true,
+            expand : burgerView,
+            setBurgerView,
+            menuItems: {
+              'Hide/Show all functions' : ()=>{ console.log('hide:',!hideFunctions); setHideFunctions(!hideFunctions); },
+              ...accountSetters(availableAccounts,4),
+              'Fetch from chain' : ()=>{ fetchAndUpdate(); },
+              'Hide Menu' : ()=>{ setBurgerView(false); }
+            }
+          }}
         />
 
         <Section
           id='checkin'
-          buttonSuper= { `You are ${ checkedIn ? 'not ' : '' }checked in` }
-          buttonText= { checkedIn ? 'Check In' : 'Update check-in proofs' }
+          buttonSuper= { `You are ${ checkedIn ? '' : 'not ' }checked in` }
+          buttonText= { checkedIn ? 'Update check-in proofs' : 'Check In' }
           buttonAction= { ()=>{ setModalView('check in') } }
           buttonDisabled= { checkInIsClosed || !checkInClosingIn(checkInCloses) }
         >
@@ -298,13 +352,13 @@ return(<>
             <span className="address42"> { ownAddy } </span> (you)
           </div>
           <div className="strong right-align">
-            staked <span className="hype hanging"> { niceNum(repStaked) } Rep </span>
+            staked <span className="hype hanging"> { niceNum(repStaked/1000) } Rep </span>
           </div>
         </Section>
 
         <div className="full-width thin-section">
-          { niceTime(checkInCloses)
-            ? `Hurry Hurry, check-in closing, yo! (${ niceTime(checkInCloses) })`
+          { !checkInIsClosed && checkInClosingIn(checkInCloses)
+            ? `${checkInCloses<5*60000 ? 'Hurry Hurry, check-in closing, yo!' : 'Check-in will close:'} ${ niceTime(checkInCloses) }`
             : 'Check-in is closed'
           }
 
@@ -331,9 +385,9 @@ return(<>
         <Section
           id='close-checkin'
           buttonSuper= { checkInClosingIn(checkInCloses) ? 'Close check-in cannot be undone' : '' }
-          buttonText= { 'Close check-in' }
+          buttonText= { 'Close check-in early' }
           buttonAction= { closeCheckin }
-          buttonDisabled= { null && (checkInIsClosed || proofs.length < stakers.length )}
+          buttonDisabled= { checkInIsClosed || !checkInClosingIn(checkInCloses) || proofs.length < stakers.length }
           buttonHidden= { !checkInClosingIn(checkInCloses) }
         >
           <div className="left-align">
@@ -354,14 +408,14 @@ return(<>
           sectionHidden= { !repEverStaked }
         >
           <div className="strong right-align">
-            You staked <span className="hype hanging"> { niceNum(repStaked) } Rep </span>
+            You staked <span className="hype hanging"> { niceNum(repStaked/1000) } Rep </span>
           </div>
         </Section>
 
         <Section
           id='venue-refund'
           buttonText= { venueRefundDue(venueCost,youPaidForVenue)
-            ? `Refund ${niceNum(venueRefundDue(venueCost,youPaidForVenue))} TT-DAI`
+            ? `Refund ${niceNum(venueRefundDue(venueCost,youPaidForVenue)/1000)} TT-DAI`
             : `We're all square 😎`   // U+1F60E
           }
           buttonAction= { venueRefundDue(venueCost,youPaidForVenue) && doVenueRefund }
@@ -369,10 +423,10 @@ return(<>
           sectionHidden= { !youPaidForVenue }
         >
           <div className="centre-align">
-            Venue cost was { niceNum(venueCost) } TT-DAI
+            Venue cost was { niceNum(venueCost)/1000 } TT-DAI
           </div>
           <div className="centre-align">
-            You paid <span className="hype hype-small">{ niceNum(youPaidForVenue) } TT-DAI</span>
+            You paid <span className="hype hype-small">{ niceNum(youPaidForVenue)/1000 } TT-DAI</span>
           </div>
         </Section>
 
@@ -430,7 +484,7 @@ return(<>
               </>
               : <>
                 <div>Your rep was: {repWas} </div>
-                <div>+ stake({repStaked}) X {repMultiplier} = {repStaked*repMultiplier} </div>
+                <div>+ stake({repStaked/1000}) X {repMultiplier} = {repStaked/1000*repMultiplier} </div>
                 <div>Your rep is now: {infoModalResult} </div>
               </>
 
@@ -443,7 +497,7 @@ return(<>
 
     </div>
     { true &&
-      <AdminLogger { ...OWN_ADDRESS } />
+      <AdminLogger { ...ownAddy } />
     }
   </>)
 }

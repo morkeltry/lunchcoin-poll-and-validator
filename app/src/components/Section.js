@@ -16,9 +16,8 @@ const Section = props => {
   const { buttonText, buttonSuper, buttonStyles, buttonAction,
     buttonDisabled, buttonHidden, sectionHidden,
     error, id,
+    children } = props;
 
-  children } = props;
-console.log(id);
   return(
     <div className={ cN(
         'section',

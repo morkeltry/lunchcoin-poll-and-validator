@@ -1,6 +1,8 @@
 export const globalDefaults = {
   _poll : 'doodle.com/poll/h7phtw5u2thhz9k4', poll : 'doodle.com/poll/h7phtw5u2thhz9k4',
   _vt : 1, vt : 1,
+  _newProof : '[]',
+  _fnName : 'serialiseStakers'
 
 };
 
@@ -24,20 +26,48 @@ export const byFuncDefaults = {
   retrieve : {
     _fnName : 'serialiseProofs',
   },
+  pollData : {
+    '' : 'doodle.com/poll/h7phtw5u2thhz9k4'
+  },
+  addStaker : {
+    '' : ''
+  },
+  checkIn : {
+    _newProof : '[]'
+  },
+  addProof : {
+    _newProof : '[]'
+  },
+  addProofSelf : {
+    _newProof : '[]'
+  },
+  setRep : {
+    _rep : 4000
+  },
+  addStake : {
+    _rep : 1500,
+    _venueContribution : 15000,
+    _venueContributionFor : '0xaB4367Bd45a8812996B0d34a8141326235FBAE87'
+  },
+  getProofProperUsingStaker : {
+    _fnName : 'serialiseProofs'
+  },
 };
 
 const dontShow = {
 
 };
 [
+  'doEmit', 'setFlag', 'setCheckedInNoStaker', 'flag', 'getFlag', 'getProofIgnoringStaker', ' deserialiseStakers',
+  'set',  'get', 'setByHash',  'getByHash', 'getProofEmitHashesOnlyWithStaker',
   'validatorNames', 'validators', 'setString', 'justSetStuff',
-'serialiseStakers', 'serialiseProofs', '', '',
-'proofType', 'bytesToAddress', 'toString', 'splitToAddresses',
-'bytes32ToBytes', 'bytesToBytes32', 'bytes32ToString', 'bytes32ArrayToString',
-'string32ToBytes32', 'stringToBytes32Array', 'bytesSplit32',
-'bytesSplit4', 'bytesToBytes4',
-'encodeFunctionName', 'storeResult',
-'xcValidate', 'crossContractCall', 'crossContractValidateCall', 'callValidator_MututalAgreement'
+  'serialiseStakers', 'serialiseProofs', 'deserialiseStakers',
+  'proofType', 'bytesToAddress', 'toString', 'splitToAddresses',
+  'bytes32ToBytes', 'bytesToBytes32', 'bytes32ToString', 'bytes32ArrayToString',
+  'string32ToBytes32', 'stringToBytes32Array', 'bytesSplit32',
+  'bytesSplit4', 'bytesToBytes4',
+  'encodeFunctionName', 'storeResult',
+  'xcValidate', 'crossContractCall', 'crossContractValidateCall', 'callValidator_MututalAgreement'
 ].forEach (name => {dontShow[name]=true;} );
 
 export const clearAfterSubmit = {

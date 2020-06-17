@@ -3,7 +3,7 @@ import React from 'react';
 import cN from 'classnames';
 import Media from 'react-media';
 
-// import {  } from "./";
+import Burger from "./Burger";
 // import {  } from "./";
 // import {  } from "./";
 // import {  } from "./";
@@ -18,6 +18,7 @@ const showtimeify = text=>
 
 const Header = props => {
   // let { narrowBreak } = props;
+  const { burger } = props;
 
   return (<>
     <div className={ cN('header') }>
@@ -36,6 +37,13 @@ const Header = props => {
       </a>
       <div className="bar-horiz" >
       </div>
+
+      <Burger
+        show={ true }
+        expand={ burger.expand }
+        toggleExpand= { ()=>{ burger.setBurgerView(!props.expand); }}
+        menuItems= { burger.menuItems }
+      />
 
       <div>
         <span className={ cN(props.live && 'live', 'align-centre') } >

@@ -4,6 +4,16 @@ export const globalDefaults = {
 
 };
 
+/////////////////////////////////////////////////////////////////////////
+
+
+//       NOT THIS FILE!!!!       //
+
+
+/////////////////////////////////////////////////////////////////////////
+
+
+
 const twelveZeroes = "000000000000000000000000";
 
 const owner = "0x6AdFCEaDe0262fF9edf074BfD6834520B7999A92"
@@ -31,6 +41,8 @@ const dontShow = {
 
 };
 [
+  'doEmit', 'setFlag', 'setCheckedInNoStaker', 'flag', 'getFlag', 'getProofIgnoringStaker', ' deserialiseStakers',
+  'set',  'get', 'setByHash',  'getByHash', 'getProofEmitHashesOnlyWithStaker',
   'validatorNames', 'validators', 'setString', 'justSetStuff',
   'serialiseStakers', 'serialiseProofs', '', '',
   'proofType', 'bytesToAddress', 'toString', 'splitToAddresses',

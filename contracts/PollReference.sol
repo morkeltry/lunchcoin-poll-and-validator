@@ -43,7 +43,6 @@ contract PollReference {
     mapping(uint8 => string) public validatorNames;
     mapping(address => uint) public cashBalance;
     address selfAddy ;
-    int flag;
 
     // unused - previously for Storage Proxy
     //    mapping (address => bool) internal _allowedAccess;
@@ -86,14 +85,6 @@ contract PollReference {
 
     function getOwner() public view returns (address) {
       return owner;
-    }
-
-    function getFlag() public view returns (int) {
-      return flag;
-    }
-
-    function setFlag(int _flag) public {
-      flag = _flag;
     }
 
     function() external payable {

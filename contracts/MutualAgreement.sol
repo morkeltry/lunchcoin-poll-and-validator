@@ -31,6 +31,9 @@ contract MutualAgreement {
       uint amount;
     }
 
+
+
+
     struct Poll {
       address initiator;
       uint minStake;
@@ -40,9 +43,10 @@ contract MutualAgreement {
       TimeRange eventTime;
       bool proofsWindowClosed;
       mapping (address => Stake) staked;
-      mapping (address => uint16) ownCheckInIndex;           // 1-indexed: ownCheckInIndex[0] = nothing there.
+      mapping (address => uint16) ownCheckInIndex;           // 1-indexed: ownCheckInIndex[s]==0 => nothing there.
       dibs[] dibsCalled;
     }
+
 
     struct PollExternal {
       address initiator;
@@ -52,6 +56,7 @@ contract MutualAgreement {
       uint8 minParticipants;
       uint8 participants;
       TimeRange eventTime;
+      bool proofsWindowClosed;
       // NB external view of Poll can never correctly represent ownCheckInIndex (a mapping to a dynamic array).
       // Need to either make it indicative, or fixed size.
 
@@ -73,8 +78,6 @@ contract MutualAgreement {
     mapping(address => uint) internal __cashBalance;
     address __selfAddy ;
 
-
-    int160 public flag;
 
     // unused - previously for Storage Proxy
     //    mapping (address => bool) internal _allowedAccess;
@@ -133,6 +136,16 @@ contract MutualAgreement {
         // constructed = 1;
     }
 
+    function initialiseDemo (string memory _poll) public {
+
+      pollData[_poll].minStake = 1;
+      pollData[_poll].venueCost = 45000;
+      pollData[_poll].venuePot = 11250;
+      // pollData[_poll].staked[msg.sender].rep = 1;
+      // pollData[_poll].staked[msg.sender].venueContribution =
+      // pollData[_poll].staked[msg.sender].venueContribution[msg.sender] = 15000;
+    }
+
     function _fallback() internal {
         bytes memory input = msg.data;
 
@@ -165,34 +178,31 @@ contract MutualAgreement {
       emit logStuff (message);
     }
 
-    function getFlag() public view returns (int) {
-      return flag;
-    }
-
-    function setFlag(int160 _flag) public {
-      flag = _flag;
-    }
-
     function getPoll(string memory _poll) public view returns (
-        address initiator,
-        uint stake,
-        uint venueCost,
-        uint8 minParticipants,
-        uint8 participants,
-        uint start,
-        uint end,
-        bytes32[5][] memory ownCheckInIndex ) {
+      address initiator,
+      // uint stake,
+      // uint venueContribution,
+      uint venueCost,
+      uint8 minParticipants,
+      uint start,
+      uint end,
+      bool proofsWindowClosed,
+      // dibs[] memory dibsCalled,
+      bytes32[5][] memory ownCheckInIndex ) {
 
-        // initiator = new address(0x0);
-        stake = 1000;
-        venueCost = 40000;
-        minParticipants = 3;
-        participants = 3;
-        start = 1591535900000;
-        end = 1591536000000;
+      initiator = pollData[_poll].initiator;
+      venueCost = pollData[_poll].venueCost;
+      minParticipants = pollData[_poll].minParticipants;
+      proofsWindowClosed = pollData[_poll].proofsWindowClosed;
+      // start = pollData[_poll].eventTime.start;
+      // end = pollData[_poll].eventTime.end;
+      start = 1591535900000;
+      end = 1591536000000;
+      // dibsCalled = pollData[_poll].dibsCalled;
+      // stake = pollData[_poll].staked[_staker].rep;
+      // venueContribution = pollData[_poll].staked[_staker].venueContribution[_staker];
 
-
-      return (initiator, stake, venueCost, minParticipants, participants, start, end, ownCheckInIndex);
+      return (initiator, venueCost, minParticipants, start, end, proofsWindowClosed, ownCheckInIndex);
     }
 
     function getPollStruct(string memory _poll) public view returns (PollExternal memory returnPoll) {
@@ -295,7 +305,7 @@ contract MutualAgreement {
       if (_stakerOrZero == address(0)) {
         hash = keccak256(abi.encodePacked(_poll, encodeFunctionName(_fnName), _vt));
       } else {
-        hash = keccak256(abi.encodePacked(_poll, encodeFunctionName(_fnName), _stakerOrZero, _vt));
+        hash = keccak256(abi.encodePacked(_poll, encodeFunctionName(_fnName), bytes20(_stakerOrZero), _vt));
       }
       bytes32[] memory data = new bytes32[](_data.length);
       for(uint16 i=0; i < _data.length; i++) {
@@ -319,7 +329,7 @@ contract MutualAgreement {
       // if (idx==0) {
       //   idx = uint16(getStakerAddresses(_poll ).length);
       //   add (_poll, "serialiseProofs", vType, _newProof);
-      //   pollData[_poll].ownCheckInIndex[sender] = idx;    // would be an off-by-one but ownIndex is 1-indexed ;)
+      //   pollData[_poll].ownCheckInIndex[sender] = idx+1;    // would be an off-by-one but ownIndex is 1-indexed ;)
       //   return;
       // }
       // proofs[idx] = bytes32(bytes20(_newProof));
@@ -336,13 +346,14 @@ contract MutualAgreement {
         proofB32[i]=bytes32(bytes20(_newProof[i]));
       }
       set ( _poll, "serialiseProofs", sender, vType, proofB32);
+      pollData[_poll].ownCheckInIndex[sender] = idx+1;
     }
 
     event proofUpdated(address);
     function addProof (string memory _poll, address _impersonatedStaker, address[] memory _newProof) public {
       address sender = _impersonatedStaker;   //  should be msg.sender
       bytes32[] memory proofB32 = new bytes32[](_newProof.length);
-      bytes32 hash = keccak256(abi.encodePacked(_poll, encodeFunctionName("serialiseProofs"), _impersonatedStaker, vType));
+      bytes32 hash = keccak256(abi.encodePacked(_poll, encodeFunctionName("serialiseProofs"), bytes20(_impersonatedStaker), vType));
       for (uint16 i=0; i<_newProof.length; i++) {
         proofB32[i]=bytes32(bytes20(_newProof[i]));
       }
@@ -369,26 +380,77 @@ contract MutualAgreement {
       // This policy may be better left to differ between validators.
     }
 
+
+    function reopenProofsWindow (string memory _poll) public {
+      pollData[_poll].proofsWindowClosed = false;
+    }
+
+    function isProofsWindowClosed (string memory _poll) public view returns (bool ) {
+      return pollData[_poll].proofsWindowClosed;
+    }
+
+
+    function setRep (string memory _poll, address _staker, uint _rep) public {
+      pollData[_poll].staked[_staker].rep = _rep;
+    }
+
+    function getRep (string memory _poll, address _staker) public view returns (uint) {
+      return pollData[_poll].staked[_staker].rep;
+    }
+
+
+    event stakeNotAccepted(address, string);
+    event disreputableStakerIgnored(address, string);
+    event staked(address, string, uint);
+    // TODO: accept one TimeRange for all stakes.
+    // TODO: accept TimeRanges per stake (need to change up the data structures!)
+    function addStake (string memory _poll, address _impersonatedStaker, uint _rep, uint _venueContribution, address _venueContributionFor ) public {
+      address sender = _impersonatedStaker;
+      if (_venueContribution>0) {
+        uint currentVC = pollData[_poll].staked[sender].venueContribution[_venueContributionFor];
+        pollData[_poll].staked[sender].venueContribution[_venueContributionFor] += _venueContribution;
+      }
+      if (_rep>0) {
+        if (_rep<pollData[_poll].minStake) {
+          emit stakeNotAccepted(sender, _poll);              // aNt!p4ttrnn ###
+        } else
+        if (rep[sender]<_rep) {
+          emit disreputableStakerIgnored(sender, _poll);
+        } else {
+          rep[sender] -= _rep;
+          pollData[_poll].staked[sender].rep += _rep;
+          emit staked(sender, _poll, _rep);
+        }
+      }
+    }
+
     function totalRepStaked (string memory _poll, address _staker) public view returns (uint) {
       return pollData[_poll].staked[_staker].rep;
     }
 
     function totalVenueContribs (string memory _poll, address _staker) public view returns (uint total) {
       // dibs[] memory dibsList = allDibsPaidBy(_staker);
-      total = pollData[_poll].staked[_staker].venueContribution[_staker] + pollData[_poll].staked[_staker].venueContribution[address(0)];
+
+
+      // gives an out of bounds error (or munches it into VM..blah..blah)
+      // trying to access ...[address(0)]
+      // total = pollData[_poll].staked[_staker].venueContribution[_staker] + pollData[_poll].staked[_staker].venueContribution[address(0)];
+      total = pollData[_poll].staked[_staker].venueContribution[_staker];
+
       // for(uint16 i = 0; i < dibsList.length; i++) {
       //   total += dibsList[i].amount;
       // }
+
       return total;
     }
 
     event emptyStakeRemoved (string _poll, address _staker);
     function removeEmptyStake (string memory _poll, address _staker) public {
-      uint rep=pollData[_poll].staked[msg.sender].rep;
-      uint venueContributions = totalVenueContribs (_poll, _staker);
-      require (rep==0 && venueContributions==0, 'Staker has non empty stake or venue contribution');
-      delete pollData[_poll].staked[msg.sender];
-      emit emptyStakeRemoved(_poll, msg.sender);
+      // uint rep=pollData[_poll].staked[msg.sender].rep;
+      // uint venueContributions = totalVenueContribs (_poll, _staker);
+      // require (rep==0 && venueContributions==0, 'Staker has non empty stake or venue contribution');
+      // delete pollData[_poll].staked[msg.sender];
+      // emit emptyStakeRemoved(_poll, msg.sender);
     }
 
     // NB these require returning complex type.

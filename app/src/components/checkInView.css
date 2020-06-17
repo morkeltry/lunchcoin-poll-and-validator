@@ -2,6 +2,11 @@
    height : 100%;
  }
 
+.invisible {
+  color : #1001;
+  background-color : #1001;
+}
+
 .checkin-view{
   height : 100%;     /*  temporary - to leave room for AdminLogger*/
   background-color: #222222;

@@ -30,6 +30,7 @@ let IMPLEMENTATION_INSTANCE;
 let IMPLEMENTATION_ADDRESS;
 
 let OWN_ADDRESS;
+let availableAccounts;
 
 export function connectToWeb3() {
     // connects to web3 with the latest version of the contract
@@ -92,11 +93,13 @@ export function connectToWeb3() {
                 }
                 web3.eth.getAccounts((err, accounts) => {
                     if (err) reject(err);
+                    availableAccounts = accounts;
                     OWN_ADDRESS = accounts[0];
 
                     resolve({
                       IMPLEMENTATION_ADDRESS,
                       OWN_ADDRESS,
+                      availableAccounts,
                       unImplementedAddress,
                       PollAddress,
                       ValidatorAddress
@@ -167,7 +170,7 @@ export async function setEventWatcher(event, action) {
       }
       // console.log(result.args._value);
       // console.log(result);
-      console.log('Event returning:',result.returnValues);
+      console.log(`Event ${event} returning:`,result.returnValues);
     });
     // console.log(`Will set watch on ${event} with ${action.toString()}`);
     // console.log(`IMPLEMENTATION_INSTANCE.events[${event}]()`,IMPLEMENTATION_INSTANCE.events[event]);
@@ -283,9 +286,9 @@ function checkWithABI(currentFunc, functionName, args, resolve, reject) {
 
 
 function unpackRVs (result, outputs) {
-  console.log(typeof result, result);
+  // console.log(typeof result, result);
     outputs = outputs.forEach ((output,idx)=> {
-      console.log('output',output);
+      // console.log('output',output);
       if (output && output["type"].substr(0, 4) === "uint") {
         if (typeof result==="object")
           result[idx] = (parseInt(result[idx].valueOf()));
@@ -293,7 +296,7 @@ function unpackRVs (result, outputs) {
           result = (parseInt(result[idx].valueOf()));
         // handleExponentialNumber(result[idx].valueOf(), resolve);
         if (output && output["type"].substr(0, 5) === "tuple")
-            result[idx] = `Can't yet handle retunred tuples, sorry!`;
+            result[idx] = `Can't yet handle returned tuples, sorry!`;
     }});
     console.log(typeof result, result);
     return result;
@@ -306,6 +309,7 @@ export function getFromStorage(storageName, idx) {
 
     console.log('getFromStorage',storageName, idx);
     console.log(('args',args));
+    console.log('Warning: getFromStorage may have a bug :/');
 
     checkFunctionFormatting(storageName, args )
       .then(({rv, outputs}) => {
@@ -316,7 +320,7 @@ export function getFromStorage(storageName, idx) {
 
         // console.log(`Read to: ${storageName} of`,IMPLEMENTATION_INSTANCE);
         getter
-          .call()
+          .call(args)
           .then(result => {
               unpackRVs (result, outputs);
               resolve(result);
@@ -334,11 +338,11 @@ export function callTransaction(functionName, args) {
                 IMPLEMENTATION_INSTANCE.methods[functionName](...rv)
                     .call({from: OWN_ADDRESS})
                     .then(result => {
-                        console.log(result);
+                        console.log(functionName,': chain responded:', result);
                         unpackRVs (result, outputs);
                         resolve(result);
                     })
-                    .catch(e=>{console.log(e);reject(e)});
+                    .catch(e=>{console.log(`${functionName} fail:`,e);reject(e)});
 
             })
             .catch(err => {
@@ -359,9 +363,10 @@ export function sendTransaction(functionName, args) {
                         console.log(typeof result, result);
                         resolve(result);
                     })
-                    .catch(reject);
+                    .catch(e=>{console.log(`${functionName} fail:`,e);reject(e)});
             })
             .catch(err => {
+                console.log(`Bad format for ${functionName}`, err);
                 reject(err);
             });
     });
@@ -377,7 +382,10 @@ export function switchTo(address) {
         })
 
     })
+}
 
+export const setOwnAddy= address=> {
+  OWN_ADDRESS = address;
 }
 
 export const getDeets = ()=> ({
