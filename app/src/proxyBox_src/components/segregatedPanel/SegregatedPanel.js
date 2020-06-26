@@ -11,6 +11,8 @@ import FunctionForm from "./FunctionForm";
 import { doNotShowFuncs } from './formConfig'
 
 const SegregatedPanel = props => {
+  const { ownAddy } = props;
+
   const getFunctionDetails = functionName => {
     return props.form.find(element => {
       return element.funcName === functionName;
@@ -49,6 +51,7 @@ const SegregatedPanel = props => {
                   formFunction.funcName
                 )}
                 panelName={props.panelName}
+                ownAddy={ownAddy}
               />
           </Row>
         );

@@ -48,6 +48,7 @@ const SegregatedPanel = props => {
                 functionHasArguments={functionHasArguments(
                   formFunction.funcName
                 )}
+                ownAddress={ props.ownAddress }
                 panelName={props.panelName}
               />
           </Row>

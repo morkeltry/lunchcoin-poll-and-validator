@@ -25,7 +25,7 @@ contract MutualAgreement {
       mapping (address => uint) venueContribution;
     }
 
-    struct dibs {
+    struct Dibs {
       address payer;
       address recipient;
       uint amount;
@@ -39,12 +39,13 @@ contract MutualAgreement {
       uint minStake;
       uint venueCost;
       uint venuePot;
+      address venuePayer;
       uint8 minParticipants;
       TimeRange eventTime;
       bool proofsWindowClosed;
       mapping (address => Stake) staked;
       mapping (address => uint16) ownCheckInIndex;           // 1-indexed: ownCheckInIndex[s]==0 => nothing there.
-      dibs[] dibsCalled;
+      Dibs[] dibsCalled;
     }
 
 
@@ -53,6 +54,7 @@ contract MutualAgreement {
       uint minStake;
       uint venueCost;
       uint venuePot;
+      address venuePayer;
       uint8 minParticipants;
       uint8 participants;
       TimeRange eventTime;
@@ -125,8 +127,8 @@ contract MutualAgreement {
     //     (poll32, __reveal) = (bytesSplit32(usefulData));
     //
     //     // NB other validators will need to additionally retrieve reveal data from msg.data
-    //     bytes32[] memory stakers = crossContractCall (encodeFunctionName("serialiseStakers"), bytes32ToString(poll32), valid, vType);
-    //     bytes32[] memory proofs = crossContractCall (encodeFunctionName("serialiseProofs"), bytes32ToString(poll32), valid, vType);
+    //     bytes32[] memory stakers = crossContractCall (encodeFunctionName("staker"), bytes32ToString(poll32), valid, vType);
+    //     bytes32[] memory proofs = crossContractCall (encodeFunctionName("proof"), bytes32ToString(poll32), valid, vType);
     //
     // }
 
@@ -183,6 +185,7 @@ contract MutualAgreement {
       // uint stake,
       // uint venueContribution,
       uint venueCost,
+      uint venuePot,
       uint8 minParticipants,
       uint start,
       uint end,
@@ -192,6 +195,7 @@ contract MutualAgreement {
 
       initiator = pollData[_poll].initiator;
       venueCost = pollData[_poll].venueCost;
+      venuePot = pollData[_poll].venuePot;
       minParticipants = pollData[_poll].minParticipants;
       proofsWindowClosed = pollData[_poll].proofsWindowClosed;
       // start = pollData[_poll].eventTime.start;
@@ -202,7 +206,7 @@ contract MutualAgreement {
       // stake = pollData[_poll].staked[_staker].rep;
       // venueContribution = pollData[_poll].staked[_staker].venueContribution[_staker];
 
-      return (initiator, venueCost, minParticipants, start, end, proofsWindowClosed, ownCheckInIndex);
+      return (initiator, venueCost, venuePot, minParticipants, start, end, proofsWindowClosed, ownCheckInIndex);
     }
 
     function getPollStruct(string memory _poll) public view returns (PollExternal memory returnPoll) {
@@ -229,37 +233,36 @@ contract MutualAgreement {
       return (allTheData[_hash]);
     }
 
-    function get (string memory _poll, string memory _fnName) public view returns (bytes32[] memory) {
-        bytes32 hash = keccak256(abi.encodePacked(_poll, encodeFunctionName(_fnName), vType));
+    function get (string memory _poll, string memory _mapName) public view returns (bytes32[] memory) {
+        bytes32 hash = keccak256(abi.encodePacked(_poll, encodeFunctionName(_mapName), vType));
         return (allTheData[hash]);
     }
 
     event whassahash(bytes);
     event whassakeccack(bytes32);
-    function getProofIgnoringStaker (string memory _poll, string memory _fnName, address _staker) public returns (bytes32[] memory) {
-      bytes32 hash = keccak256(abi.encodePacked(_poll, encodeFunctionName(_fnName), vType));
-      emit whassahash(abi.encodePacked(_poll, encodeFunctionName(_fnName), vType));
+    function getStakersProof (string memory _poll, address _staker) public returns (bytes32[] memory) {
+      bytes32 hash = keccak256(abi.encodePacked(_poll, encodeFunctionName("proof"), _staker, vType));
+      emit whassahash(abi.encodePacked(_poll, encodeFunctionName("proof"), _staker, vType));
       emit whassakeccack(hash);
       return (allTheData[hash]);
     }
 
-    function getProofProperUsingStaker (string memory _poll, string memory _fnName, address _staker) public returns (bytes32[] memory) {
-      bytes32 hash = keccak256(abi.encodePacked(_poll, encodeFunctionName(_fnName), _staker, vType));
-      emit whassahash(abi.encodePacked(_poll, encodeFunctionName(_fnName), _staker, vType));
+    function getProofEmitHashesOnlyWithStaker (string memory _poll, string memory _mapName, address _stakerOrZero, uint8 _vt, bytes32[] memory data) public {
+      bytes32 hash = keccak256(abi.encodePacked(_poll, encodeFunctionName(_mapName), _stakerOrZero, _vt));
+      emit whassahash(abi.encodePacked(_poll, encodeFunctionName(_mapName), _stakerOrZero, _vt));
       emit whassakeccack(hash);
-      return (allTheData[hash]);
+
+      emit gpResult(_poll, _mapName, _stakerOrZero, _vt, getStakersProof(_poll, _stakerOrZero));
     }
 
-    function getProofEmitHashesOnlyWithStaker (string memory _poll, string memory _fnName, address _stakerOrZero, uint8 _vt, bytes32[] memory data) public {
-      bytes32 hash = keccak256(abi.encodePacked(_poll, encodeFunctionName(_fnName), _stakerOrZero, _vt));
-      emit whassahash(abi.encodePacked(_poll, encodeFunctionName(_fnName), _stakerOrZero, _vt));
-      emit whassakeccack(hash);
 
-      emit gpResult(_poll, _fnName, _stakerOrZero, _vt, getProofProperUsingStaker(_poll, _fnName, _stakerOrZero));
+    function addStaker (string memory _poll, address _staker, uint8 _vt) public {
+      bytes32 hash = keccak256(abi.encodePacked(_poll, encodeFunctionName("staker"), _vt));
+      allTheData[hash].push (bytes32(bytes20(_staker)));
     }
 
     function getStakerAddresses (string memory _poll ) public view returns (address[] memory) {
-      bytes32[] memory rawStakers = get(_poll, "serialiseStakers");
+      bytes32[] memory rawStakers = get(_poll, "staker");
       address[] memory stakers = new address[](rawStakers.length);
       for(uint16 i=0; i < rawStakers.length; i++) {
           stakers[i] = bytesToAddress(bytes32ToBytes(rawStakers[i]));
@@ -274,53 +277,44 @@ contract MutualAgreement {
       bytes32[] memory rawProof;
 
       for(uint16 i=0; i < stakers.length; i++) {
-        rawProof = getProofProperUsingStaker(_poll, "serialiseProofs", stakers[i]);
+        rawProof = getStakersProof(_poll, stakers[i]);
         proofs[i] = new address[](rawProof.length);
         for(uint16 j=0; j < rawProof.length; j++) {
-            proofs[i][j]=(bytesToAddress(bytes32ToBytes(rawProof[i])));
+            proofs[i][j]=(bytesToAddress(bytes32ToBytes(rawProof[j])));
         }
       }
       return (proofs);
     }
 
-    event gpResult(string, string, address, uint8, bytes32[]);
-    function setCheckedInNoStaker (string memory _poll, string memory _fnName, address _stakerOrZero, uint8 _vt, bytes32[] memory data) public {
-      bytes32 hash = keccak256(abi.encodePacked(_poll, encodeFunctionName(_fnName), _vt));
-      emit whassahash(abi.encodePacked(_poll, encodeFunctionName(_fnName), _vt));
-      emit whassakeccack(hash);
-      allTheData[hash] = data;
-      emit gpResult(_poll, _fnName, _stakerOrZero, _vt, getProofIgnoringStaker(_poll, _fnName, _stakerOrZero));
-    }
-
-    function setCheckedInWithStaker (string memory _poll, string memory _fnName, address _stakerOrZero, uint8 _vt, bytes32[] memory data) public {
-      bytes32 hash = keccak256(abi.encodePacked(_poll, encodeFunctionName(_fnName), _stakerOrZero, _vt));
-      emit whassahash(abi.encodePacked(_poll, encodeFunctionName(_fnName), _stakerOrZero, _vt));
-      emit whassakeccack(hash);
-      allTheData[hash] = data;
-      emit gpResult(_poll, _fnName, _stakerOrZero, _vt, getProofProperUsingStaker(_poll, _fnName, _stakerOrZero));
-    }
-
-    function set (string memory _poll, string memory _fnName, address _stakerOrZero, uint8 _vt, bytes32[] memory _data) public {
+    function set (string memory _poll, string memory _mapName, address _stakerOrZero, uint8 _vt, bytes32[] memory _data) public {
       bytes32 hash;
       if (_stakerOrZero == address(0)) {
-        hash = keccak256(abi.encodePacked(_poll, encodeFunctionName(_fnName), _vt));
+        hash = keccak256(abi.encodePacked(_poll, encodeFunctionName(_mapName), _vt));
       } else {
-        hash = keccak256(abi.encodePacked(_poll, encodeFunctionName(_fnName), bytes20(_stakerOrZero), _vt));
+        hash = keccak256(abi.encodePacked(_poll, encodeFunctionName(_mapName), bytes20(_stakerOrZero), _vt));
       }
-      bytes32[] memory data = new bytes32[](_data.length);
+      allTheData[hash] = new bytes32[](_data.length);
+      // bytes32[] memory data = new bytes32[](_data.length);
       for(uint16 i=0; i < _data.length; i++) {
-
+        allTheData[hash][i] = _data[i];
       }
-      // data=_data;
+      // allTheData[hash] = data;
+
+      // tried a number of ways and it is always reverting (when called via checkIn)
+
+    }
+
+    event gpResult(string, string, address, uint8, bytes32[]);
+    function setCheckedInWithStaker (string memory _poll, string memory _mapName, address _impersonatedStaker, uint8 _vt, bytes32[] memory data) public {
+      bytes32 hash = keccak256(abi.encodePacked(_poll, encodeFunctionName(_mapName), _impersonatedStaker, _vt));
+      emit whassahash(abi.encodePacked(_poll, encodeFunctionName(_mapName), _impersonatedStaker, _vt));
+      emit whassakeccack(hash);
       allTheData[hash] = data;
+      emit gpResult(_poll, _mapName, _impersonatedStaker, _vt, getStakersProof(_poll, _impersonatedStaker));
     }
 
-    function addStaker (string memory _poll, string memory _fnName, address _staker, uint8 _vt, address _newMember) public {
-      bytes32 hash = keccak256(abi.encodePacked(_poll, encodeFunctionName(_fnName), _vt));
-      allTheData[hash].push (bytes32(bytes20(_newMember)));
-    }
 
-    function checkIn (string memory _poll, address[] memory _newProof, address _impersonatedStaker) public {
+    function checkIn (string memory _poll, address _impersonatedStaker, address[] memory _newProof) public {
       address sender = _impersonatedStaker;   //  should be msg.sender
       uint16 idx = pollData[_poll].ownCheckInIndex[sender];
       bool hasStaked = false;
@@ -328,13 +322,13 @@ contract MutualAgreement {
 
       // if (idx==0) {
       //   idx = uint16(getStakerAddresses(_poll ).length);
-      //   add (_poll, "serialiseProofs", vType, _newProof);
+      //   add (_poll, "proof", vType, _newProof);
       //   pollData[_poll].ownCheckInIndex[sender] = idx+1;    // would be an off-by-one but ownIndex is 1-indexed ;)
       //   return;
       // }
       // proofs[idx] = bytes32(bytes20(_newProof));
 
-      // bytes32[] memory stakers = get(_poll, "serialiseStakers");
+      // bytes32[] memory stakers = get(_poll, "staker");
       // for (i=0; i<stakers.length; i++) {
       //   if bytes32(bytes20((stakers[i]))==sender
       //     hasStaked = true;
@@ -345,7 +339,7 @@ contract MutualAgreement {
       for (i=0; i<_newProof.length; i++) {
         proofB32[i]=bytes32(bytes20(_newProof[i]));
       }
-      set ( _poll, "serialiseProofs", sender, vType, proofB32);
+      set ( _poll, "proof", sender, vType, proofB32);
       pollData[_poll].ownCheckInIndex[sender] = idx+1;
     }
 
@@ -353,7 +347,7 @@ contract MutualAgreement {
     function addProof (string memory _poll, address _impersonatedStaker, address[] memory _newProof) public {
       address sender = _impersonatedStaker;   //  should be msg.sender
       bytes32[] memory proofB32 = new bytes32[](_newProof.length);
-      bytes32 hash = keccak256(abi.encodePacked(_poll, encodeFunctionName("serialiseProofs"), bytes20(_impersonatedStaker), vType));
+      bytes32 hash = keccak256(abi.encodePacked(_poll, encodeFunctionName("proof"), bytes20(_impersonatedStaker), vType));
       for (uint16 i=0; i<_newProof.length; i++) {
         proofB32[i]=bytes32(bytes20(_newProof[i]));
       }
@@ -391,11 +385,11 @@ contract MutualAgreement {
 
 
     function setRep (string memory _poll, address _staker, uint _rep) public {
-      pollData[_poll].staked[_staker].rep = _rep;
+      rep[_staker] = _rep;
     }
 
-    function getRep (string memory _poll, address _staker) public view returns (uint) {
-      return pollData[_poll].staked[_staker].rep;
+    function getRep (address _staker) public view returns (uint) {
+      return rep[_staker];
     }
 
 
@@ -507,7 +501,7 @@ contract MutualAgreement {
       // // gifted contributions are used only to top up recipients'
       // for stakers
       //   totalPaid = staker.stake[staker].amount + staker.stake[0x0].amount
-      //   if totalPaid < equalShare
+      //   if totalPaid < equalSharerefundVen
       //     for (stakes = allDibsPaidFor(staker).concat(staker.stake[staker]).concat(staker.stake[0x0]))
       //       if amount>=shortfall
       //         totalPaid += shortfall
@@ -532,17 +526,18 @@ contract MutualAgreement {
       removeEmptyStake(_poll, msg.sender);
     }
 
-    function setString (string memory _poll, string memory _fnName, uint8 _vt, string memory data) public {
-      bytes32 hash = keccak256(abi.encodePacked(_poll, encodeFunctionName(_fnName), _vt));
+    function setString (string memory _poll, string memory _mapName, uint8 _vt, string memory data) public {
+      bytes32 hash = keccak256(abi.encodePacked(_poll, encodeFunctionName(_mapName), _vt));
       allTheData[hash] = stringToBytes32Array(data);
     }
 
 
-    event repRefund (address _staker, uint _staked, uint _refunded);
+    event repRefund (address staker, uint staked, uint refunded);
     event refundFail (address _staker);
     function refundStake (string memory _poll, bytes32 _reveal) public {
-      require (pollData[_poll].staked[msg.sender].rep > 0, 'Sender has nothing staked for this poll');
-      require (pollData[_poll].ownCheckInIndex[msg.sender] > 0, 'Sender has not submitted an attendance proof for this poll');
+      // Uncomment them - this is for testing by, amount!
+      // require (pollData[_poll].staked[msg.sender].rep > 0, 'Sender has nothing staked for this poll');
+      // require (pollData[_poll].ownCheckInIndex[msg.sender] > 0, 'Sender has not submitted an attendance proof for this poll');
       if (!validate(address(0), _poll, _reveal)) {
         emit refundFail(msg.sender);
         revert ('Invalid proof');
@@ -560,12 +555,35 @@ contract MutualAgreement {
 
     }
 
+
+    function emitVenueStakeRefunded (string memory _poll, address _to, address _by, int _amount, uint8 _repeat) public  {
+      for (uint8 i=0; _repeat>0 && i<_repeat; i++) {
+        emit venuePotDisbursed (_poll, _to, _by, _amount);
+      }
+      if (_repeat==5)
+        emit venuePotDisbursed (_poll, pollData[_poll].venuePayer, _by, _amount);
+    }
+
+    function emitVenuePotRefunded (string memory _poll, address _to, address _by, int _amount) public {
+      emit venuePotDisbursed (_poll, pollData[_poll].venuePayer, _by, _amount);
+    }
+
+    function emitrepRefunded (address _staker, uint _staked, uint _refunded) public {
+      emit repRefund (_staker, _staked, _refunded);
+    }
+
+    function emitrefundFail (address _staker) public {
+      emit refundFail (_staker);
+    }
+
+
+
     event numberLoggerLikeImUsingFuckingJava (string, uint);
     // cheapo validator - this one just counts how many people included you in their proof, with no attempt at making the proofs agree.
     // currently counts votes in favour of each stakers, which will help, but doesn't flag which poroofs disagree
     function validate(address _pollContract, string memory _poll, bytes32 _reveal) public returns (bool) {
         // require (_pollContract==howeverYoullIdentifySelf, 'wrong Poll contract - something needs upgrading');
-
+return true;
         address[] memory stakers = getStakerAddresses(_poll);
         address[][] memory proofs = getproofsAsAddresses(_poll);
         uint16 i;
@@ -630,37 +648,15 @@ contract MutualAgreement {
         // return true;
     }
 
-    function deserialiseStakers(string calldata _poll) external pure returns (address[] memory) {
-        // return something which will make it obvious that you have accidentally delegated this context!
-        address[] memory ret = new address[](4);
-        (ret[0], ret[1], ret[2], ret[3]) = (address(5), address(0), address(5), address(0));
-        return ret;
-    }
-
-    function serialiseStakers(string calldata _poll, uint8 validationType) external pure returns (address[] memory) {
-        // return something which will make it obvious that you have accidentally delegated this context!
-        address[] memory ret = new address[](4);
-        (ret[0], ret[1], ret[2], ret[3]) = (address(5), address(0), address(5), address(0));
-        return ret;
-    }
-
-    function serialiseProofs(string calldata _poll, uint8 validationType) external pure returns (address[] memory) {
-        // return something which will make it obvious that you have accidentally delegated this context!
-        address[] memory ret = new address[](4);
-        (ret[0], ret[1], ret[2], ret[3]) = (address(0), address(5), address(0), address(5));
-        return ret;
-    }
-
-
     function proofType() public pure returns (uint8) {
       return vType;
     }
 
     function encodeFunctionName (string memory name) internal pure returns (bytes4) {
         // TODO: cache for readability!
-        // if ("serialiseStakers")
+        // if ("staker")
         //     return
-        // if ("serialiseStakers")
+        // if ("proof")
         //     return
         return bytes4(keccak256(bytes(name)));
     }

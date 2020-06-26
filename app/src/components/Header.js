@@ -16,21 +16,26 @@ import './checkInView.css';
 const showtimeify = text=>
   text ? `[${text.replace(/ /g,'_')}]` : text ;
 
+const asUrl = url=>
+  url.match(/https?:\/\//)
+  ? url
+  : `https://${url}` ;
+
 const Header = props => {
   // let { narrowBreak } = props;
-  const { burger } = props;
+  const { burger, pollUrl, pollName } = props;
 
   return (<>
     <div className={ cN('header') }>
-      <a href={ props.pollUrl || '#' }>
+      <a href={ asUrl(pollUrl) || '#' }>
         <Media queries={{ small: "(max-width: 599px)" }}>
           {matches =>
             matches.small
               ? <h1 className="align-centre narrow-break" >
-                  { showtimeify(props.pollName) }
+                  { showtimeify(pollName) }
                 </h1>
               : <h1 className="align-centre" >
-                  { showtimeify(props.pollName) }
+                  { showtimeify(pollName) }
                 </h1>
           }
         </Media>

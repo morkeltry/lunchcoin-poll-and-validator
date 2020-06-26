@@ -11,25 +11,35 @@ contract PollReference {
 
     address owner;  // is set by TokenStorage.. but retain types and order.
 
-    struct timeRange {
+    struct TimeRange {
       uint start;
       uint end;
     }
 
-    struct stake {
+    struct Stake {
       uint rep;
-      timeRange[] available;
+      TimeRange[] available;
       uint availabilityExpires;
+    }
+
+    struct Dibs {
+      address payer;
+      address recipient;
+      uint amount;
     }
 
     struct Poll {
       address initiator;
       uint minStake;
       uint venueCost;
+      uint venuePot;
+      address venuePayer;
       uint8 minParticipants;
-      timeRange eventTime;
-      mapping (address => stake) staked;
-      mapping (address => int16) ownProofIndex;           // 1-indexed: ownProofIndex[0] = nothing there.
+      TimeRange eventTime;
+      bool proofsWindowClosed;
+      mapping (address => Stake) staked;
+      mapping (address => uint16) ownCheckInIndex;           // 1-indexed: ownCheckInIndex[s]==0 => nothing there.
+      Dibs[] dibsCalled;
     }
 
     // shared across contracts
@@ -102,11 +112,13 @@ contract PollReference {
         (poll32, rest) = (bytesSplit32(rest));
         (result, vType) = (bytesSplit32(rest));
 
-        if (fnNameHash == encodeFunctionName("serialiseStakers")) {
+        if (fnNameHash == encodeFunctionName("staker")) {
             //NB wrapping these in bytes32 for testing, but keep as strings until you are ready to deserialise bytes32, cos they still good here!
+            // NB serialiseStakers depreacted - removed from validaotr
             result = string32ToBytes32( serialiseStakers(bytes32ToString(poll32), toUint8(vType)) );
         }
-        if (fnNameHash == encodeFunctionName("serialiseProofs")) {
+        // NB serialiseProofs deprecated - removed from validator
+        if (fnNameHash == encodeFunctionName("proof")) {
             //NB wrapping these in bytes32 for testing, but keep as strings until you are ready to deserialise bytes32, cos they still good here!
             result = string32ToBytes32(serialiseProofs(bytes32ToString(poll32), toUint8(vType)) );
         }
@@ -152,14 +164,14 @@ contract PollReference {
     // }
 
     // event RetrievedDataCache(string, uint256, bytes32[]);
-    function retrieve (string memory _poll, string memory _fnName, uint8 _vt) public view returns (bytes32[] memory) {
-        bytes32 hash = keccak256(abi.encodePacked(_poll, encodeFunctionName(_fnName), _vt));
+    function retrieve (string memory _poll, string memory _mapName, uint8 _vt) public view returns (bytes32[] memory) {
+        bytes32 hash = keccak256(abi.encodePacked(_poll, encodeFunctionName(_mapName), _vt));
         // emit RetrievedDataCache("Poll context:", notes, allTheData[hash]);
         return (allTheData[hash]);
     }
 
-    function set (string memory _poll, string memory _fnName, uint8 _vt, bytes32[] memory data) public {
-      bytes32 hash = keccak256(abi.encodePacked(_poll, encodeFunctionName(_fnName), _vt));
+    function set (string memory _poll, string memory _mapName, uint8 _vt, bytes32[] memory data) public {
+      bytes32 hash = keccak256(abi.encodePacked(_poll, encodeFunctionName(_mapName), _vt));
       allTheData[hash] = data;
     }
 
@@ -171,12 +183,13 @@ contract PollReference {
       inp1[0] = b1;
       inp2[1] = b1;
       inp2[1] = b1;
-      set ("doodle.com/poll/h7phtw5u2thhz9k4", "serialiseStakers", 1, inp1);
-      set ("doodle.com/poll/h7phtw5u2thhz9k4", "serialiseProofs", 1, inp2);
+      // NB serialiseProofs deprecated - removed from validator
+      set ("doodle.com/poll/r9rb35fiibvs3aa5", "staker", 1, inp1);
+      set ("doodle.com/poll/r9rb35fiibvs3aa5", "proof", 1, inp2);
     }
 
-    function add (string memory _poll, string memory _fnName, uint8 _vt, address newMember) public {
-      bytes32 hash = keccak256(abi.encodePacked(_poll, encodeFunctionName(_fnName), _vt));
+    function add (string memory _poll, string memory _mapName, uint8 _vt, address newMember) public {
+      bytes32 hash = keccak256(abi.encodePacked(_poll, encodeFunctionName(_mapName), _vt));
       allTheData[hash].push (bytes32(bytes20(newMember)));
     }
 
@@ -302,9 +315,9 @@ contract PollReference {
 
     function encodeFunctionName (string memory name) public pure returns (bytes4) {
         // TODO: cache for readability!
-        // if ("serialiseStakers")
+        // if ("staker")
         //     return
-        // if ("serialiseStakers")
+        // if ("proof")
         //     return
         return bytes4(keccak256(bytes(name)));
     }

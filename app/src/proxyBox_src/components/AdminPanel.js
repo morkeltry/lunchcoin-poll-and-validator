@@ -1,6 +1,7 @@
-import React, {useEffect, useState} from "react";
+import React, { useEffect, useState } from "react";
+
 // import {connectToWeb3, getImplementationFunctions, getImplementationEvents, setEventWatchers, switchTo} from "../Web3/adminPanel";
-import {connectToWeb3, getImplementationFunctions, getImplementationEvents, switchTo} from "../../Web3/accessChain";
+import {connectToWeb3, getImplementationFunctions, getImplementationEvents, switchTo } from "../../Web3/accessChain";
 import SegregatedPanel from "./segregatedPanel/SegregatedPanel";
 import Button from "react-bootstrap/Button";
 import Container from "react-bootstrap/Container";
@@ -20,9 +21,12 @@ const readPanelViewBoolean = true;
 const writePanelViewBoolean = true;
 
 const AdminPanel = props => {
+  const { ownAddy } = props;
   const [readForm, setReadForm] = useState(readFormArray);
   const [writeForm, setWriteForm] = useState(writeFormArray);
   const [events, setEvents] = useState(eventsObj);
+  // const [ownAddy, setOwnAddyinComponent] = useState();
+  // const [ownAddyAge, setOwnAddyAge] = useState(0);
   const [readPanelView, setReadPanelView] = useState(readPanelViewBoolean);
   const [writePanelView, setWritePanelView] = useState(writePanelViewBoolean);
   const [loadingStatus, setLoadingStatus] = useState(false);
@@ -38,6 +42,7 @@ const AdminPanel = props => {
     connectToWeb3().then(addressObj => {
       console.log(addressObj)
 
+      // setOwnAddy(addressObj.OWN_ADDRESS);
       setCurrentContractAddress(addressObj.IMPLEMENTATION_ADDRESS)
       setAlternateContractAddress(addressObj.unImplementedAddress)
       setNextAddresses([addressObj.PollAddress, addressObj.ValidatorAddress])
@@ -67,7 +72,16 @@ const AdminPanel = props => {
       setWriteForm(tempWrite);
       setLoadingStatus(false)
     })
-  }, []);
+  },
+  [
+    // ()=>{
+    //   currentOwnAddy()
+    //   .then(addy=> {
+    //     setOwnAddyinComponent(addy);
+    //     setOwnAddyAge(Date.now())
+    //   })
+    // }
+  ]);
 
 
   const readClick = () => {
@@ -150,6 +164,7 @@ const AdminPanel = props => {
                       form={writeForm}
                       view={writePanelView}
                       contractType={ (currentContractAddress===nextAddresses[0]) && "POLL" }
+                      ownAddy={ ownAddy }
                   />
               )}
               { readPanelView && (
@@ -158,6 +173,7 @@ const AdminPanel = props => {
                       form={readForm}
                       view={readPanelView}
                       contractType={ (currentContractAddress===nextAddresses[1]) && "VALIDATOR" }
+                      ownAddy={ ownAddy }
                   />
               )}
             </Row>

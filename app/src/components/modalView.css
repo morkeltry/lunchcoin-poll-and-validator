@@ -1,3 +1,33 @@
+.modal-container {
+  position: relative;
+  z-index: 0;
+}
+
+.modal-background {
+  position: fixed;
+  height: 100vh;
+  width: 100vw;
+  top: 0vh;
+  left: 0vw;
+  z-index: 0;
+}
+
+.modal-info {
+  position: fixed;
+  height: 87vh;     /* NB header text size is in vw => variable :/ */
+  width: 92vw;
+  top: 10vh;
+  left: 4vw;
+  padding : 6vh 4.5vh;
+  background-color: #314;
+  /* border: 1.5vw solid #639e; */
+  box-shadow: 0 0 5px #628e, 0 0 10px #628e, 0 0 15px #ccf, 0 0 20px #50d, 0 0 35px #50d, 0 0 40px #50d, 0 0 50px #50d, 0 0 75px #50d;
+  box-shadow:inset 0 0 5px #628e, 0 0 10px #628e, 0 0 20px #50d, 0 0 35px #50d, 0 0 40px #50d, 0 0 50px #50d, 0 0 75px #50d;
+  border-radius: 5vw;
+  z-index: 5;
+
+}
+
 .modal-form {
   position: fixed;
   height: 87vh;     /* NB header text size is in vw => variable :/ */
@@ -17,8 +47,33 @@
   height: 100%;
 }
 
+.modal-form input[type=checkbox] {
+  height: 3vh;
+  position: relative;
+  top: 1.5vw;
+  margin: 1vw;
+  background-color: black;
+  box-shadow: 0 0 0.5vh #936e, 0 0 1vh #936e, 0 0 1.5vh #fff, 0 0 2vh;
+  box-shadow:inset 0 0 0.5vh #936e, 0 0 1vh #936e, 0 0 2vh #FF1177;
+}
+
+.modal-form input[type=checkbox]:checked {
+  height: 3vh;
+  position: relative;
+  top: 1.5vw;
+  margin: 1vw;
+  /* Default blue:  */
+  box-shadow: 0 0 0.5vh #3daee9, 0 0 1vh #3daee9, 0 0 1.5vh #fff, 0 0 2vh;
+  box-shadow:inset 0 0 1vh #3daee9, 0 0 3vh #3daee9, 0 0 4vh #FF1177;
+  /* Green:  */
+  /* box-shadow: 0 0 0.5vh #6f3, 0 0 1vh #6f3, 0 0 1.5vh #fff, 0 0 2vh;
+  box-shadow:inset 0 0 1vh #6f3, 0 0 3vh #6f3, 0 0 4vh #FF1177; */
+}
+
+
 .modal-button  {
   position: absolute;
+  top: 59.5vh;           /*  explcit height to get round weird changes on :active */
   bottom: 20vh;          /*  height of .logo-section */
   background-color: #8d3;
   font-size : 4vh;
@@ -26,12 +81,40 @@
   left: 10%;
 }
 
+
 .modal-button__form-button {
 
+}
+
+.modal-button__info-button {
+  background-color: #3d8;
 }
 
 .modal-form button:active {
   color : #000;
   position: absolute;
-  bottom : 23vh;
+  top: 60vh;          /*  height .modal-form = 87vh -  bottom: 19vh - own size (assume 7.5vh) */
+  bottom: 19vh;
+  left: 9.5%;
+  width : 81%;
+  right: 9.5%;
+}
+
+.modal-info button:active {
+  position: absolute;
+  top: 60vh;          /*  height .modal-form = 87vh -  bottom: 19vh - own size (assume 7.5vh) */
+  bottom: 19vh;
+  left: 9.5%;
+  width : 81%;
+  right: 9.5%;
+}
+
+.modal-info__loading {
+  font-size : 3vh;
+  text-align: center;
+}
+
+.modal-info__header {
+  font-size : 3vh;
+  text-align: center;
 }

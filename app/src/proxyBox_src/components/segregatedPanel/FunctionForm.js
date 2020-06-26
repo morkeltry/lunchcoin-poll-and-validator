@@ -1,11 +1,12 @@
 import React, { useState, useEffect } from "react";
+import  { useGlobal } from "reactn";
 import Form from "react-bootstrap/Form";
 import Row from "react-bootstrap/Row";
 import Col from "react-bootstrap/Col";
 import Button from "react-bootstrap/Button";
 
 // import { callTransaction, sendTransaction } from "../../Web3/adminPanel";
-import { callTransaction, sendTransaction } from "../../../Web3/accessChain";
+import { callTransaction, sendTransaction, currentOwnAddy } from "../../../Web3/accessChain";
 
 import { globalDefaults, byFuncDefaults, clearAfterSubmit } from './formConfig'
 import "./functionForm.css";
@@ -14,6 +15,8 @@ import "./segregatedPanel.scss";
 const timeString = date => `${date.getHours()}:${date.getMinutes()}:${date.getSeconds()}`;
 
 const FunctionForm = props => {
+  const { ownAddy } = props;
+
   const [disabled, setDisabled] = useState(false);
   const [args, setArgs] = useState({});
   const [shouldRefresh,setShouldRefresh] = useState({});
@@ -107,12 +110,20 @@ const FunctionForm = props => {
     });
   };
 
+  const wait = async ms=> new Promise( resolve=> {
+    setTimeout(()=>{ resolve() }, ms)
+  })
+
   const defaultVal = (func, arg) => {
     arg = arg.split(' ')[0];
-    return (byFuncDefaults[func] && byFuncDefaults[func][arg]) || globalDefaults[arg]
+    const preFill= (byFuncDefaults[func] && byFuncDefaults[func][arg]) || globalDefaults[arg];
+
+    return preFill==='OWN_ADDRESS'
+      ? ownAddy
+      : preFill
   }
 
-  //NB args in state weirdle is an array with non-iterable members. But only the iterable ones show up in devTools.
+  // NB args in state weirdle is an array with non-iterable members. But only the iterable ones show up in devTools.
   const onFieldChange = (e, argumentName) => {
     let tempState = args;
     if (e.target.value === "")
@@ -168,7 +179,7 @@ const FunctionForm = props => {
                 key={ argsKey + (shouldRefresh[props.funcName] || 0) }
                 type={"text"}
                 placeholder={"argument(type):  " + arg}
-                defaultValue={ defaultVal(props.funcName,arg) }
+                defaultValue={ defaultVal(props.funcName,arg, props.ownAddy) }
                 required
                 className={"function-arg"}
                 onChange={e => {

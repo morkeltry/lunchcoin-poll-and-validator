@@ -38,6 +38,7 @@ const AdminPanel = props => {
     connectToWeb3().then(addressObj => {
       console.log(addressObj)
 
+      setOwnAddy(addressObj.OWN_ADDRESS);
       setCurrentContractAddress(addressObj.IMPLEMENTATION_ADDRESS)
       setAlternateContractAddress(addressObj.unImplementedAddress)
       setNextAddresses([addressObj.PollAddress, addressObj.ValidatorAddress])
@@ -150,7 +151,7 @@ const AdminPanel = props => {
                       view={writePanelView}
                       contractType={ (currentContractAddress===nextAddresses[0]) && "POLL" }
                   />
-              )}  
+              )}
               { readPanelView && (
                   <SegregatedPanel
                       panelName={"read"}

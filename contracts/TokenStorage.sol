@@ -28,7 +28,7 @@ contract TokenStorage  is Ownable{
       mapping (address => uint) venueContribution;
     }
 
-    struct dibs {
+    struct Dibs {
       address payer;
       address recipient;
       uint amount;
@@ -42,12 +42,13 @@ contract TokenStorage  is Ownable{
       uint minStake;
       uint venueCost;
       uint venuePot;
+      address venuePayer;
       uint8 minParticipants;
       TimeRange eventTime;
       bool proofsWindowClosed;
       mapping (address => Stake) staked;
       mapping (address => uint16) ownCheckInIndex;           // 1-indexed: ownCheckInIndex[s]==0 => nothing there.
-      dibs[] dibsCalled;
+      Dibs[] dibsCalled;
     }
 
 
@@ -56,6 +57,7 @@ contract TokenStorage  is Ownable{
       uint minStake;
       uint venueCost;
       uint venuePot;
+      address venuePayer;
       uint8 minParticipants;
       uint8 participants;
       TimeRange eventTime;

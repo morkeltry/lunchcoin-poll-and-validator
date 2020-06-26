@@ -1,4 +1,5 @@
 import Web3 from "web3";
+import  { useGlobal } from "reactn";
 import TokenProxyArtifacts from "../contracts/TokenProxy.json";
 import PollArtifacts from "../contracts/PollReference.json";
 import ValidatorArtifacts from "../contracts/MutualAgreement.json";
@@ -143,7 +144,7 @@ export async function getImplementationEvents( options={ setWatchers:false }, ev
     console.log(IMPLEMENTATION_INSTANCE.events);
     IMPLEMENTATION_ABI.forEach(ele => {
         if (ele.type === "event") {
-            // console.log(`Found event`, ele);
+            console.log(`Found event`, ele);
             let objectToBeAppended = {};
             objectToBeAppended["eventName"] = ele["name"];
             let argsObject = [];
@@ -162,18 +163,29 @@ export async function getImplementationEvents( options={ setWatchers:false }, ev
     return rv;
 }
 
+const withErrLog = (eventName, actionFn)=> {
+  const errFn= actionFn.errFn || (err=>{ console.log(err) }) ;
+  return (err, result)=>
+    err
+      ? errFn(err)
+      : actionFn(result, eventName)
+}
+
 export async function setEventWatcher(event, action) {
-    action = action || ((err, result)=> {
-      if (err) {
-        console.log(err)
-        return;
-      }
-      // console.log(result.args._value);
-      // console.log(result);
-      console.log(`Event ${event} returning:`,result.returnValues);
-    });
-    // console.log(`Will set watch on ${event} with ${action.toString()}`);
-    // console.log(`IMPLEMENTATION_INSTANCE.events[${event}]()`,IMPLEMENTATION_INSTANCE.events[event]);
+  action = withErrLog (event, action || ((result, eventName)=>{ console.log(eventName, result) }) )
+
+    // action = action || ((err, result)=> {
+    //   if (err) {
+    //     console.log(err)
+    //     return;
+    //   }
+    //
+    //   // console.log(result.args._value);
+    //   // console.log(result);
+    //   console.log(`Event ${event} returning:`,result.returnValues);
+    // });
+    // // console.log(`Will set watch on ${event} with ${action.toString()}`);
+    // // console.log(`IMPLEMENTATION_INSTANCE.events[${event}]()`,IMPLEMENTATION_INSTANCE.events[event]);
     IMPLEMENTATION_INSTANCE.events[event](action);
 };
 
@@ -203,29 +215,6 @@ export async function getImplementationFunctions() {
     return rv;
 }
 
-async function checkFunctionFormatting(functionName, args) {
-    return new Promise((resolve, reject) => {
-        let found = ProxyABI.find(element => {
-            return element.name === functionName;
-        });
-        // Checks Proxy before Implementation!
-        console.log(functionName, found);
-        if (found) {
-            // Function present in Proxy Contract
-            checkWithABI(found, functionName, args, resolve, reject);
-        } else {
-            let nowFound = IMPLEMENTATION_ABI.find(element => {
-                return element.name === functionName;
-            });
-            if (!nowFound)
-              console.log(`${functionName} was not found. Did you rename it?`);
-            // Function present in Implementation Contract
-            console.log('checkWithABI', nowFound, functionName, args);
-            checkWithABI(nowFound, functionName, args, resolve, reject);
-        }
-    });
-}
-
 function checkForTokenHandlingArgument(arg) {
     if (arg === "amount" || arg === "value") return true;
     else return arg.substr(0, 1) === "amount" || arg.substr(0, 1) === "value";
@@ -243,7 +232,7 @@ function checkWithABI(currentFunc, functionName, args, resolve, reject) {
         }
         let callValue = args[input.name];
         let inputType = input.type;
-        if (inputType.substr(0, 4) === "uint") {
+        if (inputType.substr(0, 4) === "uint" || inputType.substr(0, 3) === "int") {
             let notNum = isNaN(callValue);
             if (notNum || callValue.length === 0)
                 reject(
@@ -281,9 +270,36 @@ function checkWithABI(currentFunc, functionName, args, resolve, reject) {
             );
           }
     });
+    console.log(`resolving with ${rv.length} RVs for ${currentFunc.outputs.length} outputs.`);
+    if (rv.length!==currentFunc.outputs.length)
+      console.log(rv);
     resolve({rv, outputs: currentFunc.outputs });
 }
 
+
+async function checkFunctionFormatting(functionName, args) {
+    return new Promise((resolve, reject) => {
+        let found = ProxyABI.find(element => {
+            return element.name === functionName;
+        });
+        console.log(functionName, found);
+        // Checks Proxy before Implementation!
+        if (found) {
+            // Function present in Proxy Contract
+            checkWithABI(found, functionName, args, resolve, reject);
+        } else {
+            let nowFound = IMPLEMENTATION_ABI.find(element => {
+                return element.name === functionName;
+            });
+            console.log(functionName, nowFound);
+            if (!nowFound)
+              console.log(`${functionName} was not found. Did you rename it?`);
+            // Function present in Implementation Contract
+            console.log('checkWithABI', nowFound, functionName, args);
+            checkWithABI(nowFound, functionName, args, resolve, reject);
+        }
+    });
+}
 
 function unpackRVs (result, outputs) {
   // console.log(typeof result, result);
@@ -334,7 +350,7 @@ export function callTransaction(functionName, args) {
     return new Promise((resolve, reject) => {
         checkFunctionFormatting(functionName, args)
             .then(({rv, outputs}) => {
-                console.log(`Call to:`,IMPLEMENTATION_INSTANCE,args,rv);
+                console.log(`Call to:`,IMPLEMENTATION_INSTANCE,functionName,args,rv);
                 IMPLEMENTATION_INSTANCE.methods[functionName](...rv)
                     .call({from: OWN_ADDRESS})
                     .then(result => {
@@ -354,9 +370,9 @@ export function callTransaction(functionName, args) {
 export function sendTransaction(functionName, args) {
     return new Promise((resolve, reject) => {
         checkFunctionFormatting(functionName, args)
-            .then(({rv, output}) => {
+            .then(({rv, outputs}) => {
                 console.log(`Send to (${functionName}):`,IMPLEMENTATION_INSTANCE);
-                console.log('got back from checkFF ready to send:',{rv, output});
+                console.log('got back from checkFF ready to send:',{rv, outputs});
                 IMPLEMENTATION_INSTANCE.methods[functionName](...rv)
                     .send({from: OWN_ADDRESS})
                     .then(result => {
@@ -384,12 +400,20 @@ export function switchTo(address) {
     })
 }
 
-export const setOwnAddy= address=> {
-  OWN_ADDRESS = address;
-}
+// export const setOwnAddy= address=> {
+//   OWN_ADDRESS = address;
+// }
+//
+// export const currentOwnAddy= ()=> new Promise( resolve=>{
+//   if (OWN_ADDRESS)
+//     resolve(OWN_ADDRESS);
+//   setTimeout(()=>{
+//     resolve( currentOwnAddy(OWN_ADDRESS), 1000 )
+//   })
+// })
 
 export const getDeets = ()=> ({
-  NETWORK_ID,
+  NETWORK_ID, OWN_ADDRESS,
   ProxyAddress, PollAddress, ValidatorAddress,
   ProxyABI, PollABI, ValidatorABI,
   ProxyInstance, PollInstance, ValidatorInstance,

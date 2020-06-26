@@ -25,6 +25,7 @@ const Burger = props => {
         <div className="burger-container" >
           { Object.keys(props.menuItems).map(key=>(
             <div
+              key={ key }
               className="burger-menu-item"
               onClick={ props.menuItems[key] }
             > { key } </div>
@@ -35,6 +36,7 @@ const Burger = props => {
         onClick={ props.toggleExpand }
       >
         { [1,2,3].map(n=> <div
+            key={ n+'. Ha Ha Ha.' }
             className={ cN('burger-container') }
             onClick={ props.toggleExpand }
         />) }

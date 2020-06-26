@@ -1,6 +1,8 @@
-import React, {useEffect, useState} from "react";
+import React, { useEffect, useState } from "react";
+import  { useGlobal } from "reactn";
+
 import {connectToWeb3, getImplementationFunctions, getImplementationEvents,
-  callTransaction, myAccounts, setOwnAddy, switchTo} from "../Web3/accessChain";
+  callTransaction, myAccounts, switchTo} from "../Web3/accessChain";
 // import SegregatedPanel from "./segregatedPanel/SegregatedPanel";
 import Button from "react-bootstrap/Button";
 import Container from "react-bootstrap/Container";
@@ -17,13 +19,15 @@ import "../App.scss";
 
 
 // import { owner } from './segregatedPanel/formConfig'
-const pollUrls = ['doodle.com/poll/h7phtw5u2thhz9k4'];
+const pollUrls = ['doodle.com/poll/h7phtw5u2thhz9k4', 'doodle.com/poll/r9rb35fiibvs3aa5'];
 const eventsObj = {};
 
 const LunchcoinApp = props => {
+  // const [ownAddy, setOwnAddy] = useState('0xLA');
+  const { setOwnAddyParent } = props;
   const [polls, setPolls] = useState([]);
   const [livePolls, setLivePolls] = useState([]);
-  const [currentPoll, setCurrentPoll] = useState('doodle.com/poll/h7phtw5u2thhz9k4');
+  const [currentPoll, setCurrentPoll] = useState('doodle.com/poll/r9rb35fiibvs3aa5');
   const [choosePoll, setChoosePoll] = useState(true);
   // const [, set] = useState();
   // const [, set] = useState();
@@ -150,7 +154,7 @@ const LunchcoinApp = props => {
       <Container fluid={"true"} className={"height-100vh"} >
         { currentPoll
           // ? <LiveEvent event={currentPoll} />
-          ? <LiveEvent pollUrl={currentPoll} checkInIsClosed={true} x={'y'}/>
+          ? <LiveEvent pollUrl={currentPoll} checkInIsClosed={true} setOwnAddyParent={ setOwnAddyParent }/>
           : choosePoll
             ? livePolls.map((poll,idx)=>(
                 <Row>

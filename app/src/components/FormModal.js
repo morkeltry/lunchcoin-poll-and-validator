@@ -19,7 +19,9 @@ const showtimeify = text=>
 const FormModal = props => {
   const { children } = props;
   return (
-    <div className= "modal-form">
+    <div
+      className= "modal-form"
+    >
       { children }
       <div>
       </div>
