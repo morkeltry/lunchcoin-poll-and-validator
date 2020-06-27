@@ -37,7 +37,7 @@ contract MutualAgreement {
     struct Poll {
       address initiator;
       uint minStake;
-      uint venueCost;
+      int venueCost;
       uint venuePot;
       address venuePayer;
       uint8 minParticipants;
@@ -52,7 +52,7 @@ contract MutualAgreement {
     struct PollExternal {
       address initiator;
       uint minStake;
-      uint venueCost;
+      int venueCost;
       uint venuePot;
       address venuePayer;
       uint8 minParticipants;
@@ -105,6 +105,7 @@ contract MutualAgreement {
 
     using strings for *;
     using stringcast for string;
+    using SafeMath for int;
     using SafeMath for uint;
 
     function () payable external {
@@ -141,8 +142,8 @@ contract MutualAgreement {
     function initialiseDemo (string memory _poll) public {
 
       pollData[_poll].minStake = 1;
-      pollData[_poll].venueCost = 45000;
-      pollData[_poll].venuePot = 11250;
+      pollData[_poll].venueCost = 12500;
+      pollData[_poll].venuePot = 112500;
       // pollData[_poll].staked[msg.sender].rep = 1;
       // pollData[_poll].staked[msg.sender].venueContribution =
       // pollData[_poll].staked[msg.sender].venueContribution[msg.sender] = 15000;
@@ -184,7 +185,7 @@ contract MutualAgreement {
       address initiator,
       // uint stake,
       // uint venueContribution,
-      uint venueCost,
+      int venueCost,
       uint venuePot,
       uint8 minParticipants,
       uint start,
@@ -438,6 +439,8 @@ contract MutualAgreement {
       return total;
     }
 
+    // NB refundVenueStake and refundStake BOTH call this, so one will revert.
+    // TODO: Add checks into those functions
     event emptyStakeRemoved (string _poll, address _staker);
     function removeEmptyStake (string memory _poll, address _staker) public {
       // uint rep=pollData[_poll].staked[msg.sender].rep;
@@ -480,28 +483,104 @@ contract MutualAgreement {
     //   return dibsList;
     // }
 
-    event venuePotDisbursed (string _poll, address to, address by, int amount);
+
+    function doRefund (address to, uint amount) private returns (bool){
+      // do moneyyyzz
+      return true;
+    }
+
+
+    // NB proportional refunds are not vulnerable to gas exhaustion but covering refunds may be.
+    // Hence populating the 0x0 staker's stake with the refunded stakes, to maintain the size of stakes compared to venuePot.
+    event venuePotDisbursed (string _poll, address to, address by, uint amount);
     // Any staker can call refund of excess venue pot.
     // Disbursement to venue payer must wait until initiator has actively set venue payer (eg to self);
     function refundVenueStakes(string memory _poll) public isStaker(_poll) {
       address[] memory stakers = getStakerAddresses(_poll);
-      uint equalShare = (pollData[_poll].venueCost).div(stakers.length);
-      uint spareCash = pollData[_poll].venuePot-pollData[_poll].venueCost;
+      int equalShare = (pollData[_poll].venueCost) / int(stakers.length);
+      uint pot = pollData[_poll].venuePot;
+      uint spareCash =1234;
+      uint16 i =0;
+      uint16 j =0;
+
+      if (pot==0)
+        return;
+      // This would be so much simpler if you could compare whethere a possibly negative number is smaller than a positive one.
+      // and would be safer, not having a 2's complement risk. Fucking rectangulists.
+      if ((pollData[_poll].venueCost<0) || uint(pollData[_poll].venueCost) < pollData[_poll].venuePot)
+        spareCash = uint( int(pollData[_poll].venuePot) - pollData[_poll].venueCost );
+
       // // proportional refunds:
       // // allows recipients of gifted contributions to get a refund too
-      // for stakers
-      //   refund = 0
-      //   for (stakes = allDibsPaidBy(staker).concat(staker.stake[staker]).concat(staker.stake[0x0]))
-      //     refund += stake*proportion
-      //     remove stake
-      //   refund (refund)
-      //   emit
+      for (i=0; i<stakers.length; i++) {
+        uint refund = 0;
+        uint[3] memory fuckSolidity;
+        address[] memory recipients = new address[](2);
+        int[] memory amounts = new int[](2);
+        //   for (stakes = allDibsPaidBy(staker).concat(staker.stake[staker]).concat(staker.stake[0x0]))
+        recipients[0] = address(0);
+        recipients[1] = msg.sender;
+        // what if this loop runs out of gas? Will the totals that everything is based on still be a good starting point?
+        for (j=0; j<recipients.length; j++) {
+          amounts[j] = int( pollData[_poll].staked[stakers[i]].venueContribution[recipients[j]] );
+          fuckSolidity[0] = 0;
+          fuckSolidity[1] = uint(amounts[j]) * spareCash;
+          if (pot>0)
+            fuckSolidity[2] = fuckSolidity[1]/pot;
+          else
+            fuckSolidity[2] = 888888;
+
+          // refund += fuckSolidity[2];  // += n failing when n nonzero (but that is likely diue to emitting onzero)
+          // refund = refund + fuckSolidity[2];  // r = r + n failing when n nonzero (but that is likely diue to emitting onzero)
+
+          // refund += (  uint(amounts[j]) / pot );
+          // refund += ( spareCash.mul(uint(amounts[j])) / pot );  // fails
+          // refund += ( spareCash * (uint(amounts[j])) / pot );  // failing intermittently (maybe forgot to initialise?) - Also when last emit param is zero.
+          pollData[_poll].staked[stakers[i]].venueContribution[recipients[j]] = 0;
+          // maintain a tally of refunded stakes in case of gas exhaustion.
+          pollData[_poll].staked[address(0)].venueContribution[address(0)] = refund;
+          if (pollData[_poll].venuePot >= refund)
+            pollData[_poll].venuePot -= refund;
+          // else
+          //   revert ('Someone emptied the pot!!');
+        }
+        // if (refund>0 || uint160(bytes20(recipients[j]))>0) {  //likely fail
+        // if (refund>0 || j>0) {
+        // Temporarily catch the zero refunds which should be more
+        // if (uint160(bytes20(recipients[j]))>0) {  // failing!
+        if (j>0) {
+          if (doRefund(stakers[i], refund))
+            emit venuePotDisbursed (_poll, stakers[i], msg.sender, 0);  // cannot get it to issue nonzero last param. Previously failed on literal zero but now works :/
+          // else {
+          //   emit venuePotDisbursed ('doRefund FAILED', stakers[i], msg.sender, fuckSolidity[2]);
+          // }
+        }
+      }
+      pollData[_poll].staked[address(0)].venueContribution[address(0)] = 0;
+
       //
       // // covering refunds:
       // // gifted contributions are used only to top up recipients'
-      // for stakers
-      //   totalPaid = staker.stake[staker].amount + staker.stake[0x0].amount
-      //   if totalPaid < equalSharerefundVen
+      // for (i=0; i<stakers.length; i++) {
+      //   int refund = 0;
+      //   int totalPaid = 0;
+      //   address[] memory recipients = new address[](2);
+      //   int[] memory amounts = new int[](2);
+      //   //   for (stakes = allDibsPaidBy(staker).concat(staker.stake[staker]).concat(staker.stake[0x0]))
+      //   recipients[0] = address(0);
+      //   recipients[1] = msg.sender;
+      //   for (j=0; j<recipients.length; j++) {
+      //     amounts[j] = int( pollData[_poll].staked[stakers[i]].venueContribution[recipients[j]] );
+      //     totalPaid += amounts[j];
+      //   }
+      //   if (totalPaid > int(equalShare))
+      //     for (j=0; j<recipients.length; j++) {
+      //       // too tired for this!!
+      //     }
+      // }
+
+
+
       //     for (stakes = allDibsPaidFor(staker).concat(staker.stake[staker]).concat(staker.stake[0x0]))
       //       if amount>=shortfall
       //         totalPaid += shortfall
@@ -523,7 +602,8 @@ contract MutualAgreement {
       //     emitsolidity uint16
       //
 
-      removeEmptyStake(_poll, msg.sender);
+      if (pollData[_poll].staked[msg.sender].rep == 0)
+        removeEmptyStake(_poll, msg.sender);
     }
 
     function setString (string memory _poll, string memory _mapName, uint8 _vt, string memory data) public {
@@ -551,12 +631,12 @@ contract MutualAgreement {
       pollData[_poll].staked[msg.sender].rep = 0;
       rep[msg.sender] += refund;
       emit repRefund (msg.sender, pollData[_poll].staked[msg.sender].rep, refund);
-      removeEmptyStake(_poll, msg.sender);
-
+      if (totalVenueContribs(_poll, msg.sender) == 0)
+        removeEmptyStake(_poll, msg.sender);
     }
 
 
-    function emitVenueStakeRefunded (string memory _poll, address _to, address _by, int _amount, uint8 _repeat) public  {
+    function emitVenueStakeRefunded (string memory _poll, address _to, address _by, uint _amount, uint8 _repeat) public  {
       for (uint8 i=0; _repeat>0 && i<_repeat; i++) {
         emit venuePotDisbursed (_poll, _to, _by, _amount);
       }
@@ -564,7 +644,7 @@ contract MutualAgreement {
         emit venuePotDisbursed (_poll, pollData[_poll].venuePayer, _by, _amount);
     }
 
-    function emitVenuePotRefunded (string memory _poll, address _to, address _by, int _amount) public {
+    function emitVenuePotRefunded (string memory _poll, address _to, address _by, uint _amount) public {
       emit venuePotDisbursed (_poll, pollData[_poll].venuePayer, _by, _amount);
     }
 

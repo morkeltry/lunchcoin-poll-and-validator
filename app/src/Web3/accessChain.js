@@ -379,7 +379,7 @@ export function sendTransaction(functionName, args) {
                         console.log(typeof result, result);
                         resolve(result);
                     })
-                    .catch(e=>{console.log(`${functionName} fail:`,e);reject(e)});
+                    .catch(e=>{console.log(`${functionName} fail:`,e); reject(e)});
             })
             .catch(err => {
                 console.log(`Bad format for ${functionName}`, err);

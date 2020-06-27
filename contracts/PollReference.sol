@@ -31,7 +31,7 @@ contract PollReference {
     struct Poll {
       address initiator;
       uint minStake;
-      uint venueCost;
+      int venueCost;
       uint venuePot;
       address venuePayer;
       uint8 minParticipants;

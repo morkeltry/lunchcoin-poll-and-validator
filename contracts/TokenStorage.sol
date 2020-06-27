@@ -40,7 +40,7 @@ contract TokenStorage  is Ownable{
     struct Poll {
       address initiator;
       uint minStake;
-      uint venueCost;
+      int venueCost;
       uint venuePot;
       address venuePayer;
       uint8 minParticipants;
@@ -55,7 +55,7 @@ contract TokenStorage  is Ownable{
     struct PollExternal {
       address initiator;
       uint minStake;
-      uint venueCost;
+      int venueCost;
       uint venuePot;
       address venuePayer;
       uint8 minParticipants;

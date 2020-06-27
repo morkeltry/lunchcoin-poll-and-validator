@@ -17,19 +17,22 @@ import { connectToWeb3, getImplementationFunctions, getImplementationEvents,
   myAccounts, } from "../Web3/accessChain";
 import { getPrice } from "../helpers/priceFeed.js";
 
+let OWN_ADDRESS = '0x000';
+let t=[];
+
 const LiveEvent = props => {
   const { pollUrl, events, setOwnAddyParent } = props;
   if (!pollUrl)
     throw ('Attempted to render LiveEvent with pollUrl='+pollUrl);
-  let OWN_ADDRESS = '0x000';
 
-  const [ownAddy, setOwnAddy] = useState(OWN_ADDRESS);
+  const [ownAddress, setOwnAddy] = useState(OWN_ADDRESS);
+  OWN_ADDRESS = '0x123';
   const [modalView, setModalView] = useState(null);
   const [burgerView, setBurgerView] = useState(false);
   const [hideFunctions, setHideFunctions] = useState(true);
   const [pollName, setPollName] = useState('');
   const [availableAccounts, setAvailableAccounts] = useState(['0x1234','0x5678']);
-  const [contractAddy, setContractAddy] = useState(ownAddy);
+  // const [contractAddy, setContractAddy] = useState(ownAddy);
   const [caughtEvents, setCaughtEvents] = useState([]);
   const [sentTransaction, setSentTransaction] = useState([]);
   const [checkedIn, setCheckedIn] = useState(false);
@@ -46,17 +49,21 @@ const LiveEvent = props => {
   const [youPaidForVenue, setYouPaidForVenueRaw] = useState(0);
   const [mismatchedProofs, setMismatchedProofs] = useState([]);
   const [repMultiplier, repMultiplierRaw] = useState(1.25);
+  const [maxRep, setMaxRepRaw] = useState(1000);
   const [updatedRep, setUpdatedRepRaw] = useState(null);
   const [infoModalResult, setInfoModalResult] = useState([]);
   const [price, setPrice] = useState();
   // const [, set] = useState();
   const [validator1PeerCheckedIn, setValidator1PeerCheckedIn] = useState([[ OWN_ADDRESS, true ]]);
 
-  const [setCheckInCloses ,setVenueCost ,setVenuePot ,setYouPaidForVenue, setRepStaked, setRepEverStaked, setRepWas ,setRepMultiplier, setUpdatedRep ]
-    = [setCheckInClosesRaw, setVenueCostRaw, setVenuePotRaw, setYouPaidForVenueRaw, setRepStakedRaw, setRepEverStakedRaw, setRepWasRaw, repMultiplierRaw, setUpdatedRepRaw ]
+  const [setCheckInCloses ,setVenueCost ,setVenuePot ,setYouPaidForVenue, setRepStaked, setRepEverStaked, setRepWas ,setRepMultiplier, setMaxRep, setUpdatedRep ]
+    = [setCheckInClosesRaw, setVenueCostRaw, setVenuePotRaw, setYouPaidForVenueRaw, setRepStakedRaw, setRepEverStakedRaw, setRepWasRaw, repMultiplierRaw, setMaxRepRaw, setUpdatedRepRaw ]
       .map(setter=> response=> { setter(Number(response)); });
 
 // TODO: setRepWas setInfoModalResult
+
+  clearInterval(t)
+  t[0]= setInterval(()=>{ showOwnAddy() }, 15000);
 
   const catchRelevantEvent = (result, eventName)=> {
     const { returnValues } = result;
@@ -97,15 +104,22 @@ const LiveEvent = props => {
     repRefund: (result, eventName)=> {
       catchRelevantEvent(result, eventName);
       setUpdatedRepRaw(null);
-      if (!ownAddy) {
-        console.log(`ownAddy is now ${ownAddy}. Setting timeout to recheck soon.`);
-        setTimeout(()=>{console.log(`After timeout, ownAddy is now ${ownAddy}`);}, 3000)
-      }
-      console.log('FETCHANDUPDATEREP', ownAddy);
-      fetchAndUpdateRep(ownAddy);
+      const ownAddy=showOwnAddy();
+      // console.log('FETCHANDUPDATEREP', ownAddy);
+      // if (!ownAddy || ownAddy.length<42) {
+      //   t[1]= setTimeout(()=>{ fetchAndUpdateRep(); }, 500)
+      //   console.log(`ownAddy is now ${ownAddy}. Setting timeout to recheck soon.`);
+      //   t[2]= setTimeout(()=>{ console.log(`After timeout, ownAddy is now ${ownAddy}`); }, 3000)
+      // } else
+      // fetchAndUpdateRep();
     },
     venuePotDisbursed: catchRelevantEvent,
 
+  }
+
+  const showOwnAddy = ()=> {
+    console.log(new Date().toTimeString().slice(0,8)+': '+ownAddress);
+    return ownAddress;
   }
 
   const proofMismatchMessage = ()=> 'attendees are not in your check-in proof!'
@@ -131,7 +145,7 @@ const LiveEvent = props => {
   }
 
 
-  const fetchAndUpdate = (freshAddy = ownAddy )=> {
+  const fetchAndUpdate = (freshAddy = ownAddress )=> {
     callTransaction('getproofsAsAddresses', {_poll : pollUrl})
       .then(response=>{
         console.log('getproofsAsAddresses', response);
@@ -146,8 +160,8 @@ const LiveEvent = props => {
       .then(response=>{
         console.log('getStakerAddresses', response);
         setStakers (response);
-        if (response.indexOf(ownAddy)>-1)
-          callTransaction('getStakersProof', {_poll : pollUrl, _staker : freshAddy || ownAddy })
+        if (response.indexOf(freshAddy || ownAddress)>-1)
+          callTransaction('getStakersProof', {_poll : pollUrl, _staker : freshAddy || ownAddress })
             .then(response=>{
               console.log('expecting array representing own proof:',response);
               if (response.length) {
@@ -159,17 +173,17 @@ const LiveEvent = props => {
             .catch(err=>{console.log(err);});
       })
       .catch(err=>{console.log(err);});
-    callTransaction('totalRepStaked', {_poll : pollUrl, _staker : freshAddy || ownAddy })
+    callTransaction('totalRepStaked', {_poll : pollUrl, _staker : freshAddy || ownAddress })
       .then(response=>{
         console.log('totalRepStaked', response);
         setRepStaked(response);
         setRepEverStaked(response);
       })
       .catch(err=>{console.log(err);});
-    console.log('FETCHANDUPDATEREP',freshAddy,ownAddy,(freshAddy || ownAddy));
-    fetchAndUpdateRep(freshAddy || ownAddy)
+    console.log('FETCHANDUPDATEREP',freshAddy,ownAddress,(freshAddy || ownAddress));
+    fetchAndUpdateRep(freshAddy || ownAddress)
       .then(setRepWas);
-    callTransaction('totalVenueContribs', {_poll : pollUrl, _staker : freshAddy || ownAddy })
+    callTransaction('totalVenueContribs', {_poll : pollUrl, _staker : freshAddy || ownAddress })
       .then(response=>{
         console.log('totalVenueContribs', response);
         console.log(`Initial fetchandupdate gave setYouPaidForVenue= ${youPaidForVenue} (${response.total},${response[0]},${response})`);
@@ -186,6 +200,10 @@ const LiveEvent = props => {
           console.log('Why is response.proofsWindowClosed',response.proofsWindowClosed,'in',response);
         setCheckInIsClosed(response.proofsWindowClosed);
       })
+      .catch(err=>{console.log('err:',err);});
+
+    callTransaction('getproofsAsAddresses', {_poll : pollUrl})
+      .then(setMaxRep)
       .catch(err=>{console.log('err:',err);});
 
       // NB getFromStorage failing!
@@ -233,8 +251,8 @@ const LiveEvent = props => {
       .then(setPrice);
   }
 
-  const fetchAndUpdateRep = (_staker = ownAddy )=> new Promise((resolve, reject)=> {
-    console.log('ownAddy',ownAddy,'getRep', {_staker});
+  const fetchAndUpdateRep = (_staker = ownAddress )=> new Promise((resolve, reject)=> {
+    console.log('ownAddy',ownAddress,'getRep', {_staker});
     callTransaction('getRep', {_staker})
       .then(response=>{
         console.log('setting updatedRep');
@@ -265,7 +283,7 @@ const LiveEvent = props => {
   // NB _impersonatedStaker is a temporary expedient for testing which will be removed
   const submitProof = ()=> {
     const _newProof = ownProof;
-    const _impersonatedStaker = ownAddy;
+    const _impersonatedStaker = ownAddress;
     const args = {_poll: pollUrl, _newProof: ownProof, _impersonatedStaker } ;
     let getproofsAsAddressesIsOK = true;
 
@@ -323,7 +341,7 @@ const LiveEvent = props => {
     sendTransaction('refundStake', {_poll: pollUrl, _reveal: emptyBytes32 })
       .then(response=>{
         setTimeout(()=>{
-        callTransaction('totalRepStaked', {_poll: pollUrl, _staker: ownAddy })
+        callTransaction('totalRepStaked', {_poll: pollUrl, _staker: ownAddress })
           .then(response=>{
             console.log(response);
           })
@@ -353,7 +371,7 @@ const LiveEvent = props => {
 
 // ----------------------- useEffect
 
-  useLayoutEffect(()=> {
+  useEffect(()=> {
     getLocalCache();
     fetchOnlinePoll(pollUrl);
     connectToWeb3().then(addressObj => {
@@ -362,10 +380,10 @@ const LiveEvent = props => {
       console.log('which one is ownAddy, which is IMPLEMENTATION_ADDRESS?' );
       if (!addressObj.OWN_ADDRESS)
         console.log(`\n\n\n\nWarning - setOwnAddy(${addressObj.OWN_ADDRESS})\n\n\n\n`);
-      console.log(`\n\nsetOwnAddy(${addressObj.OWN_ADDRESS})\n (Previous was ${ownAddy})\n`);
+      console.log(`\n\nsetOwnAddy(${addressObj.OWN_ADDRESS})\n (Previous was ${ownAddress})\n`);
       setOwnAddyForApp(addressObj.OWN_ADDRESS);
-      console.log(`\n\nsetOwnAddy(${addressObj.OWN_ADDRESS})\nis done. New ownAddy=${ownAddy} \n`);
-      setContractAddy(addressObj.IMPLEMENTATION_ADDRESS);
+      console.log(`\n\nsetOwnAddy(${addressObj.OWN_ADDRESS})\nis done. New ownAddy=${ownAddress} \n`);
+      // setContractAddy(addressObj.IMPLEMENTATION_ADDRESS);
       setAvailableAccounts(addressObj.availableAccounts);
       return addressObj.OWN_ADDRESS
     }).then(addy=> {
@@ -475,7 +493,7 @@ return(<>
           buttonDisabled= { checkInIsClosed || !checkInClosingIn(checkInCloses) }
         >
           <div className="strong left-align">
-            <span className="address42"> { ownAddy } </span> (you)
+            <span className="address42"> { ownAddress } </span> (you)
           </div>
           <div className="strong right-align">
             staked <span className="hype hanging"> { niceNum(repStaked/1000) } Rep </span>
@@ -567,7 +585,7 @@ return(<>
                     clearModal= { ()=>{ setModalView(null) } }
                     submit= { submitProof  /*NB not yet implemented in FormModal - see submit below */ }
                   >
-                    <div>{ ownAddy }</div>
+                    <div>{ ownAddress }</div>
                     <div className=""><span className="">Validator:</span><span className=""> Mutual Agreement</span></div>
                     <div className="">Check in your friends</div>
                     <form>
@@ -609,7 +627,7 @@ return(<>
                     loadingText= { modalView==='venue refund' ? 'Waiting for refund confirmations' : `Current rep: ${repWas}. Updating...` }
                     loading = { modalView==='venue refund'
                       ? !caughtEvents.filter(event=> event.eventName==='venuePotDisbursed').length
-                      : !caughtEvents.filter(event=> event.eventName==='repRefund' && event.returnValues.staker===ownAddy).length
+                      : !caughtEvents.filter(event=> event.eventName==='repRefund' && "event.returnValues.staker===ownAddress").length
                     }
                   >
                   { modalView==='venue refund'
@@ -639,13 +657,16 @@ return(<>
                 : <>
                     <div className={ cN("modal-info__header", "w100", "hype-small") }> Reputation update </div>
                     { caughtEvents
-                        .filter(event=> event.eventName==='repRefund' && event.returnValues.staker===ownAddy)
+                        .filter(event=> event.eventName==='repRefund' && 'event.returnValues.staker===ownAddress')
                         .map (event=>{
                           const { returnValues } = event;
                           const { staker, staked, refunded } = returnValues;
                           return <>
                             <div className={ cN("hype-small", "w70") }>Your rep was: {repWas/1000} </div>
-                            <div>+ stake({repStaked/1000}) X {repMultiplier} = {repStaked/1000*repMultiplier} </div>
+                            <div className="w70"><span className="hype-small">+ stake</span>({repStaked/1000}) X {repMultiplier} = <span className="hype-small">{repStaked/1000*repMultiplier} </span></div>
+                            { updatedRep && updatedRep>=maxRep &&
+                              <div className="w70"><span className="hype-small">Maximum rep</span>: <span className="hype-small">{maxRep} </span></div>
+                            }
                             <div>Your rep is now:
                               <span className={ cN("hype") }>
                                 {'  '}{ updatedRep===null ? <Dots /> : updatedRep }
@@ -667,7 +688,7 @@ return(<>
 
     </div>
     { true &&
-      <AdminLogger { ...ownAddy } />
+      <AdminLogger ownAddy={ ownAddress } />
     }
   </>)
 }

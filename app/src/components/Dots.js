@@ -9,7 +9,12 @@ import './modalView.css';
 const Dots = props => {
   const [dots, setDots] = useState (1);
 
-  return '...'
+  setInterval(()=>{ setDots(dots%3+1) }, 1250);
+
+  return new Array(dots)
+    .fill()
+    .map(x=>'.')
+    .join('')
 }
 
 export default Dots;
