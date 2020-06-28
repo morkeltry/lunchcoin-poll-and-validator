@@ -34,9 +34,6 @@ contract TokenStorage  is Ownable{
       uint amount;
     }
 
-
-
-
     struct Poll {
       address initiator;
       uint minStake;
@@ -81,7 +78,12 @@ contract TokenStorage  is Ownable{
     mapping(uint8 => address) internal __validators;
     mapping(uint8 => string) internal __validatorNames;
     mapping(address => uint) internal __cashBalance;
-    address __selfAddy ;
+    mapping(address => bool) internal stakerKnown;      // will move to Poll
+    mapping(address => bool) internal isCurrentMiner;      // will move to Poll
+    address[] knownMiners;
+    uint initialRep = 2000;      // will move to Poll
+    uint topupRep = 1500;        // will move to Poll
+    address selfAddy ;
 
 
     // unused - previously for Storage Proxy
@@ -99,7 +101,9 @@ contract TokenStorage  is Ownable{
 
 
     constructor() public {
-        _owner = msg.sender;
+      _owner = msg.sender;
+      uint initialRep = 2000;  
+      uint topupRep = 1500;
     }
 
     function setProxyContract(address proxyContract) onlyOwner public{

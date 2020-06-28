@@ -1,10 +1,20 @@
+
 import Web3 from "web3";
 import  { useGlobal } from "reactn";
 import TokenProxyArtifacts from "../contracts/TokenProxy.json";
 import PollArtifacts from "../contracts/PollReference.json";
 import ValidatorArtifacts from "../contracts/MutualAgreement.json";
 
-let providerUrl = "ws://127.0.0.1:8545";
+const env = require('env2')('./.env');
+const envVars = Object.keys(process.env);
+if (envVars.length>2)
+console.log(envVars);
+
+
+let providerUrl = {
+  development : 'ws://127.0.0.1:8545',
+  production: 'ws://mainnet-rpc.thundercore.com/:8545'
+}[process.env.NODE_ENV || 'development'];
 let web3;
 
 // NB Drizzle Requires 'ws://' not anything else

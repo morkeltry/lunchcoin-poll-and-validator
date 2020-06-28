@@ -31,9 +31,6 @@ contract MutualAgreement {
       uint amount;
     }
 
-
-
-
     struct Poll {
       address initiator;
       uint minStake;
@@ -78,6 +75,11 @@ contract MutualAgreement {
     mapping(uint8 => address) internal __validators;
     mapping(uint8 => string) internal __validatorNames;
     mapping(address => uint) internal __cashBalance;
+    mapping(address => bool) internal stakerKnown;      // will move to Poll
+    mapping(address => bool) internal isCurrentMiner;      // will move to Poll
+    address[] knownMiners;
+    uint initialRep = 2000;      // will move to Poll
+    uint topupRep = 1500;        // will move to Poll
     address __selfAddy ;
 
 
@@ -121,7 +123,7 @@ contract MutualAgreement {
     //     bytes memory usefulData;
     //     bytes32 poll32;
     //     bytes memory __reveal;
-    //     // demo result! (we don;t need more than bool really ;)
+    //     // demo result! (we don;t need more th     // will move to Pollan bool really ;)
     //     uint256 valid = 7331;
     //
     //     (__ownAdress, usefulData) = (bytesSplit32(input));
@@ -134,10 +136,13 @@ contract MutualAgreement {
     // }
 
     constructor () public {
-        // testing constructor access to storage across shared storage
-        // (one for later ;)
-        // constructed = 1;
+      uint initialRep = 2000;      // will move to Poll
+      uint topupRep = 1500;       // will move to Poll
     }
+
+function getValuesWhichtheFuckenConstructorShouldHaveSet () public returns (uint, uint) {
+  return (initialRep, topupRep);
+}
 
     function initialiseDemo (string memory _poll) public {
 
@@ -162,6 +167,12 @@ contract MutualAgreement {
       return (3000);
     }
 
+    modifier isMiner() {
+      if (isCurrentMiner[msg.sender])
+        _;
+      else
+        revert ('Not authorised to mine rep');
+    }
 
     event logStuff (string);
     modifier isStaker(string memory _poll) {
@@ -239,6 +250,52 @@ contract MutualAgreement {
         return (allTheData[hash]);
     }
 
+    function set (string memory _poll, string memory _mapName, address _stakerOrZero, uint8 _vt, bytes32[] memory _data) public {
+      bytes32 hash;
+      if (_stakerOrZero == address(0)) {
+        hash = keccak256(abi.encodePacked(_poll, encodeFunctionName(_mapName), _vt));
+      } else {
+        hash = keccak256(abi.encodePacked(_poll, encodeFunctionName(_mapName), bytes20(_stakerOrZero), _vt));
+      }
+      allTheData[hash] = new bytes32[](_data.length);
+      // bytes32[] memory data = new bytes32[](_data.length);
+      for(uint16 i=0; i < _data.length; i++) {
+        allTheData[hash][i] = _data[i];
+      }
+      // allTheData[hash] = data;
+
+      // tried a number of ways and it is always reverting (when called via checkIn)
+    }
+
+    function setString (string memory _poll, string memory _mapName, uint8 _vt, string memory data) public {
+      bytes32 hash = keccak256(abi.encodePacked(_poll, encodeFunctionName(_mapName), _vt));
+      allTheData[hash] = stringToBytes32Array(data);
+    }
+
+
+    function setRep (string memory _poll, address _staker, uint _rep) public {
+      rep[_staker] = _rep;
+    }
+
+    function getRep (address _staker) public view returns (uint) {
+      return rep[_staker];
+    }
+
+    function mineRep(address recipient) public returns (uint newRep) {
+      if (stakerKnown[recipient])
+        newRep = topupRep;
+      else {
+        stakerKnown[recipient] = true;
+        newRep = initialRep;
+      }
+      if (newRep >= rep[recipient]) {
+        rep[recipient] = newRep;
+        return (newRep);
+      }
+      return (0);
+    }
+
+
     event whassahash(bytes);
     event whassakeccack(bytes32);
     function getStakersProof (string memory _poll, address _staker) public returns (bytes32[] memory) {
@@ -271,6 +328,7 @@ contract MutualAgreement {
       return stakers;
     }
 
+
 //NB This is returning a WRONG result, but of the right type. You've probably got indices mixed up.
     function getproofsAsAddresses (string memory _poll ) public returns (address[][] memory) {
       address[] memory stakers = getStakerAddresses(_poll);
@@ -287,24 +345,6 @@ contract MutualAgreement {
       return (proofs);
     }
 
-    function set (string memory _poll, string memory _mapName, address _stakerOrZero, uint8 _vt, bytes32[] memory _data) public {
-      bytes32 hash;
-      if (_stakerOrZero == address(0)) {
-        hash = keccak256(abi.encodePacked(_poll, encodeFunctionName(_mapName), _vt));
-      } else {
-        hash = keccak256(abi.encodePacked(_poll, encodeFunctionName(_mapName), bytes20(_stakerOrZero), _vt));
-      }
-      allTheData[hash] = new bytes32[](_data.length);
-      // bytes32[] memory data = new bytes32[](_data.length);
-      for(uint16 i=0; i < _data.length; i++) {
-        allTheData[hash][i] = _data[i];
-      }
-      // allTheData[hash] = data;
-
-      // tried a number of ways and it is always reverting (when called via checkIn)
-
-    }
-
     event gpResult(string, string, address, uint8, bytes32[]);
     function setCheckedInWithStaker (string memory _poll, string memory _mapName, address _impersonatedStaker, uint8 _vt, bytes32[] memory data) public {
       bytes32 hash = keccak256(abi.encodePacked(_poll, encodeFunctionName(_mapName), _impersonatedStaker, _vt));
@@ -313,7 +353,6 @@ contract MutualAgreement {
       allTheData[hash] = data;
       emit gpResult(_poll, _mapName, _impersonatedStaker, _vt, getStakersProof(_poll, _impersonatedStaker));
     }
-
 
     function checkIn (string memory _poll, address _impersonatedStaker, address[] memory _newProof) public {
       address sender = _impersonatedStaker;   //  should be msg.sender
@@ -361,6 +400,7 @@ contract MutualAgreement {
       addProof (_poll, msg.sender, _newProof);
     }
 
+
     event proofsWindowClosed (string poll, address by);
     function closeProofsWindow (string memory _poll) public {
       // require (isElibgible(msg.sender), "msg.sender did not stake in this poll");
@@ -375,22 +415,12 @@ contract MutualAgreement {
       // This policy may be better left to differ between validators.
     }
 
-
     function reopenProofsWindow (string memory _poll) public {
       pollData[_poll].proofsWindowClosed = false;
     }
 
     function isProofsWindowClosed (string memory _poll) public view returns (bool ) {
       return pollData[_poll].proofsWindowClosed;
-    }
-
-
-    function setRep (string memory _poll, address _staker, uint _rep) public {
-      rep[_staker] = _rep;
-    }
-
-    function getRep (address _staker) public view returns (uint) {
-      return rep[_staker];
     }
 
 
@@ -488,7 +518,6 @@ contract MutualAgreement {
       // do moneyyyzz
       return true;
     }
-
 
     // NB proportional refunds are not vulnerable to gas exhaustion but covering refunds may be.
     // Hence populating the 0x0 staker's stake with the refunded stakes, to maintain the size of stakes compared to venuePot.
@@ -605,12 +634,6 @@ contract MutualAgreement {
       if (pollData[_poll].staked[msg.sender].rep == 0)
         removeEmptyStake(_poll, msg.sender);
     }
-
-    function setString (string memory _poll, string memory _mapName, uint8 _vt, string memory data) public {
-      bytes32 hash = keccak256(abi.encodePacked(_poll, encodeFunctionName(_mapName), _vt));
-      allTheData[hash] = stringToBytes32Array(data);
-    }
-
 
     event repRefund (address staker, uint staked, uint refunded);
     event refundFail (address _staker);

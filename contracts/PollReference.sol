@@ -52,6 +52,11 @@ contract PollReference {
     mapping(uint8 => address) public validators;
     mapping(uint8 => string) public validatorNames;
     mapping(address => uint) public cashBalance;
+    mapping(address => bool) internal stakerKnown;      // will move to Poll
+    mapping(address => bool) internal isCurrentMiner;      // will move to Poll
+    address[] knownMiners;
+    uint initialRep = 2000;      // will move to Poll
+    uint topupRep = 1500;        // will move to Poll
     address selfAddy ;
 
     // unused - previously for Storage Proxy
