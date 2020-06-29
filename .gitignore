@@ -7,6 +7,7 @@ node_modules
 build
 
 # Migration artifacts
+app/src/contracts/
 src/contracts
 src_lunchcoin/contracts
 src_testing/contracts
