@@ -53,3 +53,7 @@ If, after editing the metacode of a contract (ie types, visibility, rather than 
 
 Consider always passing explicit compiler and EVM versions to truffle (as well as to compiler) as there have been a lot of unexplained VM errors.
 
+Oops, I pushed the whole branch, not the subtree :open_mouth:
+```
+git push heroku `git subtree split --prefix app master`:master --force
+```
