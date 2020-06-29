@@ -8,7 +8,7 @@
       "type": "constructor",
       "signature": "constructor"
     },
-    {
+    { 
       "anonymous": false,
       "inputs": [],
       "name": "CrossContractValidateBegin",

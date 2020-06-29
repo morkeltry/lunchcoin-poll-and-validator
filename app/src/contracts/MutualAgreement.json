@@ -1,7 +1,7 @@
 {
   "contractName": "MutualAgreement",
   "abi": [
-    {
+    { 
       "inputs": [],
       "payable": false,
       "stateMutability": "nonpayable",
