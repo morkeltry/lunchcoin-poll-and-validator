@@ -24,6 +24,11 @@ let web3;
   web3 = new Web3(new Web3.providers.WebsocketProvider(providerUrl));
 if (!web3.eth.net)
   console.log(`Did not get web3.eth.net from ${providerUrl}. Maybe check the port number?`);
+if (process.env.NODE_ENV !== 'production'){
+  console.log(`Running in ${process.env.NODE_ENV}`);
+  if (web3.eth)
+    console.log('but web3.eth.net=',web3.eth.net);
+}
 
 let NETWORK_ID;
 let ProxyABI;
