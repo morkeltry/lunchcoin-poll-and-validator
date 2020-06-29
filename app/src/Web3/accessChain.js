@@ -30,7 +30,7 @@ if (process.env.NODE_ENV !== 'production'){
   if (web3.eth)
     console.log('but web3.eth.net=',web3.eth.net);
 }
-
+  
 let NETWORK_ID;
 let ProxyABI;
 let ProxyAddress;
