@@ -1,0 +1,8 @@
+rm app/src/contracts/Migrations.json
+rm app/src/contracts/MutualAgreement.json
+rm app/src/contracts/PollReference.json
+rm app/src/contracts/Proxy.json
+rm app/src/contracts/TokenProxy.json
+rm app/src/contracts/TokenStorage.json
+rm app/src/contracts/UpgradeabilityProxy.json
+echo truffle migrate --reset

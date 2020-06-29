@@ -8,7 +8,7 @@
       "type": "constructor",
       "signature": "constructor"
     },
-    { 
+    {
       "anonymous": false,
       "inputs": [],
       "name": "CrossContractValidateBegin",
@@ -2211,7 +2211,7 @@
                           "name": "this",
                           "nodeType": "Identifier",
                           "overloadedDeclarations": [],
-                          "referencedDeclaration": 8609,
+                          "referencedDeclaration": 8615,
                           "src": "2197:4:4",
                           "typeDescriptions": {
                             "typeIdentifier": "t_contract$_PollReference_$4302",
@@ -16116,7 +16116,7 @@
                           "name": "this",
                           "nodeType": "Identifier",
                           "overloadedDeclarations": [],
-                          "referencedDeclaration": 8609,
+                          "referencedDeclaration": 8615,
                           "src": "2197:4:4",
                           "typeDescriptions": {
                             "typeIdentifier": "t_contract$_PollReference_$4302",
@@ -28471,47 +28471,15 @@
     "version": "0.5.17+commit.d19bba13.Emscripten.clang"
   },
   "networks": {
-    "108": {
+    "1593378643010": {
       "events": {},
       "links": {},
-      "address": "0xE7aC359F492010619a0ef5A9B3B71a8b64cE3236",
-      "transactionHash": "0x677223d770e04482f39c7ba9bcf53afe51ba1366e770aacfb74a0c54f1e79852"
-    },
-    "1593378643010": {
-      "events": {
-        "0x1ff50e4650f7f1e5b26a5f5e921b803deee4a95a1b6ef46e05992b3bc1dcdb8c": {
-          "anonymous": false,
-          "inputs": [],
-          "name": "CrossContractValidateBegin",
-          "type": "event"
-        },
-        "0x8d3a809bf7de78d4f05cff7e28d114c50c5b6b828274326dec15c0119a574f81": {
-          "anonymous": false,
-          "inputs": [],
-          "name": "CrossContractValidateEnd",
-          "type": "event"
-        },
-        "0xd65038c0be209d4ae257f7e73a69b8b787796717cd2ce67d00d7e02c9de1020e": {
-          "anonymous": false,
-          "inputs": [
-            {
-              "indexed": false,
-              "internalType": "bool",
-              "name": "",
-              "type": "bool"
-            }
-          ],
-          "name": "CrossContractValidateReturned",
-          "type": "event"
-        }
-      },
-      "links": {},
-      "address": "0x38489B7F3DF7CddB64FE626bF40e53f2dE1df7C8",
-      "transactionHash": "0x73f6c0204f9d177ba8fe6774fb331d6396befe17033a5fbe73dd860663e9255e"
+      "address": "0x25958aa0A2A00f2D32C6Cb8E7a9A0D02a2A8AB7e",
+      "transactionHash": "0xfc56f5c4d3989ebf14fe24a5816818685c415614e35ec037ec713339fb93904d"
     }
   },
   "schemaVersion": "3.0.2",
-  "updatedAt": "2020-06-29T12:27:21.170Z",
+  "updatedAt": "2020-06-29T13:51:04.285Z",
   "devdoc": {
     "methods": {}
   },

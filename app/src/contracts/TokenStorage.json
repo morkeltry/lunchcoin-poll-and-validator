@@ -8,7 +8,7 @@
       "type": "constructor",
       "signature": "constructor"
     },
-    { 
+    {
       "constant": true,
       "inputs": [
         {
@@ -9453,21 +9453,15 @@
     "version": "0.5.17+commit.d19bba13.Emscripten.clang"
   },
   "networks": {
-    "108": {
-      "events": {},
-      "links": {},
-      "address": "0xF9f00B68af5f89fdEace6e4E29800aDABd4A0d2d",
-      "transactionHash": "0xe3466fa6fb30712f2649a2df1784227cc869c6f62a7e3e759bb8dcbcc4777b22"
-    },
     "1593378643010": {
       "events": {},
       "links": {},
-      "address": "0xA4F822BaFf7374Bd675bD1fDF3822a53581e76B1",
-      "transactionHash": "0x37773c40042b90846bf4967c838559265b59eb9ade4066a8c2850692926e48c2"
+      "address": "0x0066C003906A1a4104CB2750D6161282EaEDd63F",
+      "transactionHash": "0xe61681b6907b1760adc5ae6900a63dee0299b7925a7a278259706848287b606f"
     }
   },
   "schemaVersion": "3.0.2",
-  "updatedAt": "2020-06-29T12:27:21.155Z",
+  "updatedAt": "2020-06-29T13:51:04.270Z",
   "devdoc": {
     "author": "Arvind Kalra (github.com/arvindkalra) and Pranav Singhal (github.com/pranav-singhal)",
     "methods": {},

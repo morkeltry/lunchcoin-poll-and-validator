@@ -3,7 +3,7 @@
   "abi": [
     {
       "inputs": [
-        { 
+        {
           "internalType": "address",
           "name": "_implementation",
           "type": "address"
@@ -1402,35 +1402,15 @@
     "version": "0.5.17+commit.d19bba13.Emscripten.clang"
   },
   "networks": {
-    "108": {
+    "1593378643010": {
       "events": {},
       "links": {},
-      "address": "0x50F5D921B156Aa3CB53aB5c30069733221fC55da",
-      "transactionHash": "0x73dd6c168a3d0db780d16a4012a77d504e94e037494f9cf2f5c774bc5e7b1260"
-    },
-    "1593378643010": {
-      "events": {
-        "0xbc7cd75a20ee27fd9adebab32041f755214dbc6bffa90cc0225b39da2e5c2d3b": {
-          "anonymous": false,
-          "inputs": [
-            {
-              "indexed": false,
-              "internalType": "address",
-              "name": "implementation",
-              "type": "address"
-            }
-          ],
-          "name": "Upgraded",
-          "type": "event"
-        }
-      },
-      "links": {},
-      "address": "0xD2421144caC035777BB884F6309BB5c428962E18",
-      "transactionHash": "0x7e00b5f8601db7be0ceee79f7a345feab2a1b13229e5085d07255c12ea1c2ae6"
+      "address": "0x45ec9dE2A65fC87f0709f73D2220E70492AcFA68",
+      "transactionHash": "0x4b967e6ebdbd7aaac9e9934cca7ffb602dc95831c0e1b41934da9748baf7d0f0"
     }
   },
   "schemaVersion": "3.0.2",
-  "updatedAt": "2020-06-29T12:27:21.151Z",
+  "updatedAt": "2020-06-29T13:51:04.265Z",
   "devdoc": {
     "author": "Arvind Kalra (github.com/arvindkalra) and Pranav Singhal (github.com/pranav-singhal)",
     "methods": {
