@@ -14,7 +14,7 @@ console.log(envVars);
 let providerUrl = {
   development : 'ws://127.0.0.1:8545',
   production: 'ws://mainnet-rpc.thundercore.com/:8545'
-}[process.env.NODE_ENV || 'development'];
+}[process.env.REACT_APP_NODE_ENV || 'development'];
 let web3;
 
 // NB Drizzle Requires 'ws://' not anything else
