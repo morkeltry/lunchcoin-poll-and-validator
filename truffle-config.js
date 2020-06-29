@@ -22,10 +22,28 @@
 // const infuraKey = "fj4jll3k.....";
 //
 // const fs = require('fs');
-// const mnemonic = fs.readFileSync(".secret").toString().trim();
 const path = require("path");
+const HDWalletProvider = require("@truffle/hdwallet-provider");
+const mnemonic = require('./.mnemonic')
+const gwei = 1000000000;
 
 module.exports = {
+  contracts_build_directory: path.join(__dirname, "app/src/contracts"),
+
+  compilers: {
+    solc: {
+      version: "0.5.17",
+      settings: {
+        // see the solidity docs for advice about optimization and evmversion
+        optimizer: {
+          enabled: true,
+          runs: 200
+        },
+        evmVersion: "byzantium" // Current EVM on ThunderCore is fixed to "byzantium"
+      }
+    }
+  },
+
   /**
    * Networks define how you connect to your ethereum client and let you set the
    * defaults web3 uses to send transactions. If you don't specify one truffle
@@ -35,9 +53,6 @@ module.exports = {
    *
    * $ truffle test --network <network-name>
    */
-
-  contracts_build_directory: path.join(__dirname, "app/src/contracts"),
-
   networks: {
     // Useful for testing. The `development` name is special - truffle uses it by default
     // if it's defined here and no other network is specified at the command line.
@@ -50,7 +65,26 @@ module.exports = {
      port: 8545,            // Standard Ethereum port (default: none)
      network_id: "*",       // Any network (default: none)
      // gas: 90000000,           // Gas sent with each transaction (default: ~6700000)
+   },
+    production: {
+      provider: function() {
+        return new HDWalletProvider(mnemonic, "https://mainnet-rpc.thundercore.com");
+      },
+      network_id: '108',
     },
+    'thunder-mainnet': {
+      provider: function() {
+        return new HDWalletProvider(mnemonic, "https://mainnet-rpc.thundercore.com");
+      },
+      network_id: '108',
+      gasPrice: 35*gwei
+    },
+    'thunder-testnet': {
+      provider: function() {
+        return new HDWalletProvider(mnemonic, "https://testnet-rpc.thundercore.com");
+      },
+      network_id: '18',
+    }
     // Another network with more advanced options...
     // advanced: {
     // port: 8777,             // Custom port
@@ -83,19 +117,4 @@ module.exports = {
     // timeout: 100000
   },
 
-  // Configure your compilers
-  compilers: {
-    solc: {
-      // version: "^0.4.24",
-      // version: "0.5.1",    // Fetch exact version from solc-bin (default: truffle's version)
-      // docker: true,        // Use "0.5.1" you've installed locally with docker (default: false)
-      // settings: {          // See the solidity docs for advice about optimization and evmVersion
-      //  optimizer: {
-      //    enabled: false,
-      //    runs: 200
-      //  },
-      //  evmVersion: "byzantium"
-      // }
-    }
-  }
 };
