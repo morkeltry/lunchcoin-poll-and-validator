@@ -14,7 +14,7 @@ console.log(envVars);
 let providerUrl = {
   development : 'ws://127.0.0.1:8545',
   production: 'ws://mainnet-rpc.thundercore.com/:8545'
-}[process.env.NODE_ENV || 'development'];
+}[process.env.REACT_APP_NODE_ENV || 'development'];
 let web3;
 
 // NB Drizzle Requires 'ws://' not anything else
@@ -22,8 +22,14 @@ let web3;
 //   web3 = new Web3(new Web3.providers.HttpProvider(providerUrl))
 // else
   web3 = new Web3(new Web3.providers.WebsocketProvider(providerUrl));
-if (!web3.eth.net)
+if (!web3.eth.net) {
   console.log(`Did not get web3.eth.net from ${providerUrl}. Maybe check the port number?`);
+  if (process.env.NODE_ENV !== 'production'){
+    console.log(`Running in ${process.env.NODE_ENV}`);
+    console.log(`process.env:`, process.env);
+    if (web3.eth)
+      console.log('but web3.eth.net=',web3.eth.net);
+  }
 
 let NETWORK_ID;
 let ProxyABI;
