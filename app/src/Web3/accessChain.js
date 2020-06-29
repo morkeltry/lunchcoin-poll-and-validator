@@ -26,7 +26,7 @@ if (!web3.eth.net)
   console.log(`Did not get web3.eth.net from ${providerUrl}. Maybe check the port number?`);
 if (process.env.NODE_ENV !== 'production'){
   console.log(`Running in ${process.env.NODE_ENV}`);
-  console.log(`process.env: ${process.env}`);
+  console.log(`process.env: `,process.env);
   if (web3.eth)
     console.log('but web3.eth.net=',web3.eth.net);
 }
