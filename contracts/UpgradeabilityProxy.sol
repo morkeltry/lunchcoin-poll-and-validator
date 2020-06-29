@@ -1,7 +1,9 @@
 pragma solidity >=0.4.21 <0.6.0;
 
 import './Proxy.sol';
-import "openzeppelin-solidity/contracts/utils/Address.sol";
+
+// OpenZeppelin Address library current versions require >= Constantinople, as they use extcodehash opcode
+// import "openzeppelin-solidity/contracts/utils/Address.sol";
 
 /**
  * @title UpgradeabilityProxy
@@ -53,12 +55,27 @@ contract UpgradeabilityProxy is Proxy {
         emit Upgraded(newImplementation);
     }
 
+    // OpenZeppelin Address library v.2.3.0 is safe for Byzantium
+    // https://github.com/OpenZeppelin/openzeppelin-contracts/blob/release-v2.3.0/contracts/utils/Address.sol
+    function isContract(address account) internal view returns (bool) {
+        // This method relies in extcodesize, which returns 0 for contracts in
+        // construction, since the code is only stored at the end of the
+        // constructor execution.
+
+        uint256 size;
+        // solhint-disable-next-line no-inline-assembly
+        assembly { size := extcodesize(account) }
+        return size > 0;
+    }
+
+
     /**
      * @dev Sets the implementation address of the proxy.
      * @param newImplementation Address of the new implementation.
      */
     function _setImplementation(address newImplementation) private {
-        require(Address.isContract(newImplementation), "Cannot set a proxy implementation to a non-contract address");
+        // require(Address.isContract(newImplementation), "Cannot set a proxy implementation to a non-contract address");
+        require(isContract(newImplementation), "Cannot set a proxy implementation to a non-contract address");
 
         bytes32 slot = IMPLEMENTATION_SLOT;
 
