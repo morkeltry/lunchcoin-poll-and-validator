@@ -1,5 +1,5 @@
 
-import Web3 from "web3";
+import Web3, { ConnectionError } from "web3";
 import  { useGlobal } from "reactn";
 import TokenProxyArtifacts from "../contracts/TokenProxy.json";
 import PollArtifacts from "../contracts/PollReference.json";
@@ -13,8 +13,8 @@ console.log(envVars);
 
 let providerUrl = {
   development : 'ws://127.0.0.1:8545',
-  production: 'wss://mainnet-rpc.thundercore.com/:8545'
-}[process.env.REACT_APP_NODE_ENV || 'development'];
+  production: 'wss://mainnet-ws.thundercore.com/'
+}[process.env.REACT_APP_NODE_ENV || 'production'];
 let web3;
 
 // NB Drizzle Requires 'ws://' not anything else
@@ -131,9 +131,17 @@ export function connectToWeb3() {
 export function getImplementationAddress() {
     // returns the address of the latest version of the contract
     return new Promise((resolve, reject) => {
-        ProxyInstance.methods.implementation().call().then(implementationAddress => {
+        ProxyInstance.methods.implementation().call()
+          .then(implementationAddress => {
             resolve(implementationAddress)
-        })
+          })
+          .catch(err => {
+            console.log('There was an error at first access of the contract.');
+            console.log('This would happen if you are trying to access the wrong blockchain.');
+            console.log('Try migrating the chain again, or copying over the artifacts from the chain you need to use.');
+            console.log('the error was:', err);
+            reject(err)
+          })
     })
 }
 

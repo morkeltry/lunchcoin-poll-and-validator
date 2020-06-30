@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from "react";
-import  { useGlobal } from "reactn";
+import { ConnectionError } from "web3";
 
 import {connectToWeb3, getImplementationFunctions, getImplementationEvents,
   callTransaction, myAccounts, switchTo} from "../Web3/accessChain";
@@ -25,6 +25,7 @@ const eventsObj = {};
 const LunchcoinApp = props => {
   // const [ownAddy, setOwnAddy] = useState('0xLA');
   const { setOwnAddyParent } = props;
+  const [noChainError, setNoChainError] = useState(false);
   const [polls, setPolls] = useState([]);
   const [livePolls, setLivePolls] = useState([]);
   const [currentPoll, setCurrentPoll] = useState('doodle.com/poll/r9rb35fiibvs3aa5');
@@ -139,6 +140,10 @@ const LunchcoinApp = props => {
 
       setLoadingStatus(false);
     })
+      .catch(err=> {
+        if (err.message==='connection not open on send()' || err instanceof ConnectionError)
+          setNoChainError(true);
+      })
 
   }, []);
 
@@ -152,27 +157,21 @@ const LunchcoinApp = props => {
 
   return (
       <Container fluid={"true"} className={"height-100vh"} >
-        { currentPoll
-          // ? <LiveEvent event={currentPoll} />
-          ? <LiveEvent pollUrl={currentPoll} checkInIsClosed={true} setOwnAddyParent={ setOwnAddyParent }/>
-          : choosePoll
-            ? livePolls.map((poll,idx)=>(
-                <Row>
-                  event{ idx }
-                </Row>
-              ))
-            : <Loading heading={"No events found. Please link to a poll."}/>
-
-
+        { noChainError
+          ? 'Unable to reach blockchain endpoint'
+          : (currentPoll
+              ? <LiveEvent pollUrl={currentPoll} checkInIsClosed={true} setOwnAddyParent={ setOwnAddyParent }/>
+              : loadingStatus
+                ? <Loading heading={"Loading Contract..."}/>
+                : choosePoll
+                  ? livePolls.map((poll,idx)=>(
+                      <Row>
+                        event{ idx }
+                      </Row>
+                    ))
+                  : <Loading heading={"No events found. Please link to a poll."}/>
+            )
         }
-
-        {loadingStatus ? (
-            <Loading heading={"Loading Contract..."}/>
-        ) : (
-            <Row>
-
-            </Row>
-        )}
       </Container>
   );
 };
