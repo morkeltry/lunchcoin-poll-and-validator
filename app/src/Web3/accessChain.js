@@ -21,10 +21,23 @@ let providerUrl = {
 }[environment];
 let web3;
 let authWeb3;
+let wsProvider = new Web3.providers.WebsocketProvider(providerUrl,{timeout: 25000} );
 
-web3 = new Web3(new Web3.providers.WebsocketProvider(providerUrl));
+web3 = new Web3(wsProvider);
 if (!web3.eth.net)
   console.log(`Did not get web3.eth.net from ${providerUrl}. Maybe check the port number?`);
+
+wsProvider.on('error', e => console.log('WS Error', e));
+wsProvider.on('end', e => {
+    console.log(`${time(new Date())}: WS closed`);
+    console.log('Attempting to reconnect...');
+    wsProvider = new Web3.providers.WebsocketProvider(providerUrl);
+
+    wsProvider.on('connect', function () {
+        console.log(`${time(new Date())}: WSS Reconnected`);
+    });
+    web3.setProvider(wsProvider);
+});
 
 if (authWeb3Type==='browser') {
   if (window.web3 && window.ethereum)
@@ -62,6 +75,12 @@ let IMPLEMENTATION_ADDRESS;
 let OWN_ADDRESS;
 let availableAccounts;
 
+let awaitAccess;
+
+let d;
+const time = d=> d.toTimeString().slice(0,8);
+const ms = d=> (d%1000).toFixed(0);
+
 export function connectToWeb3() {
   return new Promise( async (resolve, reject) => {
     let unImplementedAddress;
@@ -76,7 +95,8 @@ export function connectToWeb3() {
           return otherNetId;
         });
 
-      console.log(`Network id is ${Id}, tx auth in: ${authWeb3Type}`);
+      d = new Date();
+      console.log(`${time(d)}.${ms(d)}: Network id is ${Id}, tx auth in: ${authWeb3Type}`);
       NETWORK_ID = Id;
       if (!TokenProxyArtifacts.networks[NETWORK_ID])
         console.log(`TokenProxyArtifacts does not have the current network! ${NETWORK_ID}`);
@@ -125,9 +145,14 @@ export function connectToWeb3() {
           default:
             break;
           }
-          window.ethereum.enable()
+          awaitAccess = awaitAccess
+            || window.ethereum.request && window.ethereum.request({ method: 'eth_requestAccounts' })
+            || window.ethereum.enable() ;
+
+          awaitAccess
             .then(()=>{
               authWeb3.eth.getAccounts((err, accounts) => {
+                awaitAccess = null;
                 if (err) reject(err);
                 availableAccounts = accounts;
                 OWN_ADDRESS = accounts[0];
@@ -198,7 +223,7 @@ export async function getImplementationEvents( options={ setWatchers:false }, ev
 }
 
 const withErrLog = (eventName, actionFn)=> {
-  const errFn= actionFn.errFn || (err=>{ console.log(err) }) ;
+  const errFn= actionFn.errFn || (err=>{ console.log(time(new Date()),err, err.stack) }) ;
   return (err, result)=>
     err
       ? errFn(err)

@@ -148,6 +148,7 @@ const FunctionForm = props => {
           {props.funcArgs.map((arg, argsKey) => {
             return (
               <Form.Control
+                id={`${props.funcName} ${arg}`}
                 key={argsKey}
                 type={"text"}
                 placeholder={"argument(type):  " + arg}

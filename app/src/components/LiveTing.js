@@ -396,6 +396,10 @@ const LiveEvent = props => {
 
 // ----------------------- helpers
 
+
+    const time = d=> d.toTimeString().splice(0.8);
+    const ms = d=> (d%1000).toFixed(3);
+
     const toUnixTime = x=>x;
 
     const unixifyTimes = resp=>

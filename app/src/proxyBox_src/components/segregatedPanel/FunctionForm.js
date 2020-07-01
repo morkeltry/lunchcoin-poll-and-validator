@@ -176,6 +176,7 @@ const FunctionForm = props => {
           {props.funcArgs.map((arg, argsKey) => {
             return (
               <Form.Control
+                id={`${props.funcName} ${arg}`}
                 key={ argsKey + (shouldRefresh[props.funcName] || 0) }
                 type={"text"}
                 placeholder={"argument(type):  " + arg}
