@@ -19,9 +19,10 @@ let providerUrl = {
   development : 'ws://127.0.0.1:8545',
   production: 'wss://mainnet-ws.thundercore.com/:8545'
 }[environment];
+let wsRetries=2;
 let web3;
 let authWeb3;
-let wsProvider = new Web3.providers.WebsocketProvider(providerUrl,{timeout: 25000} );
+let wsProvider = new Web3.providers.WebsocketProvider(providerUrl,{timeout: 4800000} );
 
 web3 = new Web3(wsProvider);
 if (!web3.eth.net)
@@ -33,16 +34,25 @@ if (process.env.REACT_APP_NODE_ENV !== 'production'){
     console.log('but web3.eth.net=',web3.eth.net);
 }
 
-wsProvider.on('error', e => console.log('WS Error', e));
-wsProvider.on('end', e => {
-    console.log(`${time(new Date())}: WS closed`);
-    console.log('Attempting to reconnect...');
-    wsProvider = new Web3.providers.WebsocketProvider(providerUrl);
+const reconnect = (wp = wsProvider)=> {
+    console.log(`${time(d)}.${ms(d)}: Attempting to reconnect...`);
+    wp = new Web3.providers.WebsocketProvider(providerUrl);
 
-    wsProvider.on('connect', function () {
-        console.log(`${time(new Date())}: WSS Reconnected`);
+    wp.on('connect', function () {
+      let d=new Date();
+      console.log(`${time(d)}.${ms(d)}: WSS Reconnected`);
     });
-    web3.setProvider(wsProvider);
+    web3.setProvider(wp);
+}
+
+wsProvider.on('error', e => {
+  console.log('WS Error', e);
+  reconnect(wsProvider);
+  // retry!
+});
+wsProvider.on('end', e => {
+  console.log(`${time(new Date())}.${ms(d)}: WS closed`);
+  reconnect(wsProvider);
 });
 
 if (authWeb3Type==='browser') {
@@ -91,6 +101,8 @@ export function connectToWeb3() {
   return new Promise( async (resolve, reject) => {
     let unImplementedAddress;
     let otherNetId;
+    if (!web3.eth || !authWeb3.eth)
+      reject (new Error('no web3 provider'));
     web3.eth.net.getId(async function (err, Id) {
       if (err) { console.log('err',err); reject(err); }
       if (web3!==authWeb3)
@@ -237,7 +249,10 @@ export async function getImplementationEvents( options={ setWatchers:false }, ev
 }
 
 const withErrLog = (eventName, actionFn)=> {
-  const errFn= actionFn.errFn || (err=>{ console.log(time(new Date()),err, err.stack) }) ;
+  const errFn= actionFn.errFn || (err=>{
+    if (err.message!=='CONNECTION ERROR: The connection closed unexpectedly')
+      console.log(time(new Date()),err, err.stack);
+  });
   return (err, result)=>
     err
       ? errFn(err)
@@ -420,44 +435,56 @@ export function getFromStorage(storageName, idx) {
 }
 
 export function callTransaction(functionName, args) {
+    /* eslint-disable no-loop-func */
     return new Promise((resolve, reject) => {
-        checkFunctionFormatting(functionName, args)
-            .then(({rv, outputs}) => {
-                console.log(`Call to:`,IMPLEMENTATION_INSTANCE,functionName,args,rv);
-                IMPLEMENTATION_INSTANCE.methods[functionName](...rv)
-                    .call({from: OWN_ADDRESS})
-                    .then(result => {
-                        console.log(functionName,': chain responded:', result);
-                        unpackRVs (result, outputs);
-                        resolve(result);
-                    })
-                    .catch(e=>{console.log(`${functionName} fail:`,e);reject(e)});
+      checkFunctionFormatting(functionName, args)
+        .then(({rv, outputs}) => {
+          let attempt;
+          console.log(`Call to:`,IMPLEMENTATION_INSTANCE,functionName,args,rv);
 
-            })
-            .catch(err => {
-                reject(err);
-            });
+          let i=wsRetries;
+          while (i--) {
+            attempt = IMPLEMENTATION_INSTANCE.methods[functionName](...rv)
+              .call({from: OWN_ADDRESS});
+            attempt
+              .then(result => {
+                console.log(functionName,': chain responded:', result);
+                unpackRVs (result, outputs);
+                i=0;
+                resolve(result);
+              })
+              .catch(err=> {
+                if (err.message==='CONNECTION ERROR: The connection closed unexpectedly')
+                  reconnect();
+                console.log(`${functionName} fail:`,err); reject(err)
+              });
+            }
+          })
+        .catch(err => {
+            reject(err);
+        });
     });
+    /* eslint-enable */
 }
 
 export function sendTransaction(functionName, args) {
     return new Promise((resolve, reject) => {
-        checkFunctionFormatting(functionName, args)
-            .then(({rv, outputs}) => {
-                console.log(`Send to (${functionName}):`,IMPLEMENTATION_INSTANCE_FOR_SEND);
-                console.log('got back from checkFF ready to send:',{rv, outputs});
-                IMPLEMENTATION_INSTANCE_FOR_SEND.methods[functionName](...rv)
-                    .send({from: OWN_ADDRESS})
-                    .then(result => {
-                        console.log(typeof result, result);
-                        resolve(result);
-                    })
-                    .catch(e=>{console.log(`${functionName} fail:`,e); reject(e)});
+      checkFunctionFormatting(functionName, args)
+        .then(({rv, outputs}) => {
+          console.log(`Send to (${functionName}):`,IMPLEMENTATION_INSTANCE_FOR_SEND);
+          console.log('got back from checkFF ready to send:',{rv, outputs});
+          IMPLEMENTATION_INSTANCE_FOR_SEND.methods[functionName](...rv)
+            .send({from: OWN_ADDRESS})
+            .then(result => {
+              console.log(typeof result, result);
+              resolve(result);
             })
-            .catch(err => {
-                console.log(`Bad format for ${functionName}`, err);
-                reject(err);
-            });
+            .catch(e=>{console.log(`${functionName} fail:`,e);reject(e)});
+        })
+        .catch(err => {
+          console.log(`Bad format for ${functionName}`, err);
+          reject(err);
+        });
     });
 }
 

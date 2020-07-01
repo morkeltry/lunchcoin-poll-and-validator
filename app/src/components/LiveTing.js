@@ -589,7 +589,7 @@ return(<>
           </div>
         </Section>
 
-        <LogoBottom/>
+        <LogoBottom refresh={ ()=>{ fetchAndUpdate(); }} />
 
         { modalView &&
           <div className="modal-container">

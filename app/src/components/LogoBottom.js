@@ -7,7 +7,12 @@ import pizza from "../assets/round-pizza.png";
 
 const LogoBottom = props=> (
   <div className={'logo-section '}>
-    <img src={ pizza } alt="subliminal pizza advertisement" style={{ height:"100%" }} />
+    <img
+      src={ pizza }
+      alt="subliminal pizza advertisement"
+      style={{ height:"100%" }}
+      onClick={ props.refresh }
+      />
   </div>
 )
 
