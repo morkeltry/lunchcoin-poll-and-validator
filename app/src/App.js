@@ -13,7 +13,6 @@ const App = props => {
       <LunchcoinApp setOwnAddyParent={ setOwnAddy } />
       <TestingApp ownAddy={ ownAddy } />
     </HttpsRedirect>
-
 )}
 
 export default App;
