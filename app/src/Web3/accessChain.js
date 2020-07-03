@@ -30,6 +30,7 @@ if (!web3.eth.net) {
     if (web3.eth)
       console.log('but web3.eth.net=',web3.eth.net);
   }
+}
 
 let NETWORK_ID;
 let ProxyABI;
@@ -383,18 +384,33 @@ export function callTransaction(functionName, args) {
     });
 }
 
+const logGasEstimate = (err, functionName, args, gasAmount) => {
+  if (err) console.log('Gas error:',err);
+  console.log(`${functionName}(${args.join(', ')})- expected gas: ${gasAmount}`);
+}
+
 export function sendTransaction(functionName, args) {
     return new Promise((resolve, reject) => {
         checkFunctionFormatting(functionName, args)
             .then(({rv, outputs}) => {
+                let gas;
                 console.log(`Send to (${functionName}):`,IMPLEMENTATION_INSTANCE);
                 console.log('got back from checkFF ready to send:',{rv, outputs});
                 IMPLEMENTATION_INSTANCE.methods[functionName](...rv)
-                    .send({from: OWN_ADDRESS})
-                    .then(result => {
-                        console.log(typeof result, result);
-                        resolve(result);
+                    .estimateGas({from: OWN_ADDRESS})
+                    .then (estimatedGas=>{
+                      gas = estimatedGas;
+                      logGasEstimate(null, functionName, rv, gas);
+                      return gas
                     })
+                    .then (gas=>
+                      IMPLEMENTATION_INSTANCE.methods[functionName](...rv)
+                        .send({from: OWN_ADDRESS, gas})
+                        .then(result => {
+                          console.log(typeof result, result);
+                          resolve(result);
+                        })
+                    )
                     .catch(e=>{console.log(`${functionName} fail:`,e); reject(e)});
             })
             .catch(err => {
