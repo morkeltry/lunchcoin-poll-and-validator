@@ -11,8 +11,8 @@ if (envVars.length>2)
 
 
 
-const environment = 'production';
-// const environment = process.env.REACT_APP_NODE_ENV || process.env.NODE_ENV || 'production';
+// const environment = 'production';
+const environment = process.env.REACT_APP_NODE_ENV || process.env.NODE_ENV || 'production';
 let authWeb3Type = environment==='production' ? 'browser' : 'local';
 
 let providerUrl = {
@@ -31,8 +31,8 @@ if (!web3.eth.net)
 if (environment!== 'production'){
   console.log(`Running in ${environment}`);
   console.log(`process.env: `,process.env);
-  if (web3.eth)
-    console.log('but web3.eth.net=',web3.eth.net);
+  console.log(`providerUrl: ${providerUrl}`);
+  console.log('web3.eth.net ',web3.eth.net);
 }
 if (providerUrl.indexOf('127.0.0.1')>-1)
   web3.isReliable = true;
@@ -66,13 +66,11 @@ if (authWeb3Type==='browser') {
     authWeb3 = new Web3(window.ethereum)
   else {
     console.log(`Running in production, ${window.web3 ? '': 'lacking window.web3'} ${window.ethereum ? '': 'lacking window.ethereum'}`);
-    // authWeb3Type = 'local';  // leave it until error checking implemented in LiveTing
+    authWeb3Type = 'local';  // leave it until error checking implemented in LiveTing
   }}
 if (authWeb3Type==='local') {
   authWeb3 = web3;
   console.log(`Running in ${environment}`);
-  if (web3.eth)
-    console.log('but web3.eth.net=',web3.eth.net);
 }
 
 let NETWORK_ID;
@@ -500,11 +498,6 @@ const logGasEstimate = (err, functionName, args, gasAmount) => {
   console.log(`${functionName}(${args.join(', ')})- expected gas: ${gasAmount}`);
 }
 
-const logGasEstimate = (err, functionName, args, gasAmount) => {
-  if (err) console.log('Gas error:',err);
-  console.log(`${functionName}(${args.join(', ')})- expected gas: ${gasAmount}`);
-}
-
 export function sendTransaction(functionName, args) {
     return new Promise((resolve, reject) => {
         checkFunctionFormatting(functionName, args)
@@ -522,14 +515,13 @@ export function sendTransaction(functionName, args) {
                     .then (async gas=>{
                       if ((authWeb3Type!=='browser') && !authWeb3.isReliable)
                         {} // await authWpIsUp())
-                      else
-                        throw new Error ('That was unexpected :/');
                       IMPLEMENTATION_INSTANCE_FOR_SEND.methods[functionName](...rv)
                         .send({from: OWN_ADDRESS, gas})
                         .then(result => {
                           console.log(typeof result, result);
                           resolve(result);
                         })
+                    })
                     .catch(e=>{console.log(`${functionName} fail:`,e); reject(e)});
             })
             .catch(err => {
