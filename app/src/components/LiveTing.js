@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useLayoutEffect } from 'react';
+import { ConnectionError } from "web3";
 import cN from 'classnames';
 
 import Header from "./Header";
@@ -25,6 +26,9 @@ const LiveEvent = props => {
   if (!pollUrl)
     throw ('Attempted to render LiveEvent with pollUrl='+pollUrl);
 
+  const [noChainError, setNoChainError] = useState(false);
+  const [polls, setPolls] = useState([]);
+  const [livePolls, setLivePolls] = useState([]);
   const [ownAddress, setOwnAddy] = useState(OWN_ADDRESS);
   OWN_ADDRESS = '0x123';
   const [modalView, setModalView] = useState(null);
@@ -63,7 +67,7 @@ const LiveEvent = props => {
 // TODO: setRepWas setInfoModalResult
 
   clearInterval(t)
-  t[0]= setInterval(()=>{ showOwnAddy() }, 15000);
+  // t[0]= setInterval(()=>{ showOwnAddy() }, 15000);
 
   const catchRelevantEvent = (result, eventName)=> {
     const { returnValues } = result;
@@ -375,6 +379,7 @@ const LiveEvent = props => {
     getLocalCache();
     fetchOnlinePoll(pollUrl);
     connectToWeb3().then(addressObj => {
+      console.log('\n\nconnectToWeb3 SUCEEDED\n\n');
       getImplementationEvents({ setWatchers:true }, chainEventListeners );
       console.log(addressObj);
       console.log('which one is ownAddy, which is IMPLEMENTATION_ADDRESS?' );
@@ -389,12 +394,23 @@ const LiveEvent = props => {
     }).then(addy=> {
       fetchAndUpdate(addy);
     })
+      .catch(err=> {
+        // we should be catching here: 105: reject (new Error('no web3 provider'));
+        console.log('\n\nconnectToWeb3 FAILED\n\n');
+        console.log('fetchAndUpdate gave',err);
+        if (err.message==='connection not open on send()' || err instanceof ConnectionError)
+          setNoChainError(true);
+      })
 
   }, []);
 
 
 
 // ----------------------- helpers
+
+
+    const time = d=> d.toTimeString().splice(0.8);
+    const ms = d=> (d%1000).toFixed(3);
 
     const toUnixTime = x=>x;
 
@@ -574,7 +590,7 @@ return(<>
           </div>
         </Section>
 
-        <LogoBottom/>
+        <LogoBottom refresh={ ()=>{ fetchAndUpdate(); }} />
 
         { modalView &&
           <div className="modal-container">

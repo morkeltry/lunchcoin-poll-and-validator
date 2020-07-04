@@ -1,144 +1,236 @@
 
 import Web3 from "web3";
-import  { useGlobal } from "reactn";
+
 import TokenProxyArtifacts from "../contracts/TokenProxy.json";
 import PollArtifacts from "../contracts/PollReference.json";
 import ValidatorArtifacts from "../contracts/MutualAgreement.json";
 
-const env = require('env2')('./.env');
 const envVars = Object.keys(process.env);
 if (envVars.length>2)
-console.log(envVars);
+  console.log(envVars);
 
+
+
+const environment = 'production';
+// const environment = process.env.REACT_APP_NODE_ENV || process.env.NODE_ENV || 'production';
+let authWeb3Type = environment==='production' ? 'browser' : 'local';
 
 let providerUrl = {
   development : 'ws://127.0.0.1:8545',
-  production: 'ws://mainnet-rpc.thundercore.com/:8545'
-}[process.env.REACT_APP_NODE_ENV || 'development'];
+  production: 'wss://mainnet-ws.thundercore.com/:8545'
+}[environment];
+let wsRetries=2;
 let web3;
+let authWeb3;
+let wsProvider = new Web3.providers.WebsocketProvider(providerUrl,{timeout: 4800000} );
+let wpUp = true;
 
-// NB Drizzle Requires 'ws://' not anything else
-// if (providerUrl.startsWith('ws'))
-//   web3 = new Web3(new Web3.providers.HttpProvider(providerUrl))
-// else
-  web3 = new Web3(new Web3.providers.WebsocketProvider(providerUrl));
-if (!web3.eth.net) {
+web3 = new Web3(wsProvider);
+if (!web3.eth.net)
   console.log(`Did not get web3.eth.net from ${providerUrl}. Maybe check the port number?`);
-  if (process.env.NODE_ENV !== 'production'){
-    console.log(`Running in ${process.env.NODE_ENV}`);
-    console.log(`process.env:`, process.env);
-    if (web3.eth)
-      console.log('but web3.eth.net=',web3.eth.net);
-  }
+if (environment!== 'production'){
+  console.log(`Running in ${environment}`);
+  console.log(`process.env: `,process.env);
+  if (web3.eth)
+    console.log('but web3.eth.net=',web3.eth.net);
+}
+if (providerUrl.indexOf('127.0.0.1')>-1)
+  web3.isReliable = true;
+
+const reconnect = (wp = wsProvider)=> {
+    console.log(`${time(d)}.${ms(d)}: Attempting to reconnect...`);
+    wp = new Web3.providers.WebsocketProvider(providerUrl);
+
+    wp.on('connect', function () {
+      let d=new Date();
+      console.log(`${time(d)}.${ms(d)}: WSS Reconnected`);
+    });
+    web3.setProvider(wp);
+    wpUp = true;
+}
+
+wsProvider.on('error', e => {
+  wpUp = false;
+  console.log(`${time(d)}.${ms(d)}: WS Error`, e);
+  reconnect(wsProvider);
+  // retry!
+});
+wsProvider.on('end', e => {
+  wpUp = false;
+  console.log(`${time(new Date())}.${ms(d)}: WS closed`);
+  reconnect(wsProvider);
+});
+
+if (authWeb3Type==='browser') {
+  if (window.web3 && window.ethereum)
+    authWeb3 = new Web3(window.ethereum)
+  else {
+    console.log(`Running in production, ${window.web3 ? '': 'lacking window.web3'} ${window.ethereum ? '': 'lacking window.ethereum'}`);
+    // authWeb3Type = 'local';  // leave it until error checking implemented in LiveTing
+  }}
+if (authWeb3Type==='local') {
+  authWeb3 = web3;
+  console.log(`Running in ${environment}`);
+  if (web3.eth)
+    console.log('but web3.eth.net=',web3.eth.net);
 }
 
 let NETWORK_ID;
 let ProxyABI;
 let ProxyAddress;
 let ProxyInstance;
+let ProxyInstanceForSend;
 let PollABI;
 let PollAddress;
 let PollInstance;
+let PollInstanceForSend;
 let ValidatorABI;
 let ValidatorAddress;
 let ValidatorInstance;
+let ValidatorInstanceForSend;
 
 let IMPLEMENTATION_ABI;
 let IMPLEMENTATION_INSTANCE;
+let IMPLEMENTATION_INSTANCE_FOR_SEND;
 let IMPLEMENTATION_ADDRESS;
 
 let OWN_ADDRESS;
 let availableAccounts;
 
+let awaitAccess;
+
+let d;
+const time = d=> d.toTimeString().slice(0,8);
+const ms = d=> (d%1000).toFixed(0);
+
+const wpIsUp = async (timeout)=> new Promise ((resolve, reject)=> {
+  if (wpUp)
+    resolve();
+  let t2;
+  let t = setInterval(()=>{
+    if (wpUp) {
+      clearTimeout(t2);
+      clearInterval(t);
+      resolve();
+    }
+  }, 199);
+  if (timeout)
+    t2= setTimeout(()=>{
+      clearInterval(t);
+      reject(`Gave up trying websocket after ${timeout}ms.`);
+    })
+})
+
 export function connectToWeb3() {
-    // connects to web3 with the latest version of the contract
-    return new Promise((resolve, reject) => {
+  return new Promise( async (resolve, reject) => {
     let unImplementedAddress;
-        web3.eth.net.getId(function (err, Id) {
-            if (err) reject(err);
-        console.log('err',err);
-        console.log('Id',Id);
-            NETWORK_ID = Id;
-            console.log(`NETWORK_ID = ${NETWORK_ID}`);
-            if (!TokenProxyArtifacts.networks[NETWORK_ID])
-              console.log(`TokenProxyArtifacts does not have the current network! ${NETWORK_ID}`);
-            // if (!TokenV0Artifacts.networks[NETWORK_ID])
-            //   console.log(`TokenV0Artifacts does not have the current network! ${NETWORK_ID}`);
-            // if (!TokenV1Artifacts.networks[NETWORK_ID])
-            //   console.log(`TokenV1Artifacts does not have the current network! ${NETWORK_ID}`);
-            if (!PollArtifacts.networks[NETWORK_ID])
-              console.log(`PollArtifacts does not have the current network! ${NETWORK_ID}`);
-            if (!ValidatorArtifacts.networks[NETWORK_ID])
-              console.log(`ValidatorArtifacts does not have the current network! ${NETWORK_ID}`);
-            // console.log(TokenProxyArtifacts);
-            // console.log(Object.keys(TokenProxyArtifacts.networks));
-            // console.log(TokenV0Artifacts);
-            // console.log(Object.keys(TokenV0Artifacts.networks));
-            // console.log(TokenV1Artifacts);
-            // console.log(Object.keys(TokenV1Artifacts.networks));
-            // console.log(PollArtifacts);
-            // console.log(Object.keys(PollArtifacts.networks));
-            // console.log(ValidatorArtifacts);
-            // console.log(Object.keys(ValidatorArtifacts.networks));
-
-            ProxyAddress = TokenProxyArtifacts.networks[NETWORK_ID].address;
-            PollAddress = PollArtifacts.networks[NETWORK_ID].address;
-            ValidatorAddress = ValidatorArtifacts.networks[NETWORK_ID].address;
-
-            ProxyABI = TokenProxyArtifacts.abi;
-            PollABI = PollArtifacts.abi;
-            ValidatorABI = ValidatorArtifacts.abi;
-
-            ProxyInstance = new web3.eth.Contract(ProxyABI, ProxyAddress);
-            PollInstance = new web3.eth.Contract(PollABI, ProxyAddress);
-            ValidatorInstance = new web3.eth.Contract(ValidatorABI, ProxyAddress);
-            getImplementationAddress().then(implementationAddress => {
-                switch (implementationAddress) {
-                    case PollAddress:
-                        IMPLEMENTATION_ABI = PollABI;
-                        IMPLEMENTATION_ADDRESS = PollAddress;
-                        IMPLEMENTATION_INSTANCE = PollInstance;
-                        unImplementedAddress = ValidatorAddress;
-                        break;
-                    case ValidatorAddress:
-                        IMPLEMENTATION_ABI = ValidatorABI;
-                        IMPLEMENTATION_ADDRESS = ValidatorAddress;
-                        IMPLEMENTATION_INSTANCE = ValidatorInstance;
-                        unImplementedAddress = PollAddress;
-                        break;
-                    default:
-                        break;
-                }
-                web3.eth.getAccounts((err, accounts) => {
-                    if (err) reject(err);
-                    availableAccounts = accounts;
-                    OWN_ADDRESS = accounts[0];
-
-                    resolve({
-                      IMPLEMENTATION_ADDRESS,
-                      OWN_ADDRESS,
-                      availableAccounts,
-                      unImplementedAddress,
-                      PollAddress,
-                      ValidatorAddress
-                    });
-                });
-            });
+    let otherNetId;
+    if (!web3.eth || !authWeb3.eth)
+      reject (new Error('no web3 provider'));
+    web3.eth.net.getId(async function (err, Id) {
+      if (err) { console.log('err',err); reject(err); }
+      if (web3!==authWeb3)
+        await authWeb3.eth.net.getId((err, otherNetId)=> {
+          if (err) { console.log('err',err); reject(err); }
+          if (Id!==otherNetId)
+            console.log(`Using network ${Id}for calls but network ${otherNetId} for sends. This going to end badly :/`);
+          return otherNetId;
         });
+
+      d = new Date();
+      console.log(`${time(d)}.${ms(d)}: Network id is ${Id}, tx auth in: ${authWeb3Type}`);
+      NETWORK_ID = Id;
+      if (!TokenProxyArtifacts.networks[NETWORK_ID])
+        console.log(`TokenProxyArtifacts does not have the current network! ${NETWORK_ID}`);
+      if (!PollArtifacts.networks[NETWORK_ID])
+        console.log(`PollArtifacts does not have the current network! ${NETWORK_ID}`);
+      if (!ValidatorArtifacts.networks[NETWORK_ID])
+        console.log(`ValidatorArtifacts does not have the current network! ${NETWORK_ID}`);
+
+      ProxyAddress = TokenProxyArtifacts.networks[NETWORK_ID].address;
+      PollAddress = PollArtifacts.networks[NETWORK_ID].address;
+      ValidatorAddress = ValidatorArtifacts.networks[NETWORK_ID].address;
+
+      ProxyABI = TokenProxyArtifacts.abi;
+      PollABI = PollArtifacts.abi;
+      ValidatorABI = ValidatorArtifacts.abi;
+
+      ProxyInstance = new web3.eth.Contract(ProxyABI, ProxyAddress);
+      PollInstance = new web3.eth.Contract(PollABI, ProxyAddress);
+      ValidatorInstance = new web3.eth.Contract(ValidatorABI, ProxyAddress);
+      if (web3 !== authWeb3) {
+        ProxyInstanceForSend = new authWeb3.eth.Contract(ProxyABI, ProxyAddress);
+        PollInstanceForSend = new authWeb3.eth.Contract(PollABI, ProxyAddress);
+        ValidatorInstanceForSend = new authWeb3.eth.Contract(ValidatorABI, ProxyAddress);
+      } else {
+        ProxyInstanceForSend = ProxyInstance;
+        PollInstanceForSend = PollInstance;
+        ValidatorInstanceForSend = ValidatorInstance;
+      }
+
+      getImplementationAddress().then(async implementationAddress => {
+        switch (implementationAddress) {
+          case PollAddress:
+            IMPLEMENTATION_ABI = PollABI;
+            IMPLEMENTATION_ADDRESS = PollAddress;
+            IMPLEMENTATION_INSTANCE = PollInstance;
+            IMPLEMENTATION_INSTANCE_FOR_SEND = PollInstanceForSend;
+            unImplementedAddress = ValidatorAddress;
+            break;
+          case ValidatorAddress:
+            IMPLEMENTATION_ABI = ValidatorABI;
+            IMPLEMENTATION_ADDRESS = ValidatorAddress;
+            IMPLEMENTATION_INSTANCE = ValidatorInstance;
+            IMPLEMENTATION_INSTANCE_FOR_SEND = ValidatorInstanceForSend;
+            unImplementedAddress = PollAddress;
+            break;
+          default:
+            break;
+          }
+          awaitAccess = awaitAccess
+            || window.ethereum.request && window.ethereum.request({ method: 'eth_requestAccounts' })
+            || window.ethereum.enable() ;
+
+          awaitAccess
+            .then(()=>{
+              authWeb3.eth.getAccounts((err, accounts) => {
+                awaitAccess = null;
+                if (err) reject(err);
+                availableAccounts = accounts;
+                OWN_ADDRESS = accounts[0];
+
+                resolve({
+                  IMPLEMENTATION_ADDRESS,
+                  OWN_ADDRESS,
+                  availableAccounts,
+                  unImplementedAddress,
+                  PollAddress,
+                  ValidatorAddress
+                });
+              })
+            });
+      });
     });
+  });
 }
 
 
 export function getImplementationAddress() {
     // returns the address of the latest version of the contract
     return new Promise((resolve, reject) => {
-        ProxyInstance.methods.implementation().call().then(implementationAddress => {
+        ProxyInstance.methods.implementation().call()
+          .then(implementationAddress => {
             resolve(implementationAddress)
-        })
+          })
+          .catch(err => {
+            console.log('There was an error at first access of the contract.');
+            console.log('This would happen if you are trying to access the wrong blockchain.');
+            console.log('Try migrating the chain again, or copying over the artifacts from the chain you need to use.');
+            console.log('the error was:', err);
+            reject(err)
+          })
     })
 }
-
-
 
 
 export async function updateKnownPolls( options ) {
@@ -181,7 +273,10 @@ export async function getImplementationEvents( options={ setWatchers:false }, ev
 }
 
 const withErrLog = (eventName, actionFn)=> {
-  const errFn= actionFn.errFn || (err=>{ console.log(err) }) ;
+  const errFn= actionFn.errFn || (err=>{
+    if (err.message!=='CONNECTION ERROR: The connection closed unexpectedly')
+      console.log(time(new Date()),err, err.stack);
+  });
   return (err, result)=>
     err
       ? errFn(err)
@@ -364,24 +459,45 @@ export function getFromStorage(storageName, idx) {
 }
 
 export function callTransaction(functionName, args) {
+    /* eslint-disable no-loop-func */
     return new Promise((resolve, reject) => {
-        checkFunctionFormatting(functionName, args)
-            .then(({rv, outputs}) => {
-                console.log(`Call to:`,IMPLEMENTATION_INSTANCE,functionName,args,rv);
-                IMPLEMENTATION_INSTANCE.methods[functionName](...rv)
-                    .call({from: OWN_ADDRESS})
-                    .then(result => {
-                        console.log(functionName,': chain responded:', result);
-                        unpackRVs (result, outputs);
-                        resolve(result);
-                    })
-                    .catch(e=>{console.log(`${functionName} fail:`,e);reject(e)});
+      checkFunctionFormatting(functionName, args)
+        .then(async ({rv, outputs}) => {
+          let attempt;
+          console.log(`Call to:`,IMPLEMENTATION_INSTANCE,functionName,args,rv);
 
-            })
-            .catch(err => {
-                reject(err);
-            });
+          let i=wsRetries;
+          while (i--) {
+            console.log(web3.isReliable);
+            console.log(await wpIsUp());
+            if (!web3.isReliable)
+              await wpIsUp();
+            attempt = IMPLEMENTATION_INSTANCE.methods[functionName](...rv)
+              .call({from: OWN_ADDRESS});
+            attempt
+              .then(result => {
+                console.log(functionName,': chain responded:', result);
+                unpackRVs (result, outputs);
+                i=0;
+                resolve(result);
+              })
+              .catch(err=> {
+                if (err.message==='CONNECTION ERROR: The connection closed unexpectedly')
+                  reconnect();
+                console.log(`${functionName} fail:`,err); reject(err)
+              });
+            }
+          })
+        .catch(err => {
+            reject(err);
+        });
     });
+    /* eslint-enable */
+}
+
+const logGasEstimate = (err, functionName, args, gasAmount) => {
+  if (err) console.log('Gas error:',err);
+  console.log(`${functionName}(${args.join(', ')})- expected gas: ${gasAmount}`);
 }
 
 const logGasEstimate = (err, functionName, args, gasAmount) => {
@@ -394,23 +510,26 @@ export function sendTransaction(functionName, args) {
         checkFunctionFormatting(functionName, args)
             .then(({rv, outputs}) => {
                 let gas;
-                console.log(`Send to (${functionName}):`,IMPLEMENTATION_INSTANCE);
+                console.log(`Send to (${functionName}):`,IMPLEMENTATION_INSTANCE_FOR_SEND);
                 console.log('got back from checkFF ready to send:',{rv, outputs});
-                IMPLEMENTATION_INSTANCE.methods[functionName](...rv)
+                IMPLEMENTATION_INSTANCE_FOR_SEND.methods[functionName](...rv)
                     .estimateGas({from: OWN_ADDRESS})
                     .then (estimatedGas=>{
                       gas = estimatedGas;
                       logGasEstimate(null, functionName, rv, gas);
                       return gas
                     })
-                    .then (gas=>
-                      IMPLEMENTATION_INSTANCE.methods[functionName](...rv)
+                    .then (async gas=>{
+                      if ((authWeb3Type!=='browser') && !authWeb3.isReliable)
+                        {} // await authWpIsUp())
+                      else
+                        throw new Error ('That was unexpected :/');
+                      IMPLEMENTATION_INSTANCE_FOR_SEND.methods[functionName](...rv)
                         .send({from: OWN_ADDRESS, gas})
                         .then(result => {
                           console.log(typeof result, result);
                           resolve(result);
                         })
-                    )
                     .catch(e=>{console.log(`${functionName} fail:`,e); reject(e)});
             })
             .catch(err => {
@@ -419,6 +538,27 @@ export function sendTransaction(functionName, args) {
             });
     });
 }
+
+// export function sendTransaction(functionName, args) {
+//     return new Promise((resolve, reject) => {
+//       checkFunctionFormatting(functionName, args)
+//         .then(({rv, outputs}) => {
+//           console.log(`Send to (${functionName}):`,IMPLEMENTATION_INSTANCE_FOR_SEND);
+//           console.log('got back from checkFF ready to send:',{rv, outputs});
+//           IMPLEMENTATION_INSTANCE_FOR_SEND.methods[functionName](...rv)
+//             .send({from: OWN_ADDRESS})
+//             .then(result => {
+//               console.log(typeof result, result);
+//               resolve(result);
+//             })
+//             .catch(e=>{console.log(`${functionName} fail:`,e);reject(e)});
+//         })
+//         .catch(err => {
+//           console.log(`Bad format for ${functionName}`, err);
+//           reject(err);
+//         });
+//     });
+// }
 
 export function switchTo(address) {
     return new Promise((resolve, reject) => {
@@ -449,5 +589,6 @@ export const getDeets = ()=> ({
   ProxyAddress, PollAddress, ValidatorAddress,
   ProxyABI, PollABI, ValidatorABI,
   ProxyInstance, PollInstance, ValidatorInstance,
-  IMPLEMENTATION_ABI, IMPLEMENTATION_ADDRESS, IMPLEMENTATION_INSTANCE,
+  ProxyInstanceForSend, PollInstanceForSend, ValidatorInstanceForSend,
+  IMPLEMENTATION_ABI, IMPLEMENTATION_ADDRESS, IMPLEMENTATION_INSTANCE, IMPLEMENTATION_INSTANCE_FOR_SEND
 })

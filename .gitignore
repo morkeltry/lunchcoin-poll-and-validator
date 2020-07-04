@@ -12,3 +12,7 @@ app/src/contracts
 src/contracts
 src_lunchcoin/contracts
 src_testing/contracts
+
+## since we're in dev, edit .gitigone in matser and merge to change it ;)
+## don't forget to re-add app/src/contracts after doing so.
+.gitignore
