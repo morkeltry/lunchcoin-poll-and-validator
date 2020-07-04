@@ -23,16 +23,19 @@ let wsRetries=2;
 let web3;
 let authWeb3;
 let wsProvider = new Web3.providers.WebsocketProvider(providerUrl,{timeout: 4800000} );
+let wpUp = true;
 
 web3 = new Web3(wsProvider);
 if (!web3.eth.net)
   console.log(`Did not get web3.eth.net from ${providerUrl}. Maybe check the port number?`);
-if (process.env.REACT_APP_NODE_ENV !== 'production'){
-  console.log(`Running in ${process.env.REACT_APP_NODE_ENV}`);
+if (environment!== 'production'){
+  console.log(`Running in ${environment}`);
   console.log(`process.env: `,process.env);
   if (web3.eth)
     console.log('but web3.eth.net=',web3.eth.net);
 }
+if (providerUrl.indexOf('127.0.0.1')>-1)
+  web3.isReliable = true;
 
 const reconnect = (wp = wsProvider)=> {
     console.log(`${time(d)}.${ms(d)}: Attempting to reconnect...`);
@@ -43,14 +46,17 @@ const reconnect = (wp = wsProvider)=> {
       console.log(`${time(d)}.${ms(d)}: WSS Reconnected`);
     });
     web3.setProvider(wp);
+    wpUp = true;
 }
 
 wsProvider.on('error', e => {
-  console.log('WS Error', e);
+  wpUp = false;
+  console.log(`${time(d)}.${ms(d)}: WS Error`, e);
   reconnect(wsProvider);
   // retry!
 });
 wsProvider.on('end', e => {
+  wpUp = false;
   console.log(`${time(new Date())}.${ms(d)}: WS closed`);
   reconnect(wsProvider);
 });
@@ -58,11 +64,11 @@ wsProvider.on('end', e => {
 if (authWeb3Type==='browser') {
   if (window.web3 && window.ethereum)
     authWeb3 = new Web3(window.ethereum)
-  else{
+  else {
     console.log(`Running in production, ${window.web3 ? '': 'lacking window.web3'} ${window.ethereum ? '': 'lacking window.ethereum'}`);
-    authWeb3Type = 'local';
+    // authWeb3Type = 'local';  // leave it until error checking implemented in LiveTing
   }}
-else {
+if (authWeb3Type==='local') {
   authWeb3 = web3;
   console.log(`Running in ${environment}`);
   if (web3.eth)
@@ -96,6 +102,24 @@ let awaitAccess;
 let d;
 const time = d=> d.toTimeString().slice(0,8);
 const ms = d=> (d%1000).toFixed(0);
+
+const wpIsUp = async (timeout)=> new Promise ((resolve, reject)=> {
+  if (wpUp)
+    resolve();
+  let t2;
+  let t = setInterval(()=>{
+    if (wpUp) {
+      clearTimeout(t2);
+      clearInterval(t);
+      resolve();
+    }
+  }, 199);
+  if (timeout)
+    t2= setTimeout(()=>{
+      clearInterval(t);
+      reject(`Gave up trying websocket after ${timeout}ms.`);
+    })
+})
 
 export function connectToWeb3() {
   return new Promise( async (resolve, reject) => {
@@ -438,12 +462,16 @@ export function callTransaction(functionName, args) {
     /* eslint-disable no-loop-func */
     return new Promise((resolve, reject) => {
       checkFunctionFormatting(functionName, args)
-        .then(({rv, outputs}) => {
+        .then(async ({rv, outputs}) => {
           let attempt;
           console.log(`Call to:`,IMPLEMENTATION_INSTANCE,functionName,args,rv);
 
           let i=wsRetries;
           while (i--) {
+            console.log(web3.isReliable);
+            console.log(await wpIsUp());
+            if (!web3.isReliable)
+              await wpIsUp();
             attempt = IMPLEMENTATION_INSTANCE.methods[functionName](...rv)
               .call({from: OWN_ADDRESS});
             attempt
@@ -467,26 +495,66 @@ export function callTransaction(functionName, args) {
     /* eslint-enable */
 }
 
+const logGasEstimate = (err, functionName, args, gasAmount) => {
+  if (err) console.log('Gas error:',err);
+  console.log(`${functionName}(${args.join(', ')})- expected gas: ${gasAmount}`);
+}
+
 export function sendTransaction(functionName, args) {
     return new Promise((resolve, reject) => {
-      checkFunctionFormatting(functionName, args)
-        .then(({rv, outputs}) => {
-          console.log(`Send to (${functionName}):`,IMPLEMENTATION_INSTANCE_FOR_SEND);
-          console.log('got back from checkFF ready to send:',{rv, outputs});
-          IMPLEMENTATION_INSTANCE_FOR_SEND.methods[functionName](...rv)
-            .send({from: OWN_ADDRESS})
-            .then(result => {
-              console.log(typeof result, result);
-              resolve(result);
+        checkFunctionFormatting(functionName, args)
+            .then(({rv, outputs}) => {
+                let gas;
+                console.log(`Send to (${functionName}):`,IMPLEMENTATION_INSTANCE_FOR_SEND);
+                console.log('got back from checkFF ready to send:',{rv, outputs});
+                IMPLEMENTATION_INSTANCE_FOR_SEND.methods[functionName](...rv)
+                    .estimateGas({from: OWN_ADDRESS})
+                    .then (estimatedGas=>{
+                      gas = estimatedGas;
+                      logGasEstimate(null, functionName, rv, gas);
+                      return gas
+                    })
+                    .then (async gas=>{
+                      if ((authWeb3Type!=='browser') && !authWeb3.isReliable)
+                        {} // await authWpIsUp())
+                      else
+                        throw new Error ('That was unexpected :/');
+                      IMPLEMENTATION_INSTANCE_FOR_SEND.methods[functionName](...rv)
+                        .send({from: OWN_ADDRESS, gas})
+                        .then(result => {
+                          console.log(typeof result, result);
+                          resolve(result);
+                        })
+                    })
+                    .catch(e=>{console.log(`${functionName} fail:`,e); reject(e)});
             })
-            .catch(e=>{console.log(`${functionName} fail:`,e);reject(e)});
-        })
-        .catch(err => {
-          console.log(`Bad format for ${functionName}`, err);
-          reject(err);
-        });
+            .catch(err => {
+                console.log(`Bad format for ${functionName}`, err);
+                reject(err);
+            });
     });
 }
+
+// export function sendTransaction(functionName, args) {
+//     return new Promise((resolve, reject) => {
+//       checkFunctionFormatting(functionName, args)
+//         .then(({rv, outputs}) => {
+//           console.log(`Send to (${functionName}):`,IMPLEMENTATION_INSTANCE_FOR_SEND);
+//           console.log('got back from checkFF ready to send:',{rv, outputs});
+//           IMPLEMENTATION_INSTANCE_FOR_SEND.methods[functionName](...rv)
+//             .send({from: OWN_ADDRESS})
+//             .then(result => {
+//               console.log(typeof result, result);
+//               resolve(result);
+//             })
+//             .catch(e=>{console.log(`${functionName} fail:`,e);reject(e)});
+//         })
+//         .catch(err => {
+//           console.log(`Bad format for ${functionName}`, err);
+//           reject(err);
+//         });
+//     });
+// }
 
 export function switchTo(address) {
     return new Promise((resolve, reject) => {

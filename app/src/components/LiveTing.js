@@ -395,6 +395,7 @@ const LiveEvent = props => {
       fetchAndUpdate(addy);
     })
       .catch(err=> {
+        // we should be catching here: 105: reject (new Error('no web3 provider'));
         console.log('\n\nconnectToWeb3 FAILED\n\n');
         console.log('fetchAndUpdate gave',err);
         if (err.message==='connection not open on send()' || err instanceof ConnectionError)
