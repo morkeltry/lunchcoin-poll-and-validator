@@ -146,9 +146,8 @@ function getValuesWhichtheFuckenConstructorShouldHaveSet () public returns (uint
 
     function initialiseDemo (string memory _poll) public {
 
-      pollData[_poll].minStake = 1;
+      pollData[_poll].minStake = 1000;
       pollData[_poll].venueCost = 12500;
-      pollData[_poll].venuePot = 112500;
       // pollData[_poll].staked[msg.sender].rep = 1;
       // pollData[_poll].staked[msg.sender].venueContribution =
       // pollData[_poll].staked[msg.sender].venueContribution[msg.sender] = 15000;
@@ -172,6 +171,14 @@ function getValuesWhichtheFuckenConstructorShouldHaveSet () public returns (uint
         _;
       else
         revert ('Not authorised to mine rep');
+    }
+
+
+    modifier isInitiator(string memory _poll) {
+      if (pollData[_poll].initiator == msg.sender || pollData[_poll].initiator == address(0))
+        _;
+      else
+        revert ('Venue cost may only be set by initator of the poll');
     }
 
     event logStuff (string);
@@ -270,6 +277,12 @@ function getValuesWhichtheFuckenConstructorShouldHaveSet () public returns (uint
     function setString (string memory _poll, string memory _mapName, uint8 _vt, string memory data) public {
       bytes32 hash = keccak256(abi.encodePacked(_poll, encodeFunctionName(_mapName), _vt));
       allTheData[hash] = stringToBytes32Array(data);
+    }
+
+
+    // NB vulnerable until proper poll facoty in place, since isInitiator allows any caller if poll.iniator == 0x0
+    function setVenueCost (string memory _poll, int _cost) public isInitiator(_poll) {
+      pollData[_poll].venueCost = _cost;
     }
 
 
@@ -434,6 +447,7 @@ function getValuesWhichtheFuckenConstructorShouldHaveSet () public returns (uint
       if (_venueContribution>0) {
         uint currentVC = pollData[_poll].staked[sender].venueContribution[_venueContributionFor];
         pollData[_poll].staked[sender].venueContribution[_venueContributionFor] += _venueContribution;
+        pollData[_poll].venuePot += _venueContribution;
       }
       if (_rep>0) {
         if (_rep<pollData[_poll].minStake) {
@@ -543,46 +557,31 @@ function getValuesWhichtheFuckenConstructorShouldHaveSet () public returns (uint
       // // allows recipients of gifted contributions to get a refund too
       for (i=0; i<stakers.length; i++) {
         uint refund = 0;
-        uint[3] memory fuckSolidity;
         address[] memory recipients = new address[](2);
         int[] memory amounts = new int[](2);
         //   for (stakes = allDibsPaidBy(staker).concat(staker.stake[staker]).concat(staker.stake[0x0]))
         recipients[0] = address(0);
-        recipients[1] = msg.sender;
+        recipients[1] = stakers[i];
         // what if this loop runs out of gas? Will the totals that everything is based on still be a good starting point?
         for (j=0; j<recipients.length; j++) {
           amounts[j] = int( pollData[_poll].staked[stakers[i]].venueContribution[recipients[j]] );
-          fuckSolidity[0] = 0;
-          fuckSolidity[1] = uint(amounts[j]) * spareCash;
-          if (pot>0)
-            fuckSolidity[2] = fuckSolidity[1]/pot;
-          else
-            fuckSolidity[2] = 888888;
-
-          // refund += fuckSolidity[2];  // += n failing when n nonzero (but that is likely diue to emitting onzero)
-          // refund = refund + fuckSolidity[2];  // r = r + n failing when n nonzero (but that is likely diue to emitting onzero)
-
-          // refund += (  uint(amounts[j]) / pot );
-          // refund += ( spareCash.mul(uint(amounts[j])) / pot );  // fails
-          // refund += ( spareCash * (uint(amounts[j])) / pot );  // failing intermittently (maybe forgot to initialise?) - Also when last emit param is zero.
+          refund += ( spareCash * (uint(amounts[j])) / pot );
           pollData[_poll].staked[stakers[i]].venueContribution[recipients[j]] = 0;
           // maintain a tally of refunded stakes in case of gas exhaustion.
-          pollData[_poll].staked[address(0)].venueContribution[address(0)] = refund;
+          pollData[_poll].staked[address(0)].venueContribution[address(0)] += refund;
           if (pollData[_poll].venuePot >= refund)
             pollData[_poll].venuePot -= refund;
           // else
           //   revert ('Someone emptied the pot!!');
         }
-        // if (refund>0 || uint160(bytes20(recipients[j]))>0) {  //likely fail
+        if (refund>0 || uint160(bytes20(recipients[j]))>0) {  //likely fail
         // if (refund>0 || j>0) {
         // Temporarily catch the zero refunds which should be more
         // if (uint160(bytes20(recipients[j]))>0) {  // failing!
-        if (j>0) {
+        // if (j>0) {
           if (doRefund(stakers[i], refund))
-            emit venuePotDisbursed (_poll, stakers[i], msg.sender, 0);  // cannot get it to issue nonzero last param. Previously failed on literal zero but now works :/
-          // else {
-          //   emit venuePotDisbursed ('doRefund FAILED', stakers[i], msg.sender, fuckSolidity[2]);
-          // }
+            emit venuePotDisbursed (_poll, stakers[i], msg.sender, refund);  // cannot get it to issue nonzero last param. Previously failed on literal zero but now works :/
+
         }
       }
       pollData[_poll].staked[address(0)].venueContribution[address(0)] = 0;
@@ -597,7 +596,7 @@ function getValuesWhichtheFuckenConstructorShouldHaveSet () public returns (uint
       //   int[] memory amounts = new int[](2);
       //   //   for (stakes = allDibsPaidBy(staker).concat(staker.stake[staker]).concat(staker.stake[0x0]))
       //   recipients[0] = address(0);
-      //   recipients[1] = msg.sender;
+      //   recipients[1] = stakers[i];
       //   for (j=0; j<recipients.length; j++) {
       //     amounts[j] = int( pollData[_poll].staked[stakers[i]].venueContribution[recipients[j]] );
       //     totalPaid += amounts[j];

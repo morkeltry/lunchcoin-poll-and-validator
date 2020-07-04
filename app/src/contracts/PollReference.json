@@ -28476,10 +28476,16 @@
       "links": {},
       "address": "0x25958aa0A2A00f2D32C6Cb8E7a9A0D02a2A8AB7e",
       "transactionHash": "0xfc56f5c4d3989ebf14fe24a5816818685c415614e35ec037ec713339fb93904d"
+    },
+    "1593867262328": {
+      "events": {},
+      "links": {},
+      "address": "0x3911Ef2192FEf8C8B097FEaf4698f15F3c5e610D",
+      "transactionHash": "0x34b4cce8fca33fa19593006be2878c3093c95cbefcd6c45339aca852196a9f49"
     }
   },
   "schemaVersion": "3.0.2",
-  "updatedAt": "2020-06-29T13:51:04.285Z",
+  "updatedAt": "2020-07-04T14:04:08.470Z",
   "devdoc": {
     "methods": {}
   },

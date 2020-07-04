@@ -9458,10 +9458,16 @@
       "links": {},
       "address": "0x0066C003906A1a4104CB2750D6161282EaEDd63F",
       "transactionHash": "0xe61681b6907b1760adc5ae6900a63dee0299b7925a7a278259706848287b606f"
+    },
+    "1593867262328": {
+      "events": {},
+      "links": {},
+      "address": "0xB5cb1c288F207cB6ee28B1B72529Bd219D1aA7A9",
+      "transactionHash": "0x5b2c1e7756defe8afe2abcdad1a303258907c9a6365fb41af4d1b62591fe81eb"
     }
   },
   "schemaVersion": "3.0.2",
-  "updatedAt": "2020-06-29T13:51:04.270Z",
+  "updatedAt": "2020-07-04T14:04:08.451Z",
   "devdoc": {
     "author": "Arvind Kalra (github.com/arvindkalra) and Pranav Singhal (github.com/pranav-singhal)",
     "methods": {},
