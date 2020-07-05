@@ -24,6 +24,7 @@ let web3;
 let authWeb3;
 let wsProvider = new Web3.providers.WebsocketProvider(providerUrl,{timeout: 4800000} );
 let wpUp = true;
+let awaitAccess;
 
 web3 = new Web3(wsProvider);
 if (!web3.eth.net)
@@ -92,10 +93,8 @@ let IMPLEMENTATION_INSTANCE;
 let IMPLEMENTATION_INSTANCE_FOR_SEND;
 let IMPLEMENTATION_ADDRESS;
 
-let OWN_ADDRESS;
 let availableAccounts;
-
-let awaitAccess;
+let OWN_ADDRESS;
 
 let d;
 const time = d=> d.toTimeString().slice(0,8);
@@ -185,12 +184,16 @@ export function connectToWeb3() {
           default:
             break;
           }
+
           awaitAccess = awaitAccess
-            || window.ethereum.request && window.ethereum.request({ method: 'eth_requestAccounts' })
-            || window.ethereum.enable() ;
+            || ( authWeb3Type==='local' && Promise.resolve() )    // skip awaiting metamask if authWeb3Type==='local'
+            || window.ethereum.request && window.ethereum.request({ method: 'eth_requestAccounts' })  // else try new form of metamask enable request
+            || window.ethereum.enable() ;                                                 // or the older form
 
           awaitAccess
-            .then(()=>{
+            .then((promiseResponse)=>{
+              if (promiseResponse)
+                console.log('Works without this resolve value - this should only resolve to something if metamask is enabled and is new. Heres the resolve value:', promiseResponse);
               authWeb3.eth.getAccounts((err, accounts) => {
                 awaitAccess = null;
                 if (err) reject(err);
@@ -415,7 +418,7 @@ function unpackRVs (result, outputs) {
   // console.log(typeof result, result);
     outputs = outputs.forEach ((output,idx)=> {
       // console.log('output',output);
-      if (output && output["type"].substr(0, 4) === "uint") {
+      if (output && (output["type"].substr(0, 4) === "uint" || output["type"].substr(0, 3) === "int")) {
         if (typeof result==="object")
           result[idx] = (parseInt(result[idx].valueOf()));
         else if (typeof result==="object")        // why is this unreachable code here?

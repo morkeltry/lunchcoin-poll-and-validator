@@ -1,0 +1,24 @@
+
+.polls-list__container {
+}
+
+.polls-list__known-polls {
+  position: absolute;
+  top: 0;
+  max-height: 75%;
+  background-color: #22e6;
+}
+
+.polls-list__add-poll {
+  position: absolute;
+  max-height: 25%;
+  background-color: #e226;
+}
+
+.bg0 {
+  /* background-color: #400b; */
+}
+
+.bg1 {
+  /* background-color: #303b;   */
+}
