@@ -25,17 +25,19 @@ const ChoosePollView = props=> {
   }, []); // how to make a new poll show after adding it?
 
   return (
-    <div classname="polls-list__container">
-      { livePolls.map((poll,idx)=> (            // NB you currently choose between live polls. with more functionality, there will be a point to choose between other polls too
-        <div className={ cN( 'polls-list__known-polls', 'bg'+idx%2 ) }>
-          <div className="polls-list__known-polls">
-            { poll }
+    <div className="polls-list__container">
+      <div className="polls-list__known-polls__container">
+        { livePolls.map((poll,idx)=> (            // NB you currently choose between live polls. with more functionality, there will be a point to choose between other polls too
+          <div className={ cN( 'polls-list__known-polls', 'bg'+idx%2 ) }>
+            <div className="">
+              { pollNames[idx]|| 'event'+idx }
+            </div>
+            <div className="">
+              { poll.url }
+            </div>
           </div>
-          <div className="">
-            { pollNames[idx] || 'event'+idx }
-          </div>
-        </div>
-      ))}
+        ))}
+      </div>
       <AddPoll
         add = { url=>{ if (polls.every(poll=>poll.url!==url)){ addPoll(url); console.log('done');} else console.log('UHOOOOOOOOOOOOOOOOOOHHHHHH');} }
         polls = { polls }

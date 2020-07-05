@@ -68,6 +68,7 @@ const LunchcoinApp = props => {
 
   const fetchAndUpdatePolls = (pollUrls)=> {
     let sortedPolls = polls.slice();
+    const getSortedPolls=()=> sortedPolls;
     return Promise.all( pollUrls.map (url=> new Promise(resolve=>{
       console.log('Promise',url);
       callTransaction('getPoll', { _poll: url })
@@ -80,17 +81,25 @@ const LunchcoinApp = props => {
 
           console.log(sortedPolls);
           setPolls (sortedPolls);
+          resolve(getSortedPolls);
         });
-        resolve(sortedPolls);
     })))
     // Promise.all should have resolved with an array of identical references to the sortedPolls array
-    .then(async sortedPolls=> {
+    .then(getSortedPolls=> {
       if (sortedPolls.length) {
+        const sortedPolls = getSortedPolls[0]();
         // quick sanity check of the comment above :/
-        if(sortedPolls.map(arr=>arr.length).some(len=>len!=sortedPolls[0].length))
-          console.log('Uh oh:',sortedPolls.map(arr=>arr.length));
-        const liveOnes = sortedPolls[0].filter(poll=> (poll.end>Date.now() && poll.start<Date.now()) );
+        if(getSortedPolls.map(fn=>fn().length).some(len=>len!=sortedPolls.length))
+          console.log('Uh oh:',getSortedPolls.map(fn=>fn().length));
+        const liveOnes = sortedPolls.filter(poll=> (poll.end>Date.now() && poll.start<Date.now()) );
         setLivePolls(liveOnes);
+
+        // *****
+        setLivePolls(sortedPolls);
+        // *****
+      console.log(sortedPolls);
+
+
         if (!currentPoll && liveOnes.length) {
           if (liveOnes.length === 1)
             setCurrentPoll(liveOnes[0])
@@ -114,10 +123,11 @@ const LunchcoinApp = props => {
 
   const toUnixTime = x=>x;
 
+  // not strictly Unix ;) Using end==0 to signify end==never. Don't rely on this!
   const unixifyTimes = resp=>
     Object.assign (resp,
       { start : resp.start ? toUnixTime(resp.start) : resp.start },
-      { end : resp.end ? toUnixTime(resp.end) : resp.end },
+      { end : resp.end ? toUnixTime(resp.end) : (resp.end==0) ? Infinity : resp.end },
     );
 
   const byStartEndSort = event=>{

@@ -1,24 +1,41 @@
 
 .polls-list__container {
+  display: flex;
+  background-color: black;
+  color : white;
+  flex-direction: column;
+  min-height: 100%;
+}
+
+.polls-list__known-polls__container {
+  display: flex;
+  flex-direction: column;
+  max-height: 75%;
+  padding: 0;
+  margin: 0;
 }
 
 .polls-list__known-polls {
-  position: absolute;
-  top: 0;
-  max-height: 75%;
-  background-color: #22e6;
+  padding: 2vw;
+  margin: 2vw;
+  border: 1px solid magenta;
 }
 
 .polls-list__add-poll {
-  position: absolute;
-  max-height: 25%;
+  padding: 2vw;
+  margin: 2vw;
+  min-height: 15%;
   background-color: #e226;
 }
 
 .bg0 {
-  /* background-color: #400b; */
+  background-color: #400b;
 }
 
 .bg1 {
-  /* background-color: #303b;   */
+  background-color: #303b;
+}
+
+.bg2 {
+  background-color: #030b;
 }

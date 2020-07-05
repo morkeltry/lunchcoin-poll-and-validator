@@ -183,7 +183,7 @@ const AddPoll = props=> {
   }
 
   return (
-    <div>
+    <>
       <div className="polls-list__add-poll">
         <input
           id='new-poll-url'
@@ -276,7 +276,7 @@ const AddPoll = props=> {
             : <Loading />
           )
         }
-    </div>
+    </>
   )
 }
 
