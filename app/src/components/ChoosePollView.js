@@ -7,7 +7,7 @@ import '../App.scss';
 import './pollsView.css';
 
 const ChoosePollView = props=> {
-  const { polls, addPoll, livePolls, setPolls, setCurrentPoll } = props;
+  const { polls, addToChoices, livePolls, setPolls, setCurrentPoll } = props;
 
   const pollNamesSync=[];
   const [pollNames, setPollNames] = useState([]);
@@ -39,7 +39,7 @@ const ChoosePollView = props=> {
         ))}
       </div>
       <AddPoll
-        add = { url=>{ if (polls.every(poll=>poll.url!==url)){ addPoll(url); console.log('done');} else console.log('UHOOOOOOOOOOOOOOOOOOHHHHHH');} }
+        addToChoices = { url=>{ if (polls.every(poll=>poll.url!==url)){ addToChoices(url); console.log('done');} else console.log('UHOH - duplicate url - did NOT addToChoices');} }
         polls = { polls }
         setPolls = { setPolls }
         setCurrentPoll = { setCurrentPoll }

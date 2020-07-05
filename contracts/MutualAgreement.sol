@@ -95,7 +95,7 @@ contract MutualAgreement {
     // constants: Do not use space in storage.
     uint8 constant vType=1;
     string constant vDesc = "mutual agreement";
-
+        // delete me!
 
     struct proofCounter {
         bool fakeProof;
@@ -322,6 +322,23 @@ function getValuesWhichtheFuckenConstructorShouldHaveSet () public returns (uint
       }
       return (0);
     }
+
+    event newPollCreated(string);
+    function createPoll(string memory poll, address initiator, uint minStake, int venueCost, address venuePayer, uint8 participants) public {
+      require (!isPoll(_poll), 'Poll exists already.');
+      require (_minStake>0, 'minStake must be set');
+      if (_initiator == address(0))
+        pollData[_poll].initiator = msg.sender;
+      else
+        pollData[_poll].initiator = initiator;
+      pollData[_poll].minStake = minStake;
+      pollData[_poll].venueCost = venueCost;
+      pollData[_poll].venuePayer = venuePayer;
+      pollData[_poll].minParticipants = participants;
+
+      emit newPollCreated(_poll);
+    }
+
 
 
     event whassahash(bytes);

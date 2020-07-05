@@ -338,9 +338,12 @@ function checkWithABI(currentFunc, functionName, args, resolve, reject) {
   console.log(currentFunc.inputs);
   console.log(functionName, args);
     currentFunc.inputs.forEach(input => {
+        if (typeof args[input.name]==='number')
+          args[input.name] = args[input.name].toString();
         console.log(input.name, args, args[input.name]);
         if (!args[input.name]) {
             console.log(`Will reject from checkWithABI: ${input.name} not found in ${functionName}'s args`,args);
+            console.log(` ${input.name}='${args[input.name]}' of type ${typeof args[input.name]}`);
             reject(new Error("INVALID ARGUMENTS: Invalid Number of arguments"));
         }
         let callValue = args[input.name];

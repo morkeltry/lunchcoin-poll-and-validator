@@ -47,6 +47,19 @@
   height: 100%;
 }
 
+.modal-form input[type=text] {
+  height: 3vh;
+  position: relative;
+  top: 1.5vw;
+  margin: 2vw;
+  padding: 2vw;
+  background-color: black;
+  color: #acf;
+  box-shadow: 0 0 0.5vh #936e, 0 0 1vh #936e, 0 0 1.5vh #fff, 0 0 2vh;
+  box-shadow:inset 0 0 0.5vh #936e, 0 0 1vh #936e, 0 0 2vh #FF1177;
+  border: 0px;
+}
+
 .modal-form input[type=checkbox] {
   height: 3vh;
   position: relative;

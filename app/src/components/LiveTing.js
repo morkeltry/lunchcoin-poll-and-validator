@@ -222,6 +222,7 @@ const LiveEvent = props => {
     //   callTransaction('getPoll', { poll })
     //     .then (async response=> {
     //       response.url = poll;
+    //       // await setState is not a thing!!!
     //       await setPolls (
     //         polls
     //           .filter( knownPoll=> knownPoll.url != poll )
@@ -233,6 +234,7 @@ const LiveEvent = props => {
     //     resolve();
     // })))
     // .then(async ()=> {
+    //   // await setState is not a thing!!!
     //   await setLivePolls (
     //       polls.filter(poll=> (poll.end>Date.now() && poll.start<Date.now()))
     //   );

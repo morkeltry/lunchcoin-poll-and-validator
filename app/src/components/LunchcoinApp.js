@@ -47,8 +47,8 @@ const LunchcoinApp = props => {
   // const [alternateContractAddress, setAlternateContractAddress] = useState('');
 
 
-  // TODO: it would be nivce to have a more async aware version of addPoll, that doesn't refetch all each time a poll is added
-  const addPoll = pollUrl => {
+  // TODO: it would be nivce to have a more async aware version of addToChoices, that doesn't refetch all each time a poll is added
+  const addToChoices = pollUrl => {
     fetchAndUpdatePolls(pollUrls.concat(pollUrl));
     setPollUrls(pollUrls.concat(pollUrl));
   }
@@ -69,6 +69,7 @@ const LunchcoinApp = props => {
   const fetchAndUpdatePolls = (pollUrls)=> {
     let sortedPolls = polls.slice();
     const getSortedPolls=()=> sortedPolls;
+
     return Promise.all( pollUrls.map (url=> new Promise(resolve=>{
       console.log('Promise',url);
       callTransaction('getPoll', { _poll: url })
@@ -95,9 +96,10 @@ const LunchcoinApp = props => {
         setLivePolls(liveOnes);
 
         // *****
+        // delete me!
         setLivePolls(sortedPolls);
         // *****
-      console.log(sortedPolls);
+        console.log(sortedPolls);
 
 
         if (!currentPoll && liveOnes.length) {
@@ -195,7 +197,7 @@ const LunchcoinApp = props => {
                 ? <Loading heading={"Loading Contract..."}/>
               : <ChoosePollView
                   polls={ polls }
-                  addPoll={ addPoll }
+                  addToChoices={ addToChoices }
                   livePolls={ livePolls }
                   setPolls = { setPolls }
                   setCurrentPoll = { setCurrentPoll }
