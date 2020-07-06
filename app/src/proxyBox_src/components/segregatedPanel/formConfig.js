@@ -50,9 +50,14 @@ export const byFuncDefaults = {
     _rep : 4000
   },
   addStake : {
-    _rep : 1500,
+    _rep : 1000,
     _venueContribution : 15000,
-    _venueContributionFor : ''
+    _venueContributionFor : 'OWN_ADDRESS'
+  },
+  addFakeStake : {
+    _rep : 1000,
+    _venueContribution : 15000,
+    _venueContributionFor : 'OWN_ADDRESS'
   },
   getProofUsingStaker : {
     _mapName : 'proof',

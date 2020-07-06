@@ -30,7 +30,7 @@ const LunchcoinApp = props => {
   const [pollUrls, setPollUrls] = useState([]);   // unsorted
   const [polls, setPolls] = useState([]);         // objects, sorted
   const [livePolls, setLivePolls] = useState([]);
-  const [currentPoll, setCurrentPoll] = useState(''); //doodle.com/poll/r9rb35fiibvs3aa5');
+  const [currentPoll, setCurrentPoll] = useState('doodle.com/poll/r9rb35fiibvs3aa5');
   const [choosePoll, setChoosePoll] = useState(true);
   // const [, set] = useState();
   // const [, set] = useState();
@@ -192,7 +192,7 @@ const LunchcoinApp = props => {
         { noChainError
           ? 'Unable to reach blockchain endpoint'
           : (currentPoll
-              ? <LiveEvent pollUrl={currentPoll} checkInIsClosed={true} setOwnAddyParent={ setOwnAddyParent }/>
+              ? <LiveEvent pollUrl={currentPoll} setOwnAddyParent={ setOwnAddyParent }/>
               : loadingStatus
                 ? <Loading heading={"Loading Contract..."}/>
               : <ChoosePollView
