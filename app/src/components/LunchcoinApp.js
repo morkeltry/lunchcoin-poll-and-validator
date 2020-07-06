@@ -12,6 +12,7 @@ import Nav from "react-bootstrap/Nav";
 import Col from "react-bootstrap/Col";
 import Loading from "./Loading";
 import LiveEvent from "./LiveTing";
+import ChoosePollView from "./ChoosePollView";
 import {Form} from "react-bootstrap";
 
 // import {LiveEvent} from "./LiveEvent";
@@ -19,16 +20,17 @@ import "../App.scss";
 
 
 // import { owner } from './segregatedPanel/formConfig'
-const pollUrls = ['doodle.com/poll/h7phtw5u2thhz9k4', 'doodle.com/poll/r9rb35fiibvs3aa5'];
 const eventsObj = {};
+const resolvers = {}
 
 const LunchcoinApp = props => {
   // const [ownAddy, setOwnAddy] = useState('0xLA');
   const { setOwnAddyParent } = props;
   const [noChainError, setNoChainError] = useState(false);
-  const [polls, setPolls] = useState([]);
+  const [pollUrls, setPollUrls] = useState([]);   // unsorted
+  const [polls, setPolls] = useState([]);         // objects, sorted
   const [livePolls, setLivePolls] = useState([]);
-  const [currentPoll, setCurrentPoll] = useState('doodle.com/poll/r9rb35fiibvs3aa5');
+  const [currentPoll, setCurrentPoll] = useState(''); //doodle.com/poll/r9rb35fiibvs3aa5');
   const [choosePoll, setChoosePoll] = useState(true);
   // const [, set] = useState();
   // const [, set] = useState();
@@ -41,47 +43,74 @@ const LunchcoinApp = props => {
   const [caughtEvents, setCaughtEvents] = useState([]);
   const [checkInIsClosed, setCheckInIsClosed] = useState(false);
   const [loadingStatus, setLoadingStatus] = useState(false);
-  const [currentContractAddress, setCurrentContractAddress] = useState('');
-  const [alternateContractAddress, setAlternateContractAddress] = useState('');
+  // const [currentContractAddress, setCurrentContractAddress] = useState('');
+  // const [alternateContractAddress, setAlternateContractAddress] = useState('');
+
+
+  // TODO: it would be nivce to have a more async aware version of addToChoices, that doesn't refetch all each time a poll is added
+  const addToChoices = pollUrl => {
+    fetchAndUpdatePolls(pollUrls.concat(pollUrl));
+    setPollUrls(pollUrls.concat(pollUrl));
+  }
 
   const chainEventListeners = {
     getPoll : eventResponse => { console.log(eventResponse); },
     proofsWindowClosed : eventResponse => { console.log('proofsWindowClosed', eventResponse); },
   }
 
-  const getLocalCache =()=> {
-
+  const getLocalCache= ()=> {
+    return ['doodle.com/poll/h7phtw5u2thhz9k4'];
+    return ['doodle.com/poll/h7phtw5u2thhz9k4', 'doodle.com/poll/r9rb35fiibvs3aa5'];
   }
 
 // Take an object with objects appearing twice, first under numerical keys with correct JS type,
 //   ​then under alphanum keys with possibly string type, and return alphanum keys and correct types.
 
-  const fetchAndUpdatePolls = (pollUrls)=>
-    Promise.all( pollUrls.map (poll=> new Promise(resolve=>{
-      callTransaction('getPoll', { _poll: poll })
-        .then (async response=> {
-          response.url = poll;
-          await setPolls (
-            polls
-              .filter( knownPoll=> knownPoll.url != poll )
-              .concat( [unixifyTimes(response)] )
-              .sort( byStartEndSort )
-          );
-        });
-        resolve();
-    })))
-    .then(async ()=> {
-      await setLivePolls (
-          polls.filter(poll=> (poll.end>Date.now() && poll.start<Date.now()))
-      );
-      if (!currentPoll && livePolls.length) {
-        if (livePolls.length === 1)
-          setCurrentPoll(livePolls[0])
-        else
-          setChoosePoll(true);
-      };
-    });
+  const fetchAndUpdatePolls = (pollUrls)=> {
+    let sortedPolls = polls.slice();
+    const getSortedPolls=()=> sortedPolls;
 
+    return Promise.all( pollUrls.map (url=> new Promise(resolve=>{
+      console.log('Promise',url);
+      callTransaction('getPoll', { _poll: url })
+        .then (async response=> {
+          response.url = url;
+          sortedPolls = sortedPolls
+            .filter( knownPoll=> knownPoll.url != url )
+            .concat( [unixifyTimes(response)] )
+            .sort( byStartEndSort )
+
+          console.log(sortedPolls);
+          setPolls (sortedPolls);
+          resolve(getSortedPolls);
+        });
+    })))
+    // Promise.all should have resolved with an array of identical references to the sortedPolls array
+    .then(getSortedPolls=> {
+      if (sortedPolls.length) {
+        const sortedPolls = getSortedPolls[0]();
+        // quick sanity check of the comment above :/
+        if(getSortedPolls.map(fn=>fn().length).some(len=>len!=sortedPolls.length))
+          console.log('Uh oh:',getSortedPolls.map(fn=>fn().length));
+        const liveOnes = sortedPolls.filter(poll=> (poll.end>Date.now() && poll.start<Date.now()) );
+        setLivePolls(liveOnes);
+
+        // *****
+        // delete me!
+        setLivePolls(sortedPolls);
+        // *****
+        console.log(sortedPolls);
+
+
+        if (!currentPoll && liveOnes.length) {
+          if (liveOnes.length === 1)
+            setCurrentPoll(liveOnes[0])
+          else
+            setChoosePoll(true);
+        };
+      }
+    });
+  }
 
   const rekey = keyedByNum=> {
     const result = {};
@@ -96,10 +125,11 @@ const LunchcoinApp = props => {
 
   const toUnixTime = x=>x;
 
+  // not strictly Unix ;) Using end==0 to signify end==never. Don't rely on this!
   const unixifyTimes = resp=>
     Object.assign (resp,
       { start : resp.start ? toUnixTime(resp.start) : resp.start },
-      { end : resp.end ? toUnixTime(resp.end) : resp.end },
+      { end : resp.end ? toUnixTime(resp.end) : (resp.end==0) ? Infinity : resp.end },
     );
 
   const byStartEndSort = event=>{
@@ -116,19 +146,21 @@ const LunchcoinApp = props => {
 
 
   useEffect(()=> {
-    getLocalCache();
+    const knownUrls = getLocalCache()
+    setPollUrls(knownUrls);
 
     let tempRead = [];
     let tempWrite = [];
     setLoadingStatus(true);
+
     connectToWeb3().then(addressObj => {
       console.log(addressObj)
-
-      setCurrentContractAddress(addressObj.IMPLEMENTATION_ADDRESS)
-      setAlternateContractAddress(addressObj.unImplementedAddress)
+      // setCurrentContractAddress(addressObj.IMPLEMENTATION_ADDRESS)
+      // setAlternateContractAddress(addressObj.unImplementedAddress)
       return true
     }).then( ()=> {
-      fetchAndUpdatePolls(pollUrls);
+      console.log(`will: fetchAndUpdatePolls(pollUrls) with:`,knownUrls);
+      fetchAndUpdatePolls(knownUrls);
       getImplementationEvents({ setWatchers:true }, chainEventListeners)
         .then (foundEvents=> {
           console.log(foundEvents);
@@ -163,13 +195,13 @@ const LunchcoinApp = props => {
               ? <LiveEvent pollUrl={currentPoll} checkInIsClosed={true} setOwnAddyParent={ setOwnAddyParent }/>
               : loadingStatus
                 ? <Loading heading={"Loading Contract..."}/>
-                : choosePoll
-                  ? livePolls.map((poll,idx)=>(
-                      <Row>
-                        event{ idx }
-                      </Row>
-                    ))
-                  : <Loading heading={"No events found. Please link to a poll."}/>
+              : <ChoosePollView
+                  polls={ polls }
+                  addToChoices={ addToChoices }
+                  livePolls={ livePolls }
+                  setPolls = { setPolls }
+                  setCurrentPoll = { setCurrentPoll }
+                />
             )
         }
       </Container>

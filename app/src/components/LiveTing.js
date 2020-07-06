@@ -17,6 +17,7 @@ import { connectToWeb3, getImplementationFunctions, getImplementationEvents,
   callTransaction, sendTransaction, getFromStorage,
   myAccounts, } from "../Web3/accessChain";
 import { getPrice } from "../helpers/priceFeed.js";
+import { fetchOnlinePoll } from "../helpers/doodleFetchers.js";
 
 let OWN_ADDRESS = '0x000';
 let t=[];
@@ -140,15 +141,6 @@ const LiveEvent = props => {
 
   }
 
-  const fetchOnlinePoll = (pollUrl)=> {
-    setPollName(`Let's go to the beach!!`);
-    // fetch(pollUrl)
-    //   .then (resp=> resp.xml)
-    //   .then (pull out name, etc.)
-    //   .then (setPollName) ;
-  }
-
-
   const fetchAndUpdate = (freshAddy = ownAddress )=> {
     callTransaction('getproofsAsAddresses', {_poll : pollUrl})
       .then(response=>{
@@ -230,6 +222,7 @@ const LiveEvent = props => {
     //   callTransaction('getPoll', { poll })
     //     .then (async response=> {
     //       response.url = poll;
+    //       // await setState is not a thing!!!
     //       await setPolls (
     //         polls
     //           .filter( knownPoll=> knownPoll.url != poll )
@@ -241,6 +234,7 @@ const LiveEvent = props => {
     //     resolve();
     // })))
     // .then(async ()=> {
+    //   // await setState is not a thing!!!
     //   await setLivePolls (
     //       polls.filter(poll=> (poll.end>Date.now() && poll.start<Date.now()))
     //   );
@@ -377,7 +371,9 @@ const LiveEvent = props => {
 
   useEffect(()=> {
     getLocalCache();
-    fetchOnlinePoll(pollUrl);
+    fetchOnlinePoll(pollUrl)
+      .then(poll=> poll.name)
+      .then(setPollName);
     connectToWeb3().then(addressObj => {
       console.log('\n\nconnectToWeb3 SUCEEDED\n\n');
       getImplementationEvents({ setWatchers:true }, chainEventListeners );

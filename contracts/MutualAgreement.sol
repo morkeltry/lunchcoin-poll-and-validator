@@ -95,7 +95,7 @@ contract MutualAgreement {
     // constants: Do not use space in storage.
     uint8 constant vType=1;
     string constant vDesc = "mutual agreement";
-
+        // delete me!
 
     struct proofCounter {
         bool fakeProof;
@@ -199,9 +199,23 @@ function getValuesWhichtheFuckenConstructorShouldHaveSet () public returns (uint
       emit logStuff (message);
     }
 
+    function isPoll(string memory _poll) public view returns (bool) {
+      if (
+        pollData[_poll].initiator!=address(0)
+        || pollData[_poll].minStake >0
+        || pollData[_poll].venueCost >0
+        || pollData[_poll].venuePot >0
+        || pollData[_poll].minParticipants >0
+        || pollData[_poll].proofsWindowClosed
+        || pollData[_poll].eventTime.start >0
+        || pollData[_poll].eventTime.end > 0
+      ) return true;
+      return false;
+    }
+
     function getPoll(string memory _poll) public view returns (
       address initiator,
-      // uint stake,
+      uint minStake,
       // uint venueContribution,
       int venueCost,
       uint venuePot,
@@ -213,19 +227,20 @@ function getValuesWhichtheFuckenConstructorShouldHaveSet () public returns (uint
       bytes32[5][] memory ownCheckInIndex ) {
 
       initiator = pollData[_poll].initiator;
+      minStake = pollData[_poll].minStake;
       venueCost = pollData[_poll].venueCost;
       venuePot = pollData[_poll].venuePot;
       minParticipants = pollData[_poll].minParticipants;
       proofsWindowClosed = pollData[_poll].proofsWindowClosed;
-      // start = pollData[_poll].eventTime.start;
-      // end = pollData[_poll].eventTime.end;
-      start = 1591535900000;
-      end = 1591536000000;
+      start = pollData[_poll].eventTime.start;
+      end = pollData[_poll].eventTime.end;
+      // start = 1591535900000;
+      // end = 1591536000000;
       // dibsCalled = pollData[_poll].dibsCalled;
       // stake = pollData[_poll].staked[_staker].rep;
       // venueContribution = pollData[_poll].staked[_staker].venueContribution[_staker];
 
-      return (initiator, venueCost, venuePot, minParticipants, start, end, proofsWindowClosed, ownCheckInIndex);
+      return (initiator, minStake, venueCost, venuePot, minParticipants, start, end, proofsWindowClosed, ownCheckInIndex);
     }
 
     function getPollStruct(string memory _poll) public view returns (PollExternal memory returnPoll) {
@@ -307,6 +322,23 @@ function getValuesWhichtheFuckenConstructorShouldHaveSet () public returns (uint
       }
       return (0);
     }
+
+    event newPollCreated(string);
+    function createPoll(string memory poll, address initiator, uint minStake, int venueCost, address venuePayer, uint8 participants) public {
+      require (!isPoll(poll), 'Poll exists already.');
+      require (minStake>0, 'minStake must be set');
+      if (initiator == address(0))
+        pollData[poll].initiator = msg.sender;
+      else
+        pollData[poll].initiator = initiator;
+      pollData[poll].minStake = minStake;
+      pollData[poll].venueCost = venueCost;
+      pollData[poll].venuePayer = venuePayer;
+      pollData[poll].minParticipants = participants;
+
+      emit newPollCreated(poll);
+    }
+
 
 
     event whassahash(bytes);
