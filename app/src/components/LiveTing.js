@@ -492,7 +492,8 @@ return(<>
             menuItems: {
               'Hide/Show all functions' : ()=>{ console.log('hide:',!hideFunctions); setHideFunctions(!hideFunctions); },
               ...accountSetters(availableAccounts,9),
-              'Fetch from chain' : ()=>{ fetchAndUpdate(); },
+              'Reopen Check-in' : ()=>{ sendTransaction('reopenProofsWindow', {_poll : pollUrl }) },
+              'Fetch from chain (or click pizza)' : ()=>{ fetchAndUpdate(); },
               'Hide Menu' : ()=>{ setBurgerView(false); }
             }
           }}
@@ -637,7 +638,7 @@ return(<>
                                     : ()=>{ setModalView(null) }
                                 }
                     buttonText= { modalView==='venue refund' ? 'Cool!' : 'Whoop whoop!' }
-                    loadingText= { modalView==='venue refund' ? 'Waiting for refund confirmations' : `Current rep: ${repWas}. Updating...` }
+                    loadingText= { modalView==='venue refund' ? 'Waiting for refund confirmations' : `Current rep: ${ niceNum(repWas/1000) }. Updating...` }
                     loading = { modalView==='venue refund'
                       ? !caughtEvents.filter(event=> event.eventName==='venuePotDisbursed').length
                       : !caughtEvents.filter(event=> event.eventName==='repRefund' && "event.returnValues.staker===ownAddress").length
@@ -676,13 +677,13 @@ return(<>
                           const { staker, staked, refunded } = returnValues;
                           return <React.Fragment key={`${staker}${staked}${refunded}`}>
                             <div className={ cN("hype-small", "w70") }>Your rep was: { niceNum(repWas/1000) } </div>
-                            <div className="w70"><span className="hype-small">+ stake </span>({ niceNum(repStaked/1000) }) X {repMultiplier} = <span className="hype-small">{ niceNum(repStaked/1000*repMultiplier) } </span></div>
+                            <div className="w70"><span className="hype-small">+ stake </span>({ niceNum(repStaked/1000) }) X {repMultiplier} = <span className="hype-small">{ niceNum(repMultiplier*repStaked/1000) } </span></div>
                             { updatedRep && updatedRep>=maxRep &&
-                              <div className="w70"><span className="hype-small">Maximum rep</span>: <span className="hype-small">{maxRep} </span></div>
+                              <div className="w70"><span className="hype-small">Maximum rep</span>: <span className="hype-small">{ niceNum(maxRep/1000) } </span></div>
                             }
                             <div>Your rep is now:
                               <span className={ cN("hype") }>
-                                {'  '}{ updatedRep===null ? <Dots /> : niceNum(updatedRep) }
+                                {'  '}{ updatedRep===null ? <Dots /> : niceNum(updatedRep/1000) }
                               </span>
                             </div>
                           </React.Fragment>
