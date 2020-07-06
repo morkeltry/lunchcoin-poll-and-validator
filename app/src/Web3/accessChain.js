@@ -247,14 +247,12 @@ export async function updateKnownPolls( options ) {
 export async function getImplementationEvents( options={ setWatchers:false }, eventListeners={} ) {
     // returns the list of events that are in the latest version of the contract
     let rv = [];
-    console.log(options);
-    console.log(eventListeners);
+    console.log('listeners:',eventListeners);
     const { setWatchers } = options;
     console.log(IMPLEMENTATION_ABI);
     console.log(IMPLEMENTATION_INSTANCE.events);
     IMPLEMENTATION_ABI.forEach(ele => {
         if (ele.type === "event") {
-            console.log(`Found event`, ele);
             let objectToBeAppended = {};
             objectToBeAppended["eventName"] = ele["name"];
             let argsObject = [];
@@ -398,7 +396,8 @@ async function checkFunctionFormatting(functionName, args) {
         let found = ProxyABI.find(element => {
             return element.name === functionName;
         });
-        console.log(functionName, found);
+        if (found)
+          console.log(`Ooh - found ${functionName} in the Proxy without going to Impoementation! :`, found);
         // Checks Proxy before Implementation!
         if (found) {
             // Function present in Proxy Contract
@@ -468,7 +467,7 @@ export function callTransaction(functionName, args) {
       checkFunctionFormatting(functionName, args)
         .then(async ({rv, outputs}) => {
           let attempt;
-          console.log(`Call to:`,IMPLEMENTATION_INSTANCE,functionName,args,rv);
+          console.log(`Call to (IMPLEMENTATION_INSTANCE):`,IMPLEMENTATION_INSTANCE,functionName,args,rv);
 
           let i=wsRetries;
           while (i--) {

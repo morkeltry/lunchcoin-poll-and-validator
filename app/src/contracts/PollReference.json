@@ -28474,12 +28474,12 @@
     "1593867262328": {
       "events": {},
       "links": {},
-      "address": "0x6e4E0738fc776ac6Ce7b407CB3526B9F6b27Ca1E",
-      "transactionHash": "0x6b0da9d7478045db710bad959b7d31754ac2135f9d7c7b76db4c7c07b9f9c6a7"
+      "address": "0x92AF353E9F19fE2c8d3D8a7FB46D856e0f4254b7",
+      "transactionHash": "0xe339fa264833af3ed26b1bfd6be5d84a968c602c4447984bbac0003bd83a8a7d"
     }
   },
   "schemaVersion": "3.0.2",
-  "updatedAt": "2020-07-05T15:34:16.887Z",
+  "updatedAt": "2020-07-06T16:28:46.080Z",
   "devdoc": {
     "methods": {}
   },

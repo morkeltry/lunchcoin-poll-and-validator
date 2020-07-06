@@ -87,7 +87,6 @@ contract MutualAgreement {
     //    mapping (address => bool) internal _allowedAccess;
 
     // used only in Validators
-    mapping (address => uint16) stakerPresentIn;
 
       // used for testing only - will be deleted.
       address pollAddress = 0x9D26a8a5Db7dC10689692caF8d52C912958409CF;
@@ -95,7 +94,7 @@ contract MutualAgreement {
     // constants: Do not use space in storage.
     uint8 constant vType=1;
     string constant vDesc = "mutual agreement";
-        // delete me!
+    bool usingRealMoney = false;
 
     struct proofCounter {
         bool fakeProof;
@@ -164,6 +163,13 @@ function getValuesWhichtheFuckenConstructorShouldHaveSet () public returns (uint
 
     function maxRep() public view returns (uint maxRep) {
       return (3000);
+    }
+
+    modifier onlyOwner() {
+      if (owner==msg.sender)
+        _;
+      else
+        revert (':P');
     }
 
     modifier isMiner() {
@@ -323,20 +329,27 @@ function getValuesWhichtheFuckenConstructorShouldHaveSet () public returns (uint
       return (0);
     }
 
+    function emptySofa (uint amount) onlyOwner public {
+      // <= Byzantium
+      msg.sender.transfer(amount);
+      // >= Istanbul
+      // msg.sender.call.value(amount)("");
+    }
+
     event newPollCreated(string);
     function createPoll(string memory poll, address initiator, uint minStake, int venueCost, address venuePayer, uint8 participants) public {
-      require (!isPoll(_poll), 'Poll exists already.');
-      require (_minStake>0, 'minStake must be set');
-      if (_initiator == address(0))
-        pollData[_poll].initiator = msg.sender;
+      require (!isPoll(poll), 'Poll exists already.');
+      require (minStake>0, 'minStake must be set');
+      if (initiator == address(0))
+        pollData[poll].initiator = msg.sender;
       else
-        pollData[_poll].initiator = initiator;
-      pollData[_poll].minStake = minStake;
-      pollData[_poll].venueCost = venueCost;
-      pollData[_poll].venuePayer = venuePayer;
-      pollData[_poll].minParticipants = participants;
+        pollData[poll].initiator = initiator;
+      pollData[poll].minStake = minStake;
+      pollData[poll].venueCost = venueCost;
+      pollData[poll].venuePayer = venuePayer;
+      pollData[poll].minParticipants = participants;
 
-      emit newPollCreated(_poll);
+      emit newPollCreated(poll);
     }
 
 
@@ -345,16 +358,11 @@ function getValuesWhichtheFuckenConstructorShouldHaveSet () public returns (uint
     event whassakeccack(bytes32);
     function getStakersProof (string memory _poll, address _staker) public returns (bytes32[] memory) {
       bytes32 hash = keccak256(abi.encodePacked(_poll, encodeFunctionName("proof"), _staker, vType));
-      emit whassahash(abi.encodePacked(_poll, encodeFunctionName("proof"), _staker, vType));
-      emit whassakeccack(hash);
       return (allTheData[hash]);
     }
 
     function getProofEmitHashesOnlyWithStaker (string memory _poll, string memory _mapName, address _stakerOrZero, uint8 _vt, bytes32[] memory data) public {
       bytes32 hash = keccak256(abi.encodePacked(_poll, encodeFunctionName(_mapName), _stakerOrZero, _vt));
-      emit whassahash(abi.encodePacked(_poll, encodeFunctionName(_mapName), _stakerOrZero, _vt));
-      emit whassakeccack(hash);
-
       emit gpResult(_poll, _mapName, _stakerOrZero, _vt, getStakersProof(_poll, _stakerOrZero));
     }
 
@@ -373,8 +381,6 @@ function getValuesWhichtheFuckenConstructorShouldHaveSet () public returns (uint
       return stakers;
     }
 
-
-//NB This is returning a WRONG result, but of the right type. You've probably got indices mixed up.
     function getproofsAsAddresses (string memory _poll ) public returns (address[][] memory) {
       address[] memory stakers = getStakerAddresses(_poll);
       address[][] memory proofs = new address[][](stakers.length);
@@ -472,14 +478,38 @@ function getValuesWhichtheFuckenConstructorShouldHaveSet () public returns (uint
     event stakeNotAccepted(address, string);
     event disreputableStakerIgnored(address, string);
     event staked(address, string, uint);
+    event venueContribution(address, string, uint);
     // TODO: accept one TimeRange for all stakes.
     // TODO: accept TimeRanges per stake (need to change up the data structures!)
-    function addStake (string memory _poll, address _impersonatedStaker, uint _rep, uint _venueContribution, address _venueContributionFor ) public {
+    function addStake (string memory poll, uint repStake, address beneficiary) onlyOwner payable public {
+      address sender = msg.sender;
+      if (msg.value>0) {
+        uint currentVC = pollData[poll].staked[sender].venueContribution[beneficiary];
+        pollData[poll].staked[sender].venueContribution[beneficiary] += msg.value;
+        pollData[poll].venuePot += msg.value;
+        emit staked(sender, poll, msg.value);
+      }
+      if (repStake>0) {
+        if (repStake<pollData[poll].minStake) {
+          emit stakeNotAccepted(sender, poll);              // aNt!p4ttrnn ###
+        } else
+        if (rep[sender]<repStake) {
+          emit disreputableStakerIgnored(sender, poll);
+        } else {
+          rep[sender] -= repStake;
+          pollData[poll].staked[sender].rep += repStake;
+          emit staked(sender, poll, repStake);
+        }
+      }
+    }
+
+    function addFakeStake (string memory _poll, address _impersonatedStaker, uint _rep, uint _venueContribution, address _beneficiary ) public {
       address sender = _impersonatedStaker;
       if (_venueContribution>0) {
-        uint currentVC = pollData[_poll].staked[sender].venueContribution[_venueContributionFor];
-        pollData[_poll].staked[sender].venueContribution[_venueContributionFor] += _venueContribution;
+        uint currentVC = pollData[_poll].staked[sender].venueContribution[_beneficiary];
+        pollData[_poll].staked[sender].venueContribution[_beneficiary] += _venueContribution;
         pollData[_poll].venuePot += _venueContribution;
+        emit staked(sender, _poll, _venueContribution);
       }
       if (_rep>0) {
         if (_rep<pollData[_poll].minStake) {
@@ -561,7 +591,11 @@ function getValuesWhichtheFuckenConstructorShouldHaveSet () public returns (uint
 
 
     function doRefund (address to, uint amount) private returns (bool){
-      // do moneyyyzz
+      if (usingRealMoney)
+        // <= Byzantium
+        msg.sender.transfer(amount);
+        // >= Istanbul
+        // msg.sender.call.value(amount)("");
       return true;
     }
 
@@ -580,7 +614,7 @@ function getValuesWhichtheFuckenConstructorShouldHaveSet () public returns (uint
 
       if (pot==0)
         return;
-      // This would be so much simpler if you could compare whethere a possibly negative number is smaller than a positive one.
+      // This would be so much simpler if you could compare whether a possibly negative number is smaller than a positive one.
       // and would be safer, not having a 2's complement risk. Fucking rectangulists.
       if ((pollData[_poll].venueCost<0) || uint(pollData[_poll].venueCost) < pollData[_poll].venuePot)
         spareCash = uint( int(pollData[_poll].venuePot) - pollData[_poll].venueCost );
@@ -603,18 +637,13 @@ function getValuesWhichtheFuckenConstructorShouldHaveSet () public returns (uint
           pollData[_poll].staked[address(0)].venueContribution[address(0)] += refund;
           if (pollData[_poll].venuePot >= refund)
             pollData[_poll].venuePot -= refund;
-          // else
-          //   revert ('Someone emptied the pot!!');
+          else
+            revert ('Someone emptied the pot!!');
         }
-        if (refund>0 || uint160(bytes20(recipients[j]))>0) {  //likely fail
-        // if (refund>0 || j>0) {
-        // Temporarily catch the zero refunds which should be more
-        // if (uint160(bytes20(recipients[j]))>0) {  // failing!
-        // if (j>0) {
+        if (refund>0 || stakers[i] == msg.sender)
           if (doRefund(stakers[i], refund))
-            emit venuePotDisbursed (_poll, stakers[i], msg.sender, refund);  // cannot get it to issue nonzero last param. Previously failed on literal zero but now works :/
+            emit venuePotDisbursed (_poll, stakers[i], msg.sender, refund);
 
-        }
       }
       pollData[_poll].staked[address(0)].venueContribution[address(0)] = 0;
 
@@ -666,18 +695,22 @@ function getValuesWhichtheFuckenConstructorShouldHaveSet () public returns (uint
         removeEmptyStake(_poll, msg.sender);
     }
 
+
     event repRefund (address staker, uint staked, uint refunded);
     event refundFail (address _staker);
-    function refundStake (string memory _poll, bytes32 _reveal) public {
-      // Uncomment them - this is for testing by, amount!
-      // require (pollData[_poll].staked[msg.sender].rep > 0, 'Sender has nothing staked for this poll');
+    function refundStake (string memory _poll, bytes32 _reveal) public isStaker(_poll) {
+      require (pollData[_poll].staked[msg.sender].rep > 0, 'Sender has nothing staked for this poll');
+      // Will ownCheckInIndex be a thing?
       // require (pollData[_poll].ownCheckInIndex[msg.sender] > 0, 'Sender has not submitted an attendance proof for this poll');
-      if (!validate(address(0), _poll, _reveal)) {
+      (uint num, uint denom) = multiplier();
+
+      if (!validate(msg.sender, _poll, _reveal)) {
         emit refundFail(msg.sender);
-        revert ('Invalid proof');
+        // // no point trying to both emit and revert!
+        // revert ('Not enough stakers included you in their check-ins. Your reputation is lost :(');
+        return;
       }
 
-      (uint num, uint denom) = multiplier();
       uint refund = num.mul(pollData[_poll].staked[msg.sender].rep) / denom;
       if (rep[msg.sender] + refund > maxRep())
         refund = pollData[_poll].staked[msg.sender].rep;
@@ -694,8 +727,6 @@ function getValuesWhichtheFuckenConstructorShouldHaveSet () public returns (uint
       for (uint8 i=0; _repeat>0 && i<_repeat; i++) {
         emit venuePotDisbursed (_poll, _to, _by, _amount);
       }
-      if (_repeat==5)
-        emit venuePotDisbursed (_poll, pollData[_poll].venuePayer, _by, _amount);
     }
 
     function emitVenuePotRefunded (string memory _poll, address _to, address _by, uint _amount) public {
@@ -710,6 +741,13 @@ function getValuesWhichtheFuckenConstructorShouldHaveSet () public returns (uint
       emit refundFail (_staker);
     }
 
+    function isInList (address[] memory list, address target) private returns (bool) {
+      for(uint j = 0; j < list.length; j++) {
+        if (list[j] == target)
+          return (true);
+      }
+      return (false);
+    }
 
 
     event numberLoggerLikeImUsingFuckingJava (string, uint);
@@ -717,70 +755,65 @@ function getValuesWhichtheFuckenConstructorShouldHaveSet () public returns (uint
     // currently counts votes in favour of each stakers, which will help, but doesn't flag which poroofs disagree
     function validate(address _pollContract, string memory _poll, bytes32 _reveal) public returns (bool) {
         // require (_pollContract==howeverYoullIdentifySelf, 'wrong Poll contract - something needs upgrading');
-return true;
+
         address[] memory stakers = getStakerAddresses(_poll);
         address[][] memory proofs = getproofsAsAddresses(_poll);
+        uint16[] memory stakerPresentCount = new uint16[](stakers.length);
         uint16 i;
-        uint16 sendersIndex;
+        uint16 sendersIndex;   // 1 indexed, 0=> not reached
         bool stakerPresent;
 
-        uint8 threshold = 1 ;   //  do not set to 0 - div0 error!
+        uint16 threshold = 1;   //  do not set to 0 - div0 error!
         // emit numberLoggerLikeImUsingFuckingJava('stakers',stakers.length);
         // emit numberLoggerLikeImUsingFuckingJava('proofs',proofs.length);
 
-        // proofCounter memory pc;
+
+        // deal with percentage thresholds (threshold == 10000+p where p= [percentage])
+        if(threshold>10000 && threshold<=10100) {
+          threshold = threshold-10000;
+          threshold = (threshold*uint16(stakers.length))/100;
+        }
+
+
+        for(i = 0; i < stakers.length; i++) {
+            if (stakers[i]==msg.sender)
+              sendersIndex=i+1;
+        }
+        // sendersIndex will not be 0, since validate is private and should be called only be refundStake, which has isStaker modifier
+        assert (sendersIndex>0);
+
         for(i = 0; i < stakers.length; i++) {
             // emit logStuff("started loop");
             stakerPresent = false;
-            if (stakers[i]==msg.sender)
-              sendersIndex=i;
             for(uint j = 0; j < proofs[i].length; j++) {
               if (proofs[i][j] == msg.sender)
                 stakerPresent = true;
-              stakerPresentIn[proofs[i][j]]++;     // increase the present count for the address who this staker marked present
+
+              // increase the present count for the address who this staker marked present
               // if this staker claims someone is here but the majority disagree, then emit disagreement;
+              if (proofs[i][j] == msg.sender)
+                stakerPresentCount[sendersIndex-1]++;
+              else {
+              //   // NB inefficient repeated loop - needs optimising before rolling out
+              //   stakerPresentCount[stakerIndexOf((proofs[i][j])]++;
+              }
+
             }
-            // if (!stakerPresent)
+            // // if I am not present in this proof, but I have passed my own proof, where I am checked in, emit a disagreement;
+            // if (!stakerPresent && sendersIndex>0 && isInList([sendersIndex-1], msg.sender))
             //   impugnProof(i);
-            //   // if I am not present, emit a disagreement;
         }
-        // if stakerPresentIn[sendersIndex] < proofs[i].length {
-        //   bePissedOff();
-        // }
+        // // if this staker claims someone is here but the majority disagree, then emit disagreement;
 
         // update majorities
         // check previous disagreements
 
-        if ((stakerPresentIn[msg.sender]>=threshold) && (proofs[i].length/ stakerPresentIn[msg.sender] < 2)) {
+        if (stakerPresentCount[sendersIndex-1]>=threshold)
+          if (stakerPresentCount[sendersIndex-1] *2 >= proofs.length+1 )
           return true;
-        }
-        // add reversion logic
-
-
-
-
-        // // deal with 0 < threshold < 1
-        // if(percentageThreshold>0) {
-        //   threshold = percentageThreshold*stakers.length;
-        // }
-        // if (pc.senderIsPresent && (proofs.length-pc.fakeProofs >= threshold)) {
-        //     return true;
-        // }
-        // return false;
-
-        // if (!pc.senderIsPresent)
-        //     revert('Sender did not register attendance');
-
-        // if (!pc.senderIsPresent)
-        //     emit logStuff('Sender did not register attendance');
-        // if (proofs.length-pc.fakeProofs < threshold)
-        //     emit logStuff('Not enough attendees in consensus');
-        // if (proofs.length == pc.fakeProofs)
-        //     emit logStuff('All proofs were fake');
-        // emit numberLoggerLikeImUsingFuckingJava ('fakeProofs',pc.fakeProofs);
-        // emit numberLoggerLikeImUsingFuckingJava ('proofs.length',proofs.length);
-        // return true;
+        return false;
     }
+
 
     function proofType() public pure returns (uint8) {
       return vType;

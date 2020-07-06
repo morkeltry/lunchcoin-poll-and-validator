@@ -19,11 +19,11 @@ import { connectToWeb3, getImplementationFunctions, getImplementationEvents,
 import { getPrice } from "../helpers/priceFeed.js";
 import { fetchOnlinePoll } from "../helpers/doodleFetchers.js";
 
-let OWN_ADDRESS = '0x000';
+let OWN_ADDRESS = '0x000123';
 let t=[];
 
 const LiveEvent = props => {
-  const { pollUrl, events, setOwnAddyParent } = props;
+  const { pollUrl, setOwnAddyParent } = props;
   if (!pollUrl)
     throw ('Attempted to render LiveEvent with pollUrl='+pollUrl);
 
@@ -31,7 +31,6 @@ const LiveEvent = props => {
   const [polls, setPolls] = useState([]);
   const [livePolls, setLivePolls] = useState([]);
   const [ownAddress, setOwnAddy] = useState(OWN_ADDRESS);
-  OWN_ADDRESS = '0x123';
   const [modalView, setModalView] = useState(null);
   const [burgerView, setBurgerView] = useState(false);
   const [hideFunctions, setHideFunctions] = useState(true);
@@ -53,7 +52,7 @@ const LiveEvent = props => {
   const [venuePot, setVenuePotRaw] = useState(88);
   const [youPaidForVenue, setYouPaidForVenueRaw] = useState(0);
   const [mismatchedProofs, setMismatchedProofs] = useState([]);
-  const [repMultiplier, repMultiplierRaw] = useState(1.25);
+  const [repMultiplier, setRepMultiplierRaw] = useState(1.2);
   const [maxRep, setMaxRepRaw] = useState(1000);
   const [updatedRep, setUpdatedRepRaw] = useState(null);
   const [infoModalResult, setInfoModalResult] = useState([]);
@@ -62,7 +61,7 @@ const LiveEvent = props => {
   const [validator1PeerCheckedIn, setValidator1PeerCheckedIn] = useState([[ OWN_ADDRESS, true ]]);
 
   const [setCheckInCloses ,setVenueCost ,setVenuePot ,setYouPaidForVenue, setRepStaked, setRepEverStaked, setRepWas ,setRepMultiplier, setMaxRep, setUpdatedRep ]
-    = [setCheckInClosesRaw, setVenueCostRaw, setVenuePotRaw, setYouPaidForVenueRaw, setRepStakedRaw, setRepEverStakedRaw, setRepWasRaw, repMultiplierRaw, setMaxRepRaw, setUpdatedRepRaw ]
+    = [setCheckInClosesRaw, setVenueCostRaw, setVenuePotRaw, setYouPaidForVenueRaw, setRepStakedRaw, setRepEverStakedRaw, setRepWasRaw, setRepMultiplierRaw, setMaxRepRaw, setUpdatedRepRaw ]
       .map(setter=> response=> { setter(Number(response)); });
 
 // TODO: setRepWas setInfoModalResult
@@ -109,14 +108,14 @@ const LiveEvent = props => {
     repRefund: (result, eventName)=> {
       catchRelevantEvent(result, eventName);
       setUpdatedRepRaw(null);
-      const ownAddy=showOwnAddy();
-      // console.log('FETCHANDUPDATEREP', ownAddy);
-      // if (!ownAddy || ownAddy.length<42) {
-      //   t[1]= setTimeout(()=>{ fetchAndUpdateRep(); }, 500)
-      //   console.log(`ownAddy is now ${ownAddy}. Setting timeout to recheck soon.`);
-      //   t[2]= setTimeout(()=>{ console.log(`After timeout, ownAddy is now ${ownAddy}`); }, 3000)
-      // } else
-      // fetchAndUpdateRep();
+      if (!ownAddress || ownAddress.length<42) {
+        console.log(`Caught rep event, but it looks like state has reverted to inital value:/ ownAddress=${ownAddress}, retrieved from state again=${showOwnAddy()}. Refetching from web3.`);
+        connectToWeb3().then(addressObj => {
+          console.log('\n\nconnectToWeb3 SUCEEDED\n\n');
+          fetchAndUpdateRep(addressObj.OWN_ADDRESS);
+        })
+      } else
+      fetchAndUpdateRep();
     },
     venuePotDisbursed: catchRelevantEvent,
 
@@ -192,14 +191,16 @@ const LiveEvent = props => {
         console.log(`Initial fetchandupdate gave getPoll= ${youPaidForVenue} (${response.total},${response[0]}`,response);
         setVenueCost(response.venueCost);
         setVenuePot(response.venuePot);
-        if (!response.proofsWindowClosed)
-          console.log('Why is response.proofsWindowClosed',response.proofsWindowClosed,'in',response);
         setCheckInIsClosed(response.proofsWindowClosed);
       })
       .catch(err=>{console.log('err:',err);});
 
-    callTransaction('getproofsAsAddresses', {_poll : pollUrl})
+    callTransaction('maxRep')
       .then(setMaxRep)
+      .catch(err=>{console.log('err:',err);});
+    callTransaction('multiplier', {_poll : pollUrl})
+      .then(response=> response.numerator/response.denominator)
+      .then(setRepMultiplier)
       .catch(err=>{console.log('err:',err);});
 
       // NB getFromStorage failing!
@@ -673,18 +674,18 @@ return(<>
                         .map (event=>{
                           const { returnValues } = event;
                           const { staker, staked, refunded } = returnValues;
-                          return <>
-                            <div className={ cN("hype-small", "w70") }>Your rep was: {repWas/1000} </div>
-                            <div className="w70"><span className="hype-small">+ stake</span>({repStaked/1000}) X {repMultiplier} = <span className="hype-small">{repStaked/1000*repMultiplier} </span></div>
+                          return <React.Fragment key={`${staker}${staked}${refunded}`}>
+                            <div className={ cN("hype-small", "w70") }>Your rep was: { niceNum(repWas/1000) } </div>
+                            <div className="w70"><span className="hype-small">+ stake </span>({ niceNum(repStaked/1000) }) X {repMultiplier} = <span className="hype-small">{ niceNum(repStaked/1000*repMultiplier) } </span></div>
                             { updatedRep && updatedRep>=maxRep &&
                               <div className="w70"><span className="hype-small">Maximum rep</span>: <span className="hype-small">{maxRep} </span></div>
                             }
                             <div>Your rep is now:
                               <span className={ cN("hype") }>
-                                {'  '}{ updatedRep===null ? <Dots /> : updatedRep }
+                                {'  '}{ updatedRep===null ? <Dots /> : niceNum(updatedRep) }
                               </span>
                             </div>
-                          </>
+                          </React.Fragment>
                         })
                     }
                   </>
