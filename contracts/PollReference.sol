@@ -20,6 +20,9 @@ contract PollReference {
       uint rep;
       TimeRange[] available;
       uint availabilityExpires;
+      bool accepted;
+      bool released;
+      mapping (address => uint) venueContribution;
     }
 
     struct Dibs {
@@ -36,6 +39,7 @@ contract PollReference {
       address venuePayer;
       uint8 minParticipants;
       TimeRange eventTime;
+      bool stakingClosed;
       bool proofsWindowClosed;
       mapping (address => Stake) staked;
       mapping (address => uint16) ownCheckInIndex;           // 1-indexed: ownCheckInIndex[s]==0 => nothing there.

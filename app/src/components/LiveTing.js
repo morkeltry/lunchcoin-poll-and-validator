@@ -19,6 +19,8 @@ import { connectToWeb3, getImplementationFunctions, getImplementationEvents,
 import { getPrice } from "../helpers/priceFeed.js";
 import { fetchOnlinePoll } from "../helpers/doodleFetchers.js";
 
+const ether = 1e18;
+const kEther = 1e21;
 let OWN_ADDRESS = '0x000123';
 let t=[];
 
@@ -417,6 +419,15 @@ const LiveEvent = props => {
         { end : resp.end ? toUnixTime(resp.end) : resp.end },
       );
 
+    const kiloNiceNum = num=>
+      num >= 1000000
+        ? niceNum(num/1000000)+' M'
+        : num >= 1000
+          ? niceNum(num/1000)+' k'
+          : num >= 1
+            ? niceNum(num)
+            : niceNum(num*1000)+' m' ;
+
     const niceNum = num=>
       (num || num===0)
         ? (Math.round(num*1000)/1000).toString()
@@ -573,7 +584,7 @@ return(<>
         <Section
           id='venue-refund'
           buttonText= { venueRefundDue(venueCost,youPaidForVenue)
-            ? `Refund ${niceNum(venueRefundDue(venueCost,youPaidForVenue)/1000)}k TT`
+            ? `Refund ${ kiloNiceNum(venueRefundDue(venueCost,youPaidForVenue)) }TT`
             : `We're all square 😎`   // U+1F60E
           }
           buttonAction= { venueRefundDue(venueCost,youPaidForVenue) ? doVenueRefund : ()=>{ console.log('v()',venueCost,youPaidForVenue,venueRefundDue(venueCost,youPaidForVenue)); } }
@@ -581,10 +592,10 @@ return(<>
           sectionHidden= { !youPaidForVenue }
         >
           <div className="centre-align">
-            Venue cost was { niceNum(venueCost)/1000 }k TT
+            Venue cost was { kiloNiceNum(venueCost) }TT
           </div>
           <div className="centre-align">
-            You paid <span className="hype hype-small">{ niceNum(youPaidForVenue)/1000 }k TT</span>
+            You paid <span className="hype hype-small">{ kiloNiceNum(youPaidForVenue) }TT</span>
           </div>
         </Section>
 
@@ -655,7 +666,7 @@ return(<>
                           return <div className={ cN("w100") }>
                             <span className={ cN("address42", "w70") }>{ to } </span>
                             <span className={ cN("address42", "w30r") }>
-                              <div className={ cN("hype") }>{ niceNum(amount/1000) }k TT</div>
+                              <div className={ cN("hype") }>{ kiloNiceNum(amount) }TT</div>
                             { price &&
                               <div className={ cN("hype-small","sub-right") }> (USD { niceNum(amount*price) })</div>
                             }

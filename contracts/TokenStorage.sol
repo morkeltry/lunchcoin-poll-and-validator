@@ -25,6 +25,8 @@ contract TokenStorage  is Ownable{
       uint rep;
       TimeRange[] available;
       uint availabilityExpires;
+      bool accepted;
+      bool released;
       mapping (address => uint) venueContribution;
     }
 
@@ -42,6 +44,7 @@ contract TokenStorage  is Ownable{
       address venuePayer;
       uint8 minParticipants;
       TimeRange eventTime;
+      bool stakingClosed;
       bool proofsWindowClosed;
       mapping (address => Stake) staked;
       mapping (address => uint16) ownCheckInIndex;           // 1-indexed: ownCheckInIndex[s]==0 => nothing there.
@@ -102,7 +105,7 @@ contract TokenStorage  is Ownable{
 
     constructor() public {
       _owner = msg.sender;
-      uint initialRep = 2000;  
+      uint initialRep = 2000;
       uint topupRep = 1500;
     }
 
