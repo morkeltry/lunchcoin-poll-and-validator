@@ -84,6 +84,7 @@ contract MutualAgreement {
     uint initialRep = 2000;      // will move to Poll
     uint topupRep = 1500;        // will move to Poll
     address __selfAddy ;
+    bool anyoneCanMine = true;
 
 
     // unused - previously for Storage Proxy
@@ -139,8 +140,9 @@ contract MutualAgreement {
     // }
 
     constructor () public {
-      uint initialRep = 2000;      // will move to Poll
+      uint initialRep = 2000;     // will move to Poll
       uint topupRep = 1500;       // will move to Poll
+      knownMiners.push(owner);    // will move to Poll
     }
 
 function getValuesWhichtheFuckenConstructorShouldHaveSet () public returns (uint, uint) {
@@ -317,7 +319,7 @@ function getValuesWhichtheFuckenConstructorShouldHaveSet () public returns (uint
       emit eventTimeSet(poll, start, end);
     }
 
-    // NB vulnerable until proper poll facoty in place, since isInitiator allows any caller if poll.iniator == 0x0
+    // NB vulnerable until proper poll factoy in place, since isInitiator allows any caller if poll.iniator == 0x0
     event eventStakingClosed(string, uint);
     function closeStaking (string memory poll) public isInitiator(poll) {
       pollData[poll].stakingClosed = true;
@@ -333,7 +335,40 @@ function getValuesWhichtheFuckenConstructorShouldHaveSet () public returns (uint
       return rep[_staker];
     }
 
-    function mineRep(address recipient) public returns (uint newRep) {
+    function addMiner(address miner) public isOwner() {
+      require(knownMiners.length < 65535, 'This aint the Yukon, buddy');
+
+      if (knownMiners.length < 50)
+        for(uint16 i=0; i < knownMiners.length; i++) {
+          if (knownMiners[i] == miner)
+            return;
+        }
+      knownMiners.push(miner);
+    }
+
+    function removeMiner(address miner) public isOwner() {
+      for(uint16 i=0; i < knownMiners.length; i++) {
+        if (knownMiners[i] == miner)
+          knownMiners[i]=address(0);
+      }
+    }
+
+    function mineRep(address recipient) public isMiner() returns (uint newRep) {
+      return doMine(recipient);
+    }
+
+    function anyoneMineRep() public returns (uint newRep) {
+      if (anyoneCanMine)
+        return doMine(msg.sender);
+      else
+        return 0;
+    }
+
+    function canAnyoneMine(bool answer) public isOwner() {
+      anyoneCanMine = answer;
+    }
+
+    function doMine(address recipient) private returns (uint newRep) {
       if (stakerKnown[recipient])
         newRep = topupRep;
       else {
@@ -423,6 +458,8 @@ function getValuesWhichtheFuckenConstructorShouldHaveSet () public returns (uint
 
 
     function addStaker (string memory _poll, address _staker, uint8 _vt) public {
+      require(knownMiners.length < 65535, 'Too many stakes. Try a pitchfork instead');
+
       bytes32 hash = keccak256(abi.encodePacked(_poll, encodeFunctionName("staker"), _vt));
       allTheData[hash].push (bytes32(bytes20(_staker)));
     }
@@ -635,6 +672,8 @@ function getValuesWhichtheFuckenConstructorShouldHaveSet () public returns (uint
     function addAvailability (string memory poll, uint start, uint end, uint confirmBefore) isStaker(poll) public {
       require (end>now, 'Cannot add availability in the past');
       require ((confirmBefore==0 || confirmBefore>=now), 'Cannot set expiry in the past');
+      require(knownMiners.length < 65535, 'Too available. Have some self-respect');
+
 
       TimeRange memory available = TimeRange(start, end);
 

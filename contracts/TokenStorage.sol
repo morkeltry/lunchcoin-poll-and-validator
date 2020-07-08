@@ -86,7 +86,8 @@ contract TokenStorage  is Ownable{
     address[] knownMiners;
     uint initialRep = 2000;      // will move to Poll
     uint topupRep = 1500;        // will move to Poll
-    address selfAddy ;
+    address __selfAddy ;
+    bool anyoneCanMine = true;
 
 
     // unused - previously for Storage Proxy
