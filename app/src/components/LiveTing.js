@@ -424,7 +424,7 @@ const LiveEvent = props => {
         ? niceNum(num/1000000)+' M'
         : num >= 1000
           ? niceNum(num/1000)+' k'
-          : num >= 1
+          : (num >= 1 || num==0)
             ? niceNum(num)
             : niceNum(num*1000)+' m' ;
 

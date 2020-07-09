@@ -183,7 +183,6 @@ function getValuesWhichtheFuckenConstructorShouldHaveSet () public returns (uint
         revert ('Not authorised to mine rep');
     }
 
-
     modifier isInitiator(string memory _poll) {
       if (pollData[_poll].initiator == msg.sender || pollData[_poll].initiator == address(0))
         _;
@@ -442,26 +441,6 @@ function getValuesWhichtheFuckenConstructorShouldHaveSet () public returns (uint
       }
     }
 
-
-    event expiryWasSet(string, address, uint);
-    event availabilityAdded(string, address, uint, uint);
-    function addAvailability (string memory poll, uint start, uint end, uint confirmBefore) isStaker(poll) public {
-      require (end>now, 'Cannot add availability in the past');
-      require ((confirmBefore==0 || confirmBefore>=now), 'Cannot set expiry in the past');
-      require(knownMiners.length < 65535, 'Too available. Have some self-respect');
-      //
-      // TimeRange memory available = TimeRange(start, end);
-      //
-      // if (confirmBefore > pollData[poll].staked[msg.sender].availabilityExpires) {
-      //   pollData[poll].staked[msg.sender].availabilityExpires = confirmBefore;
-      //   emit expiryWasSet(poll, msg.sender, confirmBefore);
-      // }
-      //
-      // pollData[poll].staked[msg.sender].available.push(available);
-      // emit availabilityAdded(poll, msg.sender, start, end);
-    }
-
-
     // event whassahash(bytes);
     // event whassakeccack(bytes32);
     function getStakersProof (string memory _poll, address _staker) public returns (bytes32[] memory) {
@@ -515,6 +494,8 @@ function getValuesWhichtheFuckenConstructorShouldHaveSet () public returns (uint
     //   emit gpResult(_poll, _mapName, _impersonatedStaker, _vt, getStakersProof(_poll, _impersonatedStaker));
     // }
 
+
+    // deprecated - use addProof
     function checkIn (string memory _poll, address _impersonatedStaker, address[] memory _newProof) public {
       address sender = _impersonatedStaker;   //  should be msg.sender
       uint16 idx = pollData[_poll].ownCheckInIndex[sender];
@@ -561,14 +542,19 @@ function getValuesWhichtheFuckenConstructorShouldHaveSet () public returns (uint
       addProof (_poll, msg.sender, _newProof);
     }
 
+    // TODO!
+    function allstakersSubmittedProofs (string memory poll) public returns (bool) {
+      return true;
+    }
 
+
+    // NB allstakersSubmittedProofs is still TODO!
     event proofsWindowClosed (string poll, address by);
-    function closeProofsWindow (string memory _poll) public {
-      // require (isElibgible(msg.sender), "msg.sender did not stake in this poll");
-      // require (time.now()>.pollData[_poll].eventTime.end || AllstakersSubmittedProofs(), "Not all stakers have submitted proofs and the event is not yet over");
+    function closeProofsWindow (string memory poll) isStaker(poll) public {
+      require (now > pollData[poll].eventTime.end || allstakersSubmittedProofs(poll), "Not all stakers have submitted proofs and the event is not yet over");
       // require (, "");
-      pollData[_poll].proofsWindowClosed = true;
-      emit proofsWindowClosed (_poll, msg.sender);
+      pollData[poll].proofsWindowClosed = true;
+      emit proofsWindowClosed (poll, msg.sender);
 
       // NB here assuming that poll can be closed once all stakers have submitted a proof.
       // The alternative would allow a non-attending staker to hold up refunds (by refusing to submit 'I can't make it')
@@ -585,13 +571,31 @@ function getValuesWhichtheFuckenConstructorShouldHaveSet () public returns (uint
     }
 
 
+    event expiryWasSet(string, address, uint);
+    event availabilityAdded(string, address, uint, uint);
+    function addAvailability (string memory poll, uint start, uint end, uint confirmBefore) isStaker(poll) public {
+      require (end>now, 'Cannot add availability in the past');
+      require ((confirmBefore==0 || confirmBefore>=now), 'Cannot set expiry in the past');
+      require(knownMiners.length < 65535, 'Too available. Have some self-respect');
+
+      TimeRange memory available = TimeRange(start, end);
+
+      if (confirmBefore > pollData[poll].staked[msg.sender].availabilityExpires) {
+        pollData[poll].staked[msg.sender].availabilityExpires = confirmBefore;
+        emit expiryWasSet(poll, msg.sender, confirmBefore);
+      }
+
+      pollData[poll].staked[msg.sender].available.push(available);
+      emit availabilityAdded(poll, msg.sender, start, end);
+    }
+
+
     event stakeNotAccepted(address, string);
     event disreputableStakerIgnored(address, string);
     event staked(address, string, uint);
     event venueContribution(address, string, uint);
     // TODO: accept one TimeRange for all stakes.
     // TODO: accept TimeRanges per stake (need to change up the data structures!)
-
 
     function addFakeStake (string memory _poll, address _impersonatedStaker, uint _rep, uint _venueContribution, address _beneficiary ) onlyOwner public {
       address sender = _impersonatedStaker;
@@ -615,6 +619,33 @@ function getValuesWhichtheFuckenConstructorShouldHaveSet () public returns (uint
             emit staked(sender, _poll, _rep);
           } else {
             emit staked(sender, _poll, 0);
+          }
+        }
+      }
+    }
+
+    function addUnboundedStake (string memory poll, uint repStake, address beneficiary) payable public {
+      address sender = msg.sender;
+      if (msg.value>0) {
+        uint currentVC = pollData[poll].staked[sender].venueContribution[beneficiary];
+        pollData[poll].staked[sender].venueContribution[beneficiary] += msg.value;
+        pollData[poll].venuePot += msg.value;
+        emit staked(sender, poll, msg.value);
+      }
+      if (repStake>0) {
+        if (repStake<pollData[poll].minStake) {
+          emit stakeNotAccepted(sender, poll);              // aNt!p4ttrnn ###
+        } else
+        if (rep[sender]<repStake) {
+          emit disreputableStakerIgnored(sender, poll);
+        } else {
+          addStaker (poll, sender, vType);
+          if (!pollData[poll].stakingClosed) {
+            rep[sender] -= repStake;
+            pollData[poll].staked[sender].rep += repStake;
+            emit staked(sender, poll, repStake);
+          } else {
+            emit staked(sender, poll, 0);
           }
         }
       }
@@ -655,7 +686,7 @@ function getValuesWhichtheFuckenConstructorShouldHaveSet () public returns (uint
 
       for(uint16 i=0; i < availability.length; i++) {
         if (availability[i].end > now) {
-          addAvailability (poll, availability[i].start, availability[i].end, 0);
+          addAvailability (poll, availability[i].start, availability[i].end, confirmBefore);
         }
       }
     }
@@ -684,11 +715,11 @@ function getValuesWhichtheFuckenConstructorShouldHaveSet () public returns (uint
     // TODO: Add checks into those functions
     event emptyStakeRemoved (string _poll, address _staker);
     function removeEmptyStake (string memory _poll, address _staker) public {
-      // uint rep=pollData[_poll].staked[msg.sender].rep;
-      // uint venueContributions = totalVenueContribs (_poll, _staker);
-      // require (rep==0 && venueContributions==0, 'Staker has non empty stake or venue contribution');
-      // delete pollData[_poll].staked[msg.sender];
-      // emit emptyStakeRemoved(_poll, msg.sender);
+      uint rep=pollData[_poll].staked[msg.sender].rep;
+      uint venueContributions = totalVenueContribs (_poll, _staker);
+      require (rep==0 && venueContributions==0, 'Staker has non empty stake or venue contribution');
+      delete pollData[_poll].staked[msg.sender];
+      emit emptyStakeRemoved(_poll, msg.sender);
     }
 
     // NB these require returning complex type.
