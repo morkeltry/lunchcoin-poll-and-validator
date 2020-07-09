@@ -48,7 +48,6 @@ contract MutualAgreement {
       Dibs[] dibsCalled;
     }
 
-
     struct PollExternal {
       address initiator;
       uint minStake;
@@ -83,8 +82,8 @@ contract MutualAgreement {
     address[] knownMiners;
     uint initialRep = 2000;      // will move to Poll
     uint topupRep = 1500;        // will move to Poll
+    bool anyoneCanMine = true;   // will move to Poll
     address __selfAddy ;
-    bool anyoneCanMine = true;
 
 
     // unused - previously for Storage Proxy
@@ -99,7 +98,7 @@ contract MutualAgreement {
     uint8 constant vType=1;
     string constant vDesc = "mutual agreement";
     uint constant never = 5377017599;
-    bool usingRealMoney = false;
+    bool constant usingRealMoney = false;
 
     struct proofCounter {
         bool fakeProof;
@@ -142,7 +141,6 @@ contract MutualAgreement {
     constructor () public {
       uint initialRep = 2000;     // will move to Poll
       uint topupRep = 1500;       // will move to Poll
-      knownMiners.push(owner);    // will move to Poll
     }
 
 function getValuesWhichtheFuckenConstructorShouldHaveSet () public returns (uint, uint) {
@@ -301,10 +299,10 @@ function getValuesWhichtheFuckenConstructorShouldHaveSet () public returns (uint
       // tried a number of ways and it is always reverting (when called via checkIn)
     }
 
-    function setString (string memory _poll, string memory _mapName, uint8 _vt, string memory data) public {
-      bytes32 hash = keccak256(abi.encodePacked(_poll, encodeFunctionName(_mapName), _vt));
-      allTheData[hash] = stringToBytes32Array(data);
-    }
+    // function setString (string memory _poll, string memory _mapName, uint8 _vt, string memory data) public {
+    //   bytes32 hash = keccak256(abi.encodePacked(_poll, encodeFunctionName(_mapName), _vt));
+    //   allTheData[hash] = stringToBytes32Array(data);
+    // }
 
 
     // NB vulnerable until proper poll facoty in place, since isInitiator allows any caller if poll.iniator == 0x0
@@ -335,7 +333,7 @@ function getValuesWhichtheFuckenConstructorShouldHaveSet () public returns (uint
       return rep[_staker];
     }
 
-    function addMiner(address miner) public isOwner() {
+    function addMiner(address miner) public onlyOwner() {
       require(knownMiners.length < 65535, 'This aint the Yukon, buddy');
 
       if (knownMiners.length < 50)
@@ -344,9 +342,9 @@ function getValuesWhichtheFuckenConstructorShouldHaveSet () public returns (uint
             return;
         }
       knownMiners.push(miner);
-    }
+      }
 
-    function removeMiner(address miner) public isOwner() {
+    function removeMiner(address miner) public onlyOwner() {
       for(uint16 i=0; i < knownMiners.length; i++) {
         if (knownMiners[i] == miner)
           knownMiners[i]=address(0);
@@ -364,7 +362,7 @@ function getValuesWhichtheFuckenConstructorShouldHaveSet () public returns (uint
         return 0;
     }
 
-    function canAnyoneMine(bool answer) public isOwner() {
+    function canAnyoneMine(bool answer) public onlyOwner() {
       anyoneCanMine = answer;
     }
 
@@ -444,17 +442,37 @@ function getValuesWhichtheFuckenConstructorShouldHaveSet () public returns (uint
       }
     }
 
-    event whassahash(bytes);
-    event whassakeccack(bytes32);
+
+    event expiryWasSet(string, address, uint);
+    event availabilityAdded(string, address, uint, uint);
+    function addAvailability (string memory poll, uint start, uint end, uint confirmBefore) isStaker(poll) public {
+      require (end>now, 'Cannot add availability in the past');
+      require ((confirmBefore==0 || confirmBefore>=now), 'Cannot set expiry in the past');
+      require(knownMiners.length < 65535, 'Too available. Have some self-respect');
+      //
+      // TimeRange memory available = TimeRange(start, end);
+      //
+      // if (confirmBefore > pollData[poll].staked[msg.sender].availabilityExpires) {
+      //   pollData[poll].staked[msg.sender].availabilityExpires = confirmBefore;
+      //   emit expiryWasSet(poll, msg.sender, confirmBefore);
+      // }
+      //
+      // pollData[poll].staked[msg.sender].available.push(available);
+      // emit availabilityAdded(poll, msg.sender, start, end);
+    }
+
+
+    // event whassahash(bytes);
+    // event whassakeccack(bytes32);
     function getStakersProof (string memory _poll, address _staker) public returns (bytes32[] memory) {
       bytes32 hash = keccak256(abi.encodePacked(_poll, encodeFunctionName("proof"), _staker, vType));
       return (allTheData[hash]);
     }
 
-    function getProofEmitHashesOnlyWithStaker (string memory _poll, string memory _mapName, address _stakerOrZero, uint8 _vt, bytes32[] memory data) public {
-      bytes32 hash = keccak256(abi.encodePacked(_poll, encodeFunctionName(_mapName), _stakerOrZero, _vt));
-      emit gpResult(_poll, _mapName, _stakerOrZero, _vt, getStakersProof(_poll, _stakerOrZero));
-    }
+    // function getProofEmitHashesOnlyWithStaker (string memory _poll, string memory _mapName, address _stakerOrZero, uint8 _vt, bytes32[] memory data) public {
+    //   bytes32 hash = keccak256(abi.encodePacked(_poll, encodeFunctionName(_mapName), _stakerOrZero, _vt));
+    //   emit gpResult(_poll, _mapName, _stakerOrZero, _vt, getStakersProof(_poll, _stakerOrZero));
+    // }
 
 
     function addStaker (string memory _poll, address _staker, uint8 _vt) public {
@@ -488,14 +506,14 @@ function getValuesWhichtheFuckenConstructorShouldHaveSet () public returns (uint
       return (proofs);
     }
 
-    event gpResult(string, string, address, uint8, bytes32[]);
-    function setCheckedInWithStaker (string memory _poll, string memory _mapName, address _impersonatedStaker, uint8 _vt, bytes32[] memory data) public {
-      bytes32 hash = keccak256(abi.encodePacked(_poll, encodeFunctionName(_mapName), _impersonatedStaker, _vt));
-      emit whassahash(abi.encodePacked(_poll, encodeFunctionName(_mapName), _impersonatedStaker, _vt));
-      emit whassakeccack(hash);
-      allTheData[hash] = data;
-      emit gpResult(_poll, _mapName, _impersonatedStaker, _vt, getStakersProof(_poll, _impersonatedStaker));
-    }
+    // event gpResult(string, string, address, uint8, bytes32[]);
+    // function setCheckedInWithStaker (string memory _poll, string memory _mapName, address _impersonatedStaker, uint8 _vt, bytes32[] memory data) public {
+    //   bytes32 hash = keccak256(abi.encodePacked(_poll, encodeFunctionName(_mapName), _impersonatedStaker, _vt));
+    //   emit whassahash(abi.encodePacked(_poll, encodeFunctionName(_mapName), _impersonatedStaker, _vt));
+    //   emit whassakeccack(hash);
+    //   allTheData[hash] = data;
+    //   emit gpResult(_poll, _mapName, _impersonatedStaker, _vt, getStakersProof(_poll, _impersonatedStaker));
+    // }
 
     function checkIn (string memory _poll, address _impersonatedStaker, address[] memory _newProof) public {
       address sender = _impersonatedStaker;   //  should be msg.sender
@@ -573,32 +591,7 @@ function getValuesWhichtheFuckenConstructorShouldHaveSet () public returns (uint
     event venueContribution(address, string, uint);
     // TODO: accept one TimeRange for all stakes.
     // TODO: accept TimeRanges per stake (need to change up the data structures!)
-    function addUnboundedStake (string memory poll, uint repStake, address beneficiary) onlyOwner payable public {
-      address sender = msg.sender;
-      if (msg.value>0) {
-        uint currentVC = pollData[poll].staked[sender].venueContribution[beneficiary];
-        pollData[poll].staked[sender].venueContribution[beneficiary] += msg.value;
-        pollData[poll].venuePot += msg.value;
-        emit staked(sender, poll, msg.value);
-      }
-      if (repStake>0) {
-        if (repStake<pollData[poll].minStake) {
-          emit stakeNotAccepted(sender, poll);              // aNt!p4ttrnn ###
-        } else
-        if (rep[sender]<repStake) {
-          emit disreputableStakerIgnored(sender, poll);
-        } else {
-          addStaker (poll, sender, vType);
-          if (!pollData[poll].stakingClosed) {
-            rep[sender] -= repStake;
-            pollData[poll].staked[sender].rep += repStake;
-            emit staked(sender, poll, repStake);
-          } else {
-            emit staked(sender, poll, 0);
-          }
-        }
-      }
-    }
+
 
     function addFakeStake (string memory _poll, address _impersonatedStaker, uint _rep, uint _venueContribution, address _beneficiary ) onlyOwner public {
       address sender = _impersonatedStaker;
@@ -666,26 +659,6 @@ function getValuesWhichtheFuckenConstructorShouldHaveSet () public returns (uint
         }
       }
     }
-
-    event expiryWasSet(string, address, uint);
-    event availabilityAdded(string, address, uint, uint);
-    function addAvailability (string memory poll, uint start, uint end, uint confirmBefore) isStaker(poll) public {
-      require (end>now, 'Cannot add availability in the past');
-      require ((confirmBefore==0 || confirmBefore>=now), 'Cannot set expiry in the past');
-      require(knownMiners.length < 65535, 'Too available. Have some self-respect');
-
-
-      TimeRange memory available = TimeRange(start, end);
-
-      if (confirmBefore > pollData[poll].staked[msg.sender].availabilityExpires) {
-        pollData[poll].staked[msg.sender].availabilityExpires = confirmBefore;
-        emit expiryWasSet(poll, msg.sender, confirmBefore);
-      }
-
-      pollData[poll].staked[msg.sender].available.push(available);
-      emit availabilityAdded(poll, msg.sender, start, end);
-    }
-
 
     function totalRepStaked (string memory _poll, address _staker) public view returns (uint) {
       return pollData[_poll].staked[_staker].rep;
@@ -916,7 +889,8 @@ function getValuesWhichtheFuckenConstructorShouldHaveSet () public returns (uint
     }
 
 
-    event numberLoggerLikeImUsingFuckingJava (string, uint);
+    // event numberLoggerLikeImUsingFuckingJava (string, uint);
+
     // cheapo validator - this one just counts how many people included you in their proof, with no attempt at making the proofs agree.
     // currently counts votes in favour of each stakers, which will help, but doesn't flag which poroofs disagree
     function validate(address _pollContract, string memory _poll, bytes32 _reveal) public returns (bool) {
@@ -996,17 +970,17 @@ function getValuesWhichtheFuckenConstructorShouldHaveSet () public returns (uint
 
     // split a serialised string of addresses (as received from main contract).
     // NB - only works in this validator - other validators will use multiple types within serialised string
-    function splitToAddresses(string memory _concatenated) internal pure returns (address[] memory result) {
-        strings.slice memory delim = ",".toSlice();
-        strings.slice memory source = _concatenated.toSlice();
-        address[] memory parts = new address[](source.count(delim));
-
-        for(uint i = 0; i < parts.length; i++) {
-           parts[i] = source.split(delim).toString().toAddress();
-        }
-        return parts;
-
-    }
+    // function splitToAddresses(string memory _concatenated) internal pure returns (address[] memory result) {
+    //     strings.slice memory delim = ",".toSlice();
+    //     strings.slice memory source = _concatenated.toSlice();
+    //     address[] memory parts = new address[](source.count(delim));
+    //
+    //     for(uint i = 0; i < parts.length; i++) {
+    //        parts[i] = source.split(delim).toString().toAddress();
+    //     }
+    //     return parts;
+    //
+    // }
 
     function bytesToAddress(bytes memory _bytes) public pure returns (address) {
       address tempAddress;
@@ -1016,36 +990,36 @@ function getValuesWhichtheFuckenConstructorShouldHaveSet () public returns (uint
       return tempAddress;
     }
 
-    function toString(address account) public pure returns(string memory) {
-        return toString(abi.encodePacked(account), 5);
-    }
-
-    function toString(uint256 value) public pure returns(string memory) {
-        return toString(abi.encodePacked(value), 0);
-    }
-
-    function toString(bytes32 value) public pure returns(string memory) {
-        return toString(abi.encodePacked(value), 0);
-    }
-
-    function toString(bytes memory data, uint16 len) public pure returns(string memory) {
-        bytes memory alphabet = "0123456789abcdef";
-        uint16 strLen = 20;  // It's 20. The length is just fucking 20.  uint16(data.length);
-        // Pretty simple if statement - why won't it work ?
-        // if (len>0) {
-        //     strLen = len;
-        // }
-
-
-        bytes memory str = new bytes(2 + strLen * 2);
-        str[0] = '0';
-        str[1] = 'x';
-        for (uint i = 0; i < strLen; i++) {
-            str[2+i*2] = alphabet[uint(uint8(data[i] >> 4))];
-            str[3+i*2] = alphabet[uint(uint8(data[i] & 0x0f))];
-        }
-        return string(str);
-    }
+    // function toString(address account) public pure returns(string memory) {
+    //     return toString(abi.encodePacked(account), 5);
+    // }
+    //
+    // function toString(uint256 value) public pure returns(string memory) {
+    //     return toString(abi.encodePacked(value), 0);
+    // }
+    //
+    // function toString(bytes32 value) public pure returns(string memory) {
+    //     return toString(abi.encodePacked(value), 0);
+    // }
+    //
+    // function toString(bytes memory data, uint16 len) public pure returns(string memory) {
+    //     bytes memory alphabet = "0123456789abcdef";
+    //     uint16 strLen = 20;  // It's 20. The length is just fucking 20.  uint16(data.length);
+    //     // Pretty simple if statement - why won't it work ?
+    //     // if (len>0) {
+    //     //     strLen = len;
+    //     // }
+    //
+    //
+    //     bytes memory str = new bytes(2 + strLen * 2);
+    //     str[0] = '0';
+    //     str[1] = 'x';
+    //     for (uint i = 0; i < strLen; i++) {
+    //         str[2+i*2] = alphabet[uint(uint8(data[i] >> 4))];
+    //         str[3+i*2] = alphabet[uint(uint8(data[i] & 0x0f))];
+    //     }
+    //     return string(str);
+    // }
 
 
     function bytes32ToBytes(bytes32 _bytes32) public pure returns (bytes memory){
@@ -1080,84 +1054,85 @@ function getValuesWhichtheFuckenConstructorShouldHaveSet () public returns (uint
         return string(bytesArray);
     }
 
-    function bytes32ArrayToString (bytes32[] memory data) public pure returns (string memory ) {
-        bytes memory bytesString = new bytes(data.length * 32);
-        uint urlLength;
-        uint i=0;
-        for (i=0; i<data.length; i++) {
-            for (uint j=0; j<32; j++) {
-                byte char = byte(bytes32(uint(data[i]) * 2 ** (8 * j)));
-                if (char != 0) {
-                    bytesString[urlLength] = char;
-                    urlLength += 1;
-                }
-            }
-        }
-        bytes memory bytesStringTrimmed = new bytes(urlLength);
-        for (i=0; i<urlLength; i++) {
-            bytesStringTrimmed[i] = bytesString[i];
-        }
-        return string(bytesStringTrimmed);
-    }
+    // function bytes32ArrayToString (bytes32[] memory data) public pure returns (string memory ) {
+    //     bytes memory bytesString = new bytes(data.length * 32);
+    //     uint urlLength;
+    //     uint i=0;
+    //     for (i=0; i<data.length; i++) {
+    //         for (uint j=0; j<32; j++) {
+    //             byte char = byte(bytes32(uint(data[i]) * 2 ** (8 * j)));
+    //             if (char != 0) {
+    //                 bytesString[urlLength] = char;
+    //                 urlLength += 1;
+    //             }
+    //         }
+    //     }
+    //     bytes memory bytesStringTrimmed = new bytes(urlLength);
+    //     for (i=0; i<urlLength; i++) {
+    //         bytesStringTrimmed[i] = bytesString[i];
+    //     }
+    //     return string(bytesStringTrimmed);
+    // }
 
-    function stringToBytes32Array(string memory source) public pure returns (bytes32[] memory result) {
-        // uint16 words = uint16( (bytes(source).length+31)/32 );
-        uint16 words = 1;
-        for(uint16 i=0; i<=words; i++) {
-          uint16 offset = 32*(i+1);
-          bytes32 word;
-          assembly {
-            word := mload(add(source, offset))
-          }
-          result[i] = word;
-        }
-        return result;
-    }
+    // function stringToBytes32Array(string memory source) public pure returns (bytes32[] memory result) {
+    //     // uint16 words = uint16( (bytes(source).length+31)/32 );
+    //     uint16 words = 1;
+    //     for(uint16 i=0; i<=words; i++) {
+    //       uint16 offset = 32*(i+1);
+    //       bytes32 word;
+    //       assembly {
+    //         word := mload(add(source, offset))
+    //       }
+    //       result[i] = word;
+    //     }
+    //     return result;
+    // }
 
     // TODO !!!
     // function bytes32ToUint (bytes32 data) returns (uint) {
     //     return 2;
     // }
 
-    function bytesSplit32(bytes  memory data) public pure returns (bytes32, bytes memory ) {
-        uint8 splitAt = 32;                             // all (if variable split, pass in splitAt)
-        uint256 taillength = 0;
-        if (data.length > splitAt)
-            taillength = data.length-splitAt;
-        bytes32 temp;
-        // bytes32 head;                                   // 32b split
-        bytes memory head = new bytes(splitAt);         // variable length split
-        bytes memory tail = new bytes(taillength);
-        for(uint i=0;i<=data.length-1;i++){
-            if (i<splitAt)
-                head[i] = bytes(data)[i] ;
-            else
-                tail[i-splitAt] = bytes(data)[i] ;
-        }
-        return (bytesToBytes32(head), tail);
-    }
+    // function bytesSplit32(bytes  memory data) public pure returns (bytes32, bytes memory ) {
+    //     uint8 splitAt = 32;                             // all (if variable split, pass in splitAt)
+    //     uint256 taillength = 0;
+    //     if (data.length > splitAt)
+    //         taillength = data.length-splitAt;
+    //     bytes32 temp;
+    //     // bytes32 head;                                   // 32b split
+    //     bytes memory head = new bytes(splitAt);         // variable length split
+    //     bytes memory tail = new bytes(taillength);
+    //     for(uint i=0;i<=data.length-1;i++){
+    //         if (i<splitAt)
+    //             head[i] = bytes(data)[i] ;
+    //         else
+    //             tail[i-splitAt] = bytes(data)[i] ;
+    //     }
+    //     return (bytesToBytes32(head), tail);
+    // }
 
     // calls fallback function of pollAddress, passing 4 byte encoded function name to remote contract to select method.
     // NB future better: just get the ABI of the finished Poll conmtract, and use that!
     // NB in sol 0.6 + fallback cannot return anything
     // NB future optimisation : we are not using the functionality of string here, since string must have come from a bytes32
-    event CrossContractValidateBegin();
-    event CrossContractValidateEnd();
-    function crossContractCall (bytes4 fnNameHash, string  memory poll, uint256 valid, uint8 vt) public returns (bytes32[] memory) {
-    address pollContract = pollAddress;
 
-        emit CrossContractValidateBegin();
-        assembly {
-            let ptr := mload(0x40)
-            calldatacopy(ptr, 0, calldatasize)
-            let result := delegatecall(gas, pollContract, ptr, calldatasize, 0, 0)
-            let size := returndatasize
-            returndatacopy(ptr, 0, size)
-            switch result
-            case 0 { revert(ptr, size) }
-            default { return(ptr, size) }
-        }
-        emit CrossContractValidateEnd();
-    }
+    // event CrossContractValidateBegin();
+    // event CrossContractValidateEnd();
+    // function crossContractCall (bytes4 fnNameHash, string  memory poll, uint256 valid, uint8 vt) public returns (bytes32[] memory) {
+    // address pollContract = pollAddress;
+    //
+    //     emit CrossContractValidateBegin();
+    //     assembly {
+    //         let ptr := mload(0x40)
+    //         calldatacopy(ptr, 0, calldatasize)
+    //         let result := delegatecall(gas, pollContract, ptr, calldatasize, 0, 0)
+    //         let size := returndatasize
+    //         returndatacopy(ptr, 0, size)
+    //         switch result
+    //         case 0 { revert(ptr, size) }
+    //         default { return(ptr, size) }
+    //     }
+    //     emit CrossContractValidateEnd();
+    // }
 
 }

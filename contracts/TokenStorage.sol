@@ -25,7 +25,7 @@ contract TokenStorage  is Ownable{
       uint rep;
       TimeRange[] available;
       uint availabilityExpires;
-      bool accepted;
+      bool locked;
       bool released;
       mapping (address => uint) venueContribution;
     }
@@ -50,7 +50,6 @@ contract TokenStorage  is Ownable{
       mapping (address => uint16) ownCheckInIndex;           // 1-indexed: ownCheckInIndex[s]==0 => nothing there.
       Dibs[] dibsCalled;
     }
-
 
     struct PollExternal {
       address initiator;
@@ -86,8 +85,8 @@ contract TokenStorage  is Ownable{
     address[] knownMiners;
     uint initialRep = 2000;      // will move to Poll
     uint topupRep = 1500;        // will move to Poll
-    address __selfAddy ;
-    bool anyoneCanMine = true;
+    bool anyoneCanMine = true;   // will move to Poll
+    address selfAddy ;
 
 
     // unused - previously for Storage Proxy
@@ -100,8 +99,9 @@ contract TokenStorage  is Ownable{
       address __pollAddress = 0x9D26a8a5Db7dC10689692caF8d52C912958409CF;
 
     // constants: Do not use space in storage.
-    uint8 constant __vType=1;
-    string constant __vDesc = "mutual agreement";
+    uint constant never = 5377017599;
+    bool constant usingRealMoney = false;
+
 
 
     constructor() public {
