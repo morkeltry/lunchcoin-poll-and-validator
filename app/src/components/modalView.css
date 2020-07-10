@@ -19,7 +19,7 @@
   top: 10vh;
   left: 4vw;
   padding : 6vh 4.5vh;
-  background-color: #314;
+  background-color: #314e;
   /* border: 1.5vw solid #639e; */
   box-shadow: 0 0 5px #628e, 0 0 10px #628e, 0 0 15px #ccf, 0 0 20px #50d, 0 0 35px #50d, 0 0 40px #50d, 0 0 50px #50d, 0 0 75px #50d;
   box-shadow:inset 0 0 5px #628e, 0 0 10px #628e, 0 0 20px #50d, 0 0 35px #50d, 0 0 40px #50d, 0 0 50px #50d, 0 0 75px #50d;
@@ -130,4 +130,19 @@
 .modal-info__header {
   font-size : 3vh;
   text-align: center;
+}
+
+.toast {
+  position: fixed;
+  height: 8vh;
+  width: 70vw;
+  bottom: 5vh;
+  left: 15vw;
+  padding : 4vh 2vh;
+  background-color: #314e;
+  color: #fcc;
+  box-shadow: 0 0 3px #628e, 0 0 6px #628e, 0 0 9px #ccf, 0 0 12px #50d, 0 0 21px #50d, 0 0 24px #50d, 0 0 30px #50d, 0 0 45px #50d;
+  box-shadow:inset 0 0 3px #628e, 0 0 6px #628e, 0 0 12px #50d, 0 0 21px #50d, 0 0 24px #50d, 0 0 30px #50d, 0 0 45px #50d;
+  border-radius: 2vw;
+  z-index: 5;
 }

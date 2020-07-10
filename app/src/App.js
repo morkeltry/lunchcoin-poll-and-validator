@@ -18,6 +18,7 @@ const App = props => {
         render={ ()=>
           <HttpsRedirect>
             <LunchcoinApp setOwnAddyParent={ setOwnAddy } />
+            <TestingApp ownAddy={ ownAddy } />
           </HttpsRedirect>
          }
        />

@@ -244,31 +244,40 @@ export async function updateKnownPolls( options ) {
 }
 
 
-export async function getImplementationEvents( options={ setWatchers:false }, eventListeners={} ) {
-    // returns the list of events that are in the latest version of the contract
-    let rv = [];
-    console.log('listeners:',eventListeners);
-    const { setWatchers } = options;
-    console.log(IMPLEMENTATION_ABI);
-    console.log(IMPLEMENTATION_INSTANCE.events);
-    IMPLEMENTATION_ABI.forEach(ele => {
-        if (ele.type === "event") {
-            let objectToBeAppended = {};
-            objectToBeAppended["eventName"] = ele["name"];
-            let argsObject = [];
+export async function getImplementationEvents( pollUrl, options={ setWatchers:false }, eventListeners={} ) {
+  // returns the list of events that are in the latest version of the contract
+  const filterByPoll = (pollUrl, watcher) => (result, eventName)=> {
+    const eventPoll = result.returnValues.poll || result.returnValues._poll;
+    if ((pollUrl && pollUrl.length>0) && (eventPoll && eventPoll.length) && pollUrl != eventPoll) {
+      console.log(`${eventName} event ignored:`, result.returnValues);
+      return
+    } else
+      watcher(result, eventName);
+  }
 
-            ele.inputs.forEach(input => {
-                argsObject.push(`${input.name} (${input.type})`);
-            });
-            if (setWatchers){
-              setEventWatcher(ele["name"], eventListeners[ele["name"]]);
-            }
-            objectToBeAppended["signature"] = ele["signature"];
+  let rv = [];
+  console.log('listeners:',eventListeners);
+  const { setWatchers } = options;
+  console.log(IMPLEMENTATION_ABI);
+  console.log(IMPLEMENTATION_INSTANCE.events);
+  IMPLEMENTATION_ABI.forEach(ele => {
+    if (ele.type === "event") {
+      let objectToBeAppended = {};
+      objectToBeAppended["eventName"] = ele["name"];
+      let argsObject = [];
 
-            rv.push(objectToBeAppended);
-        }
-    });
-    return rv;
+      ele.inputs.forEach(input => {
+        argsObject.push(`${input.name} (${input.type})`);
+      });
+      if (setWatchers){
+        setEventWatcher( ele["name"], filterByPoll(pollUrl, eventListeners[ele["name"]]) );
+      }
+      objectToBeAppended["signature"] = ele["signature"];
+
+      rv.push(objectToBeAppended);
+    }
+  });
+  return rv;
 }
 
 const withErrLog = (eventName, actionFn)=> {

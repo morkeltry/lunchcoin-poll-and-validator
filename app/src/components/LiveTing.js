@@ -8,6 +8,7 @@ import InfoModal from "./InfoModal";
 import FormModal from "./FormModal";
 import LogoBottom from "./LogoBottom";
 import AdminLogger from "./AdminLogger";
+import Toast from "./Toast";
 import Dots from "./Dots";
 
 import "../App.scss";
@@ -35,6 +36,7 @@ const LiveEvent = props => {
   const [ownAddress, setOwnAddy] = useState(OWN_ADDRESS);
   const [modalView, setModalView] = useState(null);
   const [burgerView, setBurgerView] = useState(false);
+  const [toastView, setToastView] = useState(null);
   const [hideFunctions, setHideFunctions] = useState(true);
   const [pollName, setPollName] = useState('');
   const [availableAccounts, setAvailableAccounts] = useState(['0x1234','0x5678']);
@@ -71,6 +73,11 @@ const LiveEvent = props => {
   clearInterval(t)
   // t[0]= setInterval(()=>{ showOwnAddy() }, 15000);
 
+  // pass this to Toast
+  // returns false (ie supress) if any modal is up.
+  // the logic is- it's like .filter, not like supress
+  const defaultToastFilter = modalView => !Boolean(modalView);
+
   const catchRelevantEvent = (result, eventName)=> {
     const { returnValues } = result;
     console.log(eventName);
@@ -79,6 +86,16 @@ const LiveEvent = props => {
     setCaughtEvents( prevState=> prevState.concat(
       { eventName, returnValues, age: Date.now() }
     ));
+    if ([].includes(eventName)) {
+      if (result.returnValues.staker === ownAddress) {
+        // const { } = result.returnValues;
+        setToastView(result.returnValues.values.join(', '));
+        setTimeout(()=> { setToastView('') }, 5000);
+      } else {
+        console.log(`toast not set, ${result.returnValues.staker}!=${ownAddress}`);
+      }
+
+    }
   }
 
   const chainEventListeners = {
@@ -379,7 +396,7 @@ const LiveEvent = props => {
       .then(setPollName);
     connectToWeb3().then(addressObj => {
       console.log('\n\nconnectToWeb3 SUCEEDED\n\n');
-      getImplementationEvents({ setWatchers:true }, chainEventListeners );
+      getImplementationEvents({ pollUrl, setWatchers:true }, chainEventListeners );
       console.log(addressObj);
       console.log('which one is ownAddy, which is IMPLEMENTATION_ADDRESS?' );
       if (!addressObj.OWN_ADDRESS)
@@ -601,6 +618,15 @@ return(<>
 
         <LogoBottom refresh={ ()=>{ fetchAndUpdate(); }} />
 
+        { toastView &&
+          <Toast show={ defaultToastFilter(modalView) }>
+            {
+
+            }
+
+          </Toast>
+        }
+
         { modalView &&
           <div className="modal-container">
             <div className="modal-background" onClick={ (ev)=>{ if (ev.target===ev.currentTarget) setModalView(null); } } >
@@ -668,7 +694,7 @@ return(<>
                             <span className={ cN("address42", "w30r") }>
                               <div className={ cN("hype") }>{ kiloNiceNum(amount) }TT</div>
                             { price &&
-                              <div className={ cN("hype-small","sub-right") }> (USD { niceNum(amount*price) })</div>
+                              <div className={ cN("hype-small","sub-righToastt") }> (USD { niceNum(amount*price) })</div>
                             }
                             </span>
                          </div>

@@ -1405,12 +1405,12 @@
     "1594305057673": {
       "events": {},
       "links": {},
-      "address": "0xAa99BB264e6F526D44E8Dcc3FCb8029b48fF0098",
-      "transactionHash": "0xa2e7717606deb051ac03b31016e3d9426abe79d6201ca2d8c8ae4bc632ea1d0e"
+      "address": "0xb6a02E338B0fD64eFF13681617b9D4B32C3Db0Fc",
+      "transactionHash": "0x110c059b35f878f69917c16d1990df8e7704d8f8a2086a742d1019de93693613"
     }
   },
   "schemaVersion": "3.0.2",
-  "updatedAt": "2020-07-09T17:18:34.146Z",
+  "updatedAt": "2020-07-10T13:01:12.900Z",
   "devdoc": {
     "author": "Arvind Kalra (github.com/arvindkalra) and Pranav Singhal (github.com/pranav-singhal)",
     "methods": {

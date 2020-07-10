@@ -190,9 +190,9 @@ function getValuesWhichtheFuckenConstructorShouldHaveSet () public returns (uint
         revert ('Venue cost may only be set by initator of the poll');
     }
 
-    event logStuff (string);
-    modifier isStaker(string memory _poll) {
-      address[] memory stakers = getStakerAddresses(_poll);
+    // any staker OR venue contributor
+    function isStaker(string memory poll) public returns (bool) {
+      address[] memory stakers = getStakerAddresses(poll);
       bool senderIsPresent;
 
       for(uint i = 0; i < stakers.length; i++) {
@@ -200,10 +200,16 @@ function getValuesWhichtheFuckenConstructorShouldHaveSet () public returns (uint
           senderIsPresent = true;
         }
       }
-      require(senderIsPresent, "Function may only be called by a staker on this poll");
+      return senderIsPresent;
+    }
+
+    // only rep stakers, not venue contributors
+    modifier onlyStaker(string memory poll) {
+      require((isStaker(poll) && pollData[poll].staked[msg.sender].rep>0), "Function may only be called by a staker on this poll");
       _;
     }
 
+    event logStuff (string);
     function doEmit (string memory message) public {
       emit logStuff (message);
     }
@@ -304,20 +310,20 @@ function getValuesWhichtheFuckenConstructorShouldHaveSet () public returns (uint
     // }
 
 
-    // NB vulnerable until proper poll facoty in place, since isInitiator allows any caller if poll.iniator == 0x0
+    // NB vulnerable until proper poll factory in place, since isInitiator allows any caller if poll.iniator == 0x0
     function setVenueCost (string memory poll, int cost) public isInitiator(poll) {
       pollData[poll].venueCost = cost;
     }
 
-    // NB vulnerable until proper poll facoty in place, since isInitiator allows any caller if poll.iniator == 0x0
-    event eventTimeSet(string, uint, uint);
+    // NB vulnerable until proper poll factory in place, since isInitiator allows any caller if poll.iniator == 0x0
+    event eventTimeSet(string poll, uint start, uint end);
     function setEventTime (string memory poll, uint start, uint end) public isInitiator(poll) {
       pollData[poll].eventTime = TimeRange(start, end);
       emit eventTimeSet(poll, start, end);
     }
 
-    // NB vulnerable until proper poll factoy in place, since isInitiator allows any caller if poll.iniator == 0x0
-    event eventStakingClosed(string, uint);
+    // NB vulnerable until proper poll factory in place, since isInitiator allows any caller if poll.iniator == 0x0
+    event eventStakingClosed(string poll, uint at);
     function closeStaking (string memory poll) public isInitiator(poll) {
       pollData[poll].stakingClosed = true;
       releaseStakes(poll);
@@ -386,7 +392,7 @@ function getValuesWhichtheFuckenConstructorShouldHaveSet () public returns (uint
       // msg.sender.call.value(amount)("");
     }
 
-    event newPollCreated(string);
+    event newPollCreated(string poll);
     function createPoll(string memory poll, address initiator, uint minStake, int venueCost, address venuePayer, uint8 participants) public {
       require (!isPoll(poll), 'Poll exists already.');
       require (minStake>0, 'minStake must be set');
@@ -418,8 +424,8 @@ function getValuesWhichtheFuckenConstructorShouldHaveSet () public returns (uint
       return false;
     }
 
-    event stakeReleased (string, address);
-    event stakeLocked (string, address);
+    event stakeReleased (string poll, address staker);
+    event stakeLocked (string poll, address staker);
     function releaseStakes (string memory poll) isInitiator(poll) public {
       address[] memory stakers = getStakerAddresses(poll);
       bool eventTimeIsSet;
@@ -525,7 +531,7 @@ function getValuesWhichtheFuckenConstructorShouldHaveSet () public returns (uint
       pollData[_poll].ownCheckInIndex[sender] = idx+1;
     }
 
-    event proofUpdated(address);
+    event proofUpdated(address staker);
     function addProof (string memory _poll, address _impersonatedStaker, address[] memory _newProof) public {
       address sender = _impersonatedStaker;   //  should be msg.sender
       bytes32[] memory proofB32 = new bytes32[](_newProof.length);
@@ -550,7 +556,7 @@ function getValuesWhichtheFuckenConstructorShouldHaveSet () public returns (uint
 
     // NB allstakersSubmittedProofs is still TODO!
     event proofsWindowClosed (string poll, address by);
-    function closeProofsWindow (string memory poll) isStaker(poll) public {
+    function closeProofsWindow (string memory poll) onlyStaker(poll) public {
       require (now > pollData[poll].eventTime.end || allstakersSubmittedProofs(poll), "Not all stakers have submitted proofs and the event is not yet over");
       // require (, "");
       pollData[poll].proofsWindowClosed = true;
@@ -571,9 +577,9 @@ function getValuesWhichtheFuckenConstructorShouldHaveSet () public returns (uint
     }
 
 
-    event expiryWasSet(string, address, uint);
-    event availabilityAdded(string, address, uint, uint);
-    function addAvailability (string memory poll, uint start, uint end, uint confirmBefore) isStaker(poll) public {
+    event expiryWasSet(string poll, address staker, uint availabilityExpires);
+    event availabilityAdded(string poll, address staker, uint start, uint end);
+    function addAvailability (string memory poll, uint start, uint end, uint confirmBefore) onlyStaker(poll) public {
       require (end>now, 'Cannot add availability in the past');
       require ((confirmBefore==0 || confirmBefore>=now), 'Cannot set expiry in the past');
       require(knownMiners.length < 65535, 'Too available. Have some self-respect');
@@ -590,35 +596,37 @@ function getValuesWhichtheFuckenConstructorShouldHaveSet () public returns (uint
     }
 
 
-    event stakeNotAccepted(address, string);
-    event disreputableStakerIgnored(address, string);
-    event staked(address, string, uint);
-    event venueContribution(address, string, uint);
+    event stakeNotAccepted(address staker, string poll);
+    event disreputableStakerIgnored(address staker, string poll);
+    event staked(address staker, string poll, uint amount);
+    event madeVenueContribution(address staker, string poll, uint amount);
     // TODO: accept one TimeRange for all stakes.
     // TODO: accept TimeRanges per stake (need to change up the data structures!)
 
-    function addFakeStake (string memory _poll, address _impersonatedStaker, uint _rep, uint _venueContribution, address _beneficiary ) onlyOwner public {
-      address sender = _impersonatedStaker;
-      if (_venueContribution>0) {
-        uint currentVC = pollData[_poll].staked[sender].venueContribution[_beneficiary];
-        pollData[_poll].staked[sender].venueContribution[_beneficiary] += _venueContribution;
-        pollData[_poll].venuePot += _venueContribution;
-        emit staked(sender, _poll, _venueContribution);
+    // NB addFakeStake only does not check for duplicate sender
+    function addFakeStake (string memory poll, address impersonatedStaker, uint repStake, uint venueContribution, address beneficiary ) onlyOwner public {
+      address sender = impersonatedStaker;
+      if (venueContribution>0) {
+        uint currentVC = pollData[poll].staked[sender].venueContribution[beneficiary];
+        pollData[poll].staked[sender].venueContribution[beneficiary] += venueContribution;
+        pollData[poll].venuePot += venueContribution;
+        addStaker (poll, sender, vType);
+        emit madeVenueContribution(sender, poll, venueContribution);
       }
-      if (_rep>0) {
-        if (_rep<pollData[_poll].minStake) {
-          emit stakeNotAccepted(sender, _poll);              // aNt!p4ttrnn ###
+      if (repStake>0) {
+        if (repStake<pollData[poll].minStake) {
+          emit stakeNotAccepted(sender, poll);              // aNt!p4ttrnn ###
         } else
-        if (rep[sender]<_rep) {
-          emit disreputableStakerIgnored(sender, _poll);
+        if (rep[sender]<repStake) {
+          emit disreputableStakerIgnored(sender, poll);
         } else {
-          addStaker (_poll, sender, vType);
-          if (!pollData[_poll].stakingClosed) {
-            rep[sender] -= _rep;
-            pollData[_poll].staked[sender].rep += _rep;
-            emit staked(sender, _poll, _rep);
+          if (!pollData[poll].stakingClosed) {
+            rep[sender] -= repStake;
+            addStaker (poll, sender, vType);
+            pollData[poll].staked[sender].rep += repStake;
+            emit staked(sender, poll, repStake);
           } else {
-            emit staked(sender, _poll, 0);
+            emit staked(sender, poll, 0);
           }
         }
       }
@@ -630,7 +638,9 @@ function getValuesWhichtheFuckenConstructorShouldHaveSet () public returns (uint
         uint currentVC = pollData[poll].staked[sender].venueContribution[beneficiary];
         pollData[poll].staked[sender].venueContribution[beneficiary] += msg.value;
         pollData[poll].venuePot += msg.value;
-        emit staked(sender, poll, msg.value);
+        if (!isStaker(poll))
+          addStaker (poll, sender, vType);
+        emit madeVenueContribution(sender, poll, msg.value);
       }
       if (repStake>0) {
         if (repStake<pollData[poll].minStake) {
@@ -639,9 +649,10 @@ function getValuesWhichtheFuckenConstructorShouldHaveSet () public returns (uint
         if (rep[sender]<repStake) {
           emit disreputableStakerIgnored(sender, poll);
         } else {
-          addStaker (poll, sender, vType);
           if (!pollData[poll].stakingClosed) {
             rep[sender] -= repStake;
+            if (!isStaker(poll))
+              addStaker (poll, sender, vType);
             pollData[poll].staked[sender].rep += repStake;
             emit staked(sender, poll, repStake);
           } else {
@@ -659,7 +670,9 @@ function getValuesWhichtheFuckenConstructorShouldHaveSet () public returns (uint
         uint currentVC = pollData[poll].staked[sender].venueContribution[beneficiary];
         pollData[poll].staked[sender].venueContribution[beneficiary] += msg.value;
         pollData[poll].venuePot += msg.value;
-        emit staked(sender, poll, msg.value);
+        if (!isStaker(poll))
+          addStaker (poll, sender, vType);
+        emit madeVenueContribution(sender, poll, msg.value);
       }
       if (repStake>0) {
         if (repStake<pollData[poll].minStake) {
@@ -668,9 +681,10 @@ function getValuesWhichtheFuckenConstructorShouldHaveSet () public returns (uint
         if (rep[sender]<repStake) {
           emit disreputableStakerIgnored(sender, poll);
         } else {
-          addStaker (poll, sender, vType);
           if (!pollData[poll].stakingClosed) {
             rep[sender] -= repStake;
+            if (!isStaker(poll))
+              addStaker (poll, sender, vType);
             pollData[poll].staked[sender].rep += repStake;
             emit staked(sender, poll, repStake);
           } else {
@@ -713,7 +727,7 @@ function getValuesWhichtheFuckenConstructorShouldHaveSet () public returns (uint
 
     // NB refundVenueStake and refundStake BOTH call this, so one will revert.
     // TODO: Add checks into those functions
-    event emptyStakeRemoved (string _poll, address _staker);
+    event emptyStakeRemoved (string poll, address staker);
     function removeEmptyStake (string memory _poll, address _staker) public {
       uint rep=pollData[_poll].staked[msg.sender].rep;
       uint venueContributions = totalVenueContribs (_poll, _staker);
@@ -767,10 +781,12 @@ function getValuesWhichtheFuckenConstructorShouldHaveSet () public returns (uint
 
     // NB proportional refunds are not vulnerable to gas exhaustion but covering refunds may be.
     // Hence populating the 0x0 staker's stake with the refunded stakes, to maintain the size of stakes compared to venuePot.
-    event venuePotDisbursed (string _poll, address to, address by, uint amount);
+    event venuePotDisbursed (string poll, address to, address by, uint amount);
     // Any staker can call refund of excess venue pot.
     // Disbursement to venue payer must wait until initiator has actively set venue payer (eg to self);
-    function refundVenueStakes(string memory _poll) public isStaker(_poll) {
+    // NB ONLY successful stakers on the poll will have venueContribs refunded
+    // -need some way for non rep stakers to be included in getStakerAddresses
+    function refundVenueStakes(string memory _poll) public onlyStaker(_poll) {
       address[] memory stakers = getStakerAddresses(_poll);
       int equalShare = (pollData[_poll].venueCost) / int(stakers.length);
       uint pot = pollData[_poll].venuePot;
@@ -863,8 +879,8 @@ function getValuesWhichtheFuckenConstructorShouldHaveSet () public returns (uint
 
 
     event repRefund (address staker, uint staked, uint refunded);
-    event refundFail (address _staker);
-    function refundStake (string memory _poll, bytes32 _reveal) public isStaker(_poll) {
+    event refundFail (address staker);
+    function refundStake (string memory _poll, bytes32 _reveal) public onlyStaker(_poll) {
       require (pollData[_poll].staked[msg.sender].rep > 0, 'Sender has nothing staked for this poll');
       // Will ownCheckInIndex be a thing?
       // require (pollData[_poll].ownCheckInIndex[msg.sender] > 0, 'Sender has not submitted an attendance proof for this poll');
@@ -950,7 +966,7 @@ function getValuesWhichtheFuckenConstructorShouldHaveSet () public returns (uint
             if (stakers[i]==msg.sender)
               sendersIndex=i+1;
         }
-        // sendersIndex will not be 0, since validate is private and should be called only be refundStake, which has isStaker modifier
+        // sendersIndex will not be 0, since validate is private and should be called only be refundStake, which has onlyStaker modifier
         assert (sendersIndex>0);
 
         for(i = 0; i < stakers.length; i++) {
