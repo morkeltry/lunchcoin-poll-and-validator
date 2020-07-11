@@ -7,6 +7,7 @@
     "classnames": "^2.2.6",
     "env2": "^2.2.2",
     "node-sass": "^4.12.0",
+    "qrcode-svg": "^1.1.0",
     "react": "^16.8.6",
     "react-bootstrap": "^1.0.0-beta.9",
     "react-dom": "^16.8.6",

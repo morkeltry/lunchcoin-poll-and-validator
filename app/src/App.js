@@ -15,6 +15,7 @@ const App = props => {
     <>
       <Route
         path="/"
+        exact
         render={ ()=>
           <HttpsRedirect>
             <LunchcoinApp setOwnAddyParent={ setOwnAddy } />
