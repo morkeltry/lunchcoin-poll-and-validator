@@ -134,6 +134,11 @@ export const eventToastOutput = (tv, ownAddy)=> {
   };
 }
 
+export const prioritiseThirdPartyEvents = (event, ownAddy)=>
+  event.returnValues &&
+    (event.to===ownAddy && (event.returnValues.amount ? -1 : -4)) + (event.returnValues.staker===ownAddy && -2) + (event.returnValues.amount && event.returnValues.by===ownAddy && -4)
+
+
 const useTimeZone = true;
 
 // warning, mutates!

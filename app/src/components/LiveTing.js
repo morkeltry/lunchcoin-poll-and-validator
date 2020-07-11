@@ -24,7 +24,7 @@ import { connectToWeb3, refetchOwnAddress, getDeets, setOwnAddyforAuthWeb3,
 import { getPrice } from "../helpers/priceFeed.js";
 import { fetchOnlinePoll } from "../helpers/doodleFetchers.js";
 import { time ,ms ,toUnixTime ,unixifyTimes ,kiloNiceNum ,niceNum ,niceTime,
-  checkInClosingIn, eventToastOutput, eventToastOutputLongFake } from "../helpers/outputFormatting.js";
+  checkInClosingIn, eventToastOutput, prioritiseThirdPartyEvents, eventToastOutputLongFake } from "../helpers/outputFormatting.js";
 
 
 const ether = 1e18;
@@ -683,7 +683,8 @@ return(<>
         { modalView &&
           <div className="modal-container">
             <div className="modal-background" onClick={ (ev)=>{ if (ev.target===ev.currentTarget) setModalView(null); } } >
-              { modalView==='check in'
+              { // check in is the only FormModal - if it's not check in, use an InfoModal which does more automatically
+              modalView==='check in'
                 ? <FormModal
                     modal = { modalView }
                     clearModal= { ()=>{ setModalView(null) } }
@@ -739,6 +740,7 @@ return(<>
                     <div className="hype-small">Refunded to:</div>
                     { caughtEvents
                         .filter(event=> event.eventName==='venuePotDisbursed')
+                        .sort(event=> prioritiseThirdPartyEvents(event, ownAddress))
                         .map (event=>{
                           const { returnValues } = event;
                           const { amount, by, to } = returnValues;
@@ -761,7 +763,7 @@ return(<>
                 : <>
                     <div className={ cN("modal-info__header", "w100", "hype-small") }> Reputation update </div>
                     { caughtEvents
-                        .filter(event=> event.eventName==='repRefund' && 'event.returnValues.staker===ownAddress')
+                        .filter(event=> event.eventName==='repRefund' && event.returnValues.staker===ownAddress)
                         .map (event=>{
                           const { returnValues } = event;
                           const { staker, staked, refunded } = returnValues;
