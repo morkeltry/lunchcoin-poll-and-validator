@@ -1,5 +1,6 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 
+import { ConnectionError } from "web3";
 import cN from 'classnames';
 import Media from 'react-media';
 import QRCode from 'qrcode-svg';
@@ -29,6 +30,9 @@ const MineApp = props => {
   const [toastView, setToastView] = useState(null);
   const [btBeacon, setBtBeacon] = useState(true);
   const [showQr, setShowQr] = useState(null);
+  const [error, setError] = useState(null);
+  const [web3Error, setWeb3Error] = useState(null);
+  const [noChainError, setNoChainError] = useState(null);
 
   const eventId = '16-07-2020';
   let seq = { eventId: 0 };
@@ -83,26 +87,55 @@ const MineApp = props => {
     //sendTransaction ...
   }
 
+
+
+  useEffect(()=> {
+    // getLocalCache();
+    connectToWeb3().then(addressObj => {
+      // getImplementationEvents({ pollUrl, setWatchers:true }, chainEventListeners );
+      if (!addressObj.OWN_ADDRESS)
+        console.log(`\n\n\n\nWarning - setOwnAddy(${addressObj.OWN_ADDRESS})\n\n\n\n`);
+      return addressObj.OWN_ADDRESS
+    }).then(addy=> {
+      setOwnAddy(addy);
+      // fetchAndUpdate(addy);
+    })
+      .catch(err=> {
+        // we should be catching here: 105: reject (new Error('no web3 provider'));
+        console.log('\n\nconnectToWeb3 FAILED\n\n');
+        console.log('fetchAndUpdate gave',err);
+        if (err.message==='connection not open on send()' || err instanceof ConnectionError)
+          setNoChainError(true)
+        else {
+          setWeb3Error(true);
+          setError(err.message);
+        }
+      })
+
+  }, []);
+
+
   return (
-    ownAddress
-      ? <div className={ cN('backstage') }>
-          <div className={ cN('huuuge', 'backstage-text') }>
-            Welcome, community star,
+    ownAddress===''
+      ? <div className={ cN('backstage', 'bg_openair' ) }>
+          <div className={ cN('backstage-text', 'huuuge') }>
+            Welcome, community star
+          </div>
+          <div className={ cN('backstage-text', 'main-header') }>
             please log in
           </div>
 
         </div>
 
-      : <div className={ cN('backstage', 'bg_openair  ') }>
+      : <div className={ cN('backstage', 'bg_openair') }>
           LIKE, A FAUCET OR SOMETHING. PROBABLY.
 
           <div className={ cN('form-section') }>
             <div className={ cN('form-section__header', 'backstage-text', 'main-header' ) }>
               { 'Welcome' }
-              { ownAddress }
             </div>
-            <div className={ cN('', 'backstage-text') }>
-
+            <div className={ cN('main-header__sub', 'backstage-text') }>
+              { ownAddress }
             </div>
           </div>
 
@@ -176,7 +209,7 @@ const MineApp = props => {
               QR mining:
             </div>
             <div className={ cN('backstage-text') }>
-              <span className={ cN('', 'backstage-text') }>QR mining requires one QR code per user who is physically present</span>
+              <span className={ cN('', 'backstage-text') }>QR mining uses a QR code for each physically present user</span>
               <span className="">
                 <button
                   id= { 'qr-mine' }

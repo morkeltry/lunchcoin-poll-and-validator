@@ -21,6 +21,15 @@ body {
   min-height: 100vh;
 }
 
+.huuuge {
+  margin-top: 10vh !important;
+  margin-bottom: 3vh !important;
+  padding:  5vh 0 !important;
+  font-size: 5vh !important;
+  text-align: center;
+
+}
+
 .backstage-text {
   background : #cbd9;
   padding: 1vw;
@@ -45,6 +54,14 @@ body {
   text-align: center;
   font-size: 6vw;
 }
+
+.main-header__sub {
+  padding-top: 0;
+  margin-top: -2vw;
+  text-align: center;
+  font-size: 4.5vw;
+}
+
 
 .bar-horiz__thick__padded {
   position: relative;
