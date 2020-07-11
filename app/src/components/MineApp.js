@@ -181,7 +181,7 @@ const MineApp = props => {
                 <button
                   id= { 'qr-mine' }
                   onClick= { ()=>{ setShowQr(qrMine());  } }
-                  className= { cN('primary-button') }
+                  className= { cN('') }
                 >
                   GENERATE QR CODE
                 </button>
