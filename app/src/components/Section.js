@@ -36,7 +36,8 @@ const Section = props => {
           className= {cN(
             id==='checkin' && 'primary-button',
             buttonDisabled && 'button__disabled',
-            buttonHidden && 'hidden'
+            buttonHidden && 'hidden',
+            buttonStyles
           )}
         >
           { props.buttonText }

@@ -460,11 +460,12 @@ function getValuesWhichtheFuckenConstructorShouldHaveSet () public returns (uint
     // }
 
 
-    function addStaker (string memory _poll, address _staker, uint8 _vt) public {
-      require(knownMiners.length < 65535, 'Too many stakes. Try a pitchfork instead');
+    function addStaker (string memory poll, address staker, uint8 vt) public {
+      bytes32[] memory rawStakers = get(poll, "staker");
+      require(rawStakers.length < 65535, 'Too many stakes. Try a pitchfork instead');
 
-      bytes32 hash = keccak256(abi.encodePacked(_poll, encodeFunctionName("staker"), _vt));
-      allTheData[hash].push (bytes32(bytes20(_staker)));
+      bytes32 hash = keccak256(abi.encodePacked(poll, encodeFunctionName("staker"), vt));
+      allTheData[hash].push (bytes32(bytes20(staker)));
     }
 
     function getStakerAddresses (string memory _poll ) public view returns (address[] memory) {
@@ -603,14 +604,17 @@ function getValuesWhichtheFuckenConstructorShouldHaveSet () public returns (uint
     // TODO: accept one TimeRange for all stakes.
     // TODO: accept TimeRanges per stake (need to change up the data structures!)
 
-    // NB addFakeStake only does not check for duplicate sender
+    // NB addFakeStake only does NOT add anyone to stakers unless there no existing stakers (do it manually)
     function addFakeStake (string memory poll, address impersonatedStaker, uint repStake, uint venueContribution, address beneficiary ) onlyOwner public {
+      bytes32[] memory rawStakers = get(poll, "staker");
       address sender = impersonatedStaker;
+
       if (venueContribution>0) {
         uint currentVC = pollData[poll].staked[sender].venueContribution[beneficiary];
         pollData[poll].staked[sender].venueContribution[beneficiary] += venueContribution;
         pollData[poll].venuePot += venueContribution;
-        addStaker (poll, sender, vType);
+        if (rawStakers.length==0)
+          addStaker (poll, sender, vType);
         emit madeVenueContribution(sender, poll, venueContribution);
       }
       if (repStake>0) {
@@ -622,7 +626,8 @@ function getValuesWhichtheFuckenConstructorShouldHaveSet () public returns (uint
         } else {
           if (!pollData[poll].stakingClosed) {
             rep[sender] -= repStake;
-            addStaker (poll, sender, vType);
+            if (rawStakers.length==0)
+              addStaker (poll, sender, vType);
             pollData[poll].staked[sender].rep += repStake;
             emit staked(sender, poll, repStake);
           } else {

@@ -132,6 +132,13 @@ button:active:disabled{
   /* background-color : red; */
 }
 
+.button__disabled__venue-refund-special-case {
+  opacity : 1;
+  background-color :#7a5614;
+  color: #990;
+  /* background-color : red; */
+}
+
 /*
 button :hover {
   color: inherit;
