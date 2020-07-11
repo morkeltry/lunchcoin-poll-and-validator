@@ -53,10 +53,10 @@ const LunchcoinApp = props => {
     setPollUrls(pollUrls.concat(pollUrl));
   }
 
-  const chainEventListeners = {
-    getPoll : eventResponse => { console.log(eventResponse); },
-    proofsWindowClosed : eventResponse => { console.log('proofsWindowClosed', eventResponse); },
-  }
+  // const chainEventListeners = {
+  //   getPoll : eventResponse => { console.log(eventResponse); },
+  //   proofsWindowClosed : eventResponse => { console.log('proofsWindowClosed', eventResponse); },
+  // }
 
   const getLocalCache= ()=> {
     return ['doodle.com/poll/h7phtw5u2thhz9k4'];
@@ -161,7 +161,8 @@ const LunchcoinApp = props => {
     }).then( ()=> {
       console.log(`will: fetchAndUpdatePolls(pollUrls) with:`,knownUrls);
       fetchAndUpdatePolls(knownUrls);
-      getImplementationEvents({ setWatchers:true }, chainEventListeners)
+      // getImplementationEvents({  pollUrl:undefined, setWatchers:true }, chainEventListeners)
+      getImplementationEvents()
         .then (foundEvents=> {
           console.log(foundEvents);
           foundEvents.forEach( event=> {

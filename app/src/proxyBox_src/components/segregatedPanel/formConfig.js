@@ -49,15 +49,22 @@ export const byFuncDefaults = {
   setRep : {
     _rep : 4000
   },
+  addUnboundedStake : {
+    repStake : 1000,
+    venueContribution : 15000,
+    beneficiary : 'OWN_ADDRESS',
+  },
   addStake : {
-    _rep : 1000,
-    _venueContribution : 15000,
-    _venueContributionFor : 'OWN_ADDRESS'
+    repStake : 1000,
+    venueContribution : 15000,
+    beneficiary : 'OWN_ADDRESS',
+    availability : "[]",
+    confirmBefore : 5377017599,
   },
   addFakeStake : {
-    _rep : 1000,
-    _venueContribution : 15000,
-    _venueContributionFor : 'OWN_ADDRESS'
+    repStake : 1000,
+    venueContribution : 15000,
+    beneficiary : 'OWN_ADDRESS',
   },
   getProofUsingStaker : {
     _mapName : 'proof',

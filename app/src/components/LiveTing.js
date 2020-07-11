@@ -1,6 +1,9 @@
 import React, { useState, useEffect, useLayoutEffect } from 'react';
+import { CSSTransition, TransitionGroup } from 'react-transition-group';
 import { ConnectionError } from "web3";
 import cN from 'classnames';
+
+import { Button } from 'react-bootstrap';
 
 import Header from "./Header";
 import Section from "./Section";
@@ -8,17 +11,24 @@ import InfoModal from "./InfoModal";
 import FormModal from "./FormModal";
 import LogoBottom from "./LogoBottom";
 import AdminLogger from "./AdminLogger";
+import Toast from "./Toast";
 import Dots from "./Dots";
 
 import "../App.scss";
 import './checkInView.css';
 
-import { connectToWeb3, getImplementationFunctions, getImplementationEvents,
+import { connectToWeb3, refetchOwnAddress, getDeets, setOwnAddyforAuthWeb3,
+  getImplementationFunctions, getImplementationEvents,
   callTransaction, sendTransaction, getFromStorage,
   myAccounts, } from "../Web3/accessChain";
 import { getPrice } from "../helpers/priceFeed.js";
 import { fetchOnlinePoll } from "../helpers/doodleFetchers.js";
+import { time ,ms ,toUnixTime ,unixifyTimes ,kiloNiceNum ,niceNum ,niceTime,
+  checkInClosingIn, eventToastOutput, prioritiseThirdPartyEvents, eventToastOutputLongFake } from "../helpers/outputFormatting.js";
 
+
+const ether = 1e18;
+const kEther = 1e21;
 let OWN_ADDRESS = '0x000123';
 let t=[];
 
@@ -33,6 +43,9 @@ const LiveEvent = props => {
   const [ownAddress, setOwnAddy] = useState(OWN_ADDRESS);
   const [modalView, setModalView] = useState(null);
   const [burgerView, setBurgerView] = useState(false);
+  const [toastView, setToastView] = useState(null);
+  const [web3Error, setWeb3Error] = useState(null);
+  const [error, setError] = useState(null);
   const [hideFunctions, setHideFunctions] = useState(true);
   const [pollName, setPollName] = useState('');
   const [availableAccounts, setAvailableAccounts] = useState(['0x1234','0x5678']);
@@ -69,14 +82,33 @@ const LiveEvent = props => {
   clearInterval(t)
   // t[0]= setInterval(()=>{ showOwnAddy() }, 15000);
 
-  const catchRelevantEvent = (result, eventName)=> {
+  // pass this to Toast
+  // returns false (ie supress) if any modal is up.
+  // the logic is- it's like .filter, not like supress
+  const defaultToastFilter = modalView => !Boolean(modalView);
+
+  const catchRelevantEvent = async (result, eventName)=> {
     const { returnValues } = result;
+    const ownAddy = await refetchOwnAddress();
+    // const ownAddy = getDeets().OWN_ADDRESS;
+    console.log(`(according to accessChain:) ${getDeets().OWN_ADDRESS}`);
     console.log(eventName);
     console.log(result.raw);
     console.log(result.returnValues);
     setCaughtEvents( prevState=> prevState.concat(
       { eventName, returnValues, age: Date.now() }
     ));
+
+    // if ([].includes(eventName)) {
+      if (Object.values(returnValues).includes(ownAddy)) {
+        // const { } = result.returnValues;
+        setToastView( { event: eventName, ...returnValues } );
+        setTimeout(()=> { setToastView('') }, 5000);
+      } else {
+        console.log(`toast not set, ${returnValues.to} || ${returnValues.staker}!=${ownAddy}`);
+      }
+    // }
+
   }
 
   const chainEventListeners = {
@@ -110,9 +142,9 @@ const LiveEvent = props => {
       setUpdatedRepRaw(null);
       if (!ownAddress || ownAddress.length<42) {
         console.log(`Caught rep event, but it looks like state has reverted to inital value:/ ownAddress=${ownAddress}, retrieved from state again=${showOwnAddy()}. Refetching from web3.`);
-        connectToWeb3().then(addressObj => {
-          console.log('\n\nconnectToWeb3 SUCEEDED\n\n');
-          fetchAndUpdateRep(addressObj.OWN_ADDRESS);
+        refetchOwnAddress().then(ownAddy => {
+          console.log('\n\nrefetchOwnAddress SUCEEDED\n\n');
+          fetchAndUpdateRep(ownAddy);
         })
       } else
       fetchAndUpdateRep();
@@ -133,6 +165,7 @@ const LiveEvent = props => {
   const setOwnAddyForApp = addy=> {
     setOwnAddy(addy);
     setOwnAddyParent(addy);
+    setOwnAddyforAuthWeb3(addy);
     // setOwnAddyinComponent(addy);
   }
 
@@ -377,7 +410,7 @@ const LiveEvent = props => {
       .then(setPollName);
     connectToWeb3().then(addressObj => {
       console.log('\n\nconnectToWeb3 SUCEEDED\n\n');
-      getImplementationEvents({ setWatchers:true }, chainEventListeners );
+      getImplementationEvents({ pollUrl, setWatchers:true }, chainEventListeners );
       console.log(addressObj);
       console.log('which one is ownAddy, which is IMPLEMENTATION_ADDRESS?' );
       if (!addressObj.OWN_ADDRESS)
@@ -396,7 +429,11 @@ const LiveEvent = props => {
         console.log('\n\nconnectToWeb3 FAILED\n\n');
         console.log('fetchAndUpdate gave',err);
         if (err.message==='connection not open on send()' || err instanceof ConnectionError)
-          setNoChainError(true);
+          setNoChainError(true)
+        else {
+          setWeb3Error(true);
+          setError(err.message);
+        }
       })
 
   }, []);
@@ -405,30 +442,40 @@ const LiveEvent = props => {
 
 // ----------------------- helpers
 
-
-    const time = d=> d.toTimeString().splice(0.8);
-    const ms = d=> (d%1000).toFixed(3);
-
-    const toUnixTime = x=>x;
-
-    const unixifyTimes = resp=>
-      Object.assign (resp,
-        { start : resp.start ? toUnixTime(resp.start) : resp.start },
-        { end : resp.end ? toUnixTime(resp.end) : resp.end },
-      );
-
-    const niceNum = num=>
-      (num || num===0)
-        ? (Math.round(num*1000)/1000).toString()
-        : '_' ;
-
-    const niceTime = (time=498705720) =>
-      time < Infinity
-        ? new Date(time).toTimeString().slice(0,14)
-        : 'Never' ;
-
-    const checkInClosingIn = checkinCloses=>
-      Math.max (checkinCloses-Date.now(), 0) ;
+// // These ones moved to helpers/outputFormatting.js
+    //
+    // const time = d=> d.toTimeString().slice(0,8);
+    // const ms = d=> (d%1000).toFixed(3);
+    //
+    // const toUnixTime = x=>x;
+    //
+    // const unixifyTimes = resp=>
+    //   Object.assign (resp,
+    //     { start : resp.start ? toUnixTime(resp.start) : resp.start },
+    //     { end : resp.end ? toUnixTime(resp.end) : resp.end },
+    //   );
+    //
+    // const kiloNiceNum = num=>
+    //   num >= 1000000
+    //     ? niceNum(num/1000000)+' M'
+    //     : num >= 1000
+    //       ? niceNum(num/1000)+' k'
+    //       : (num >= 1 || num==0)
+    //         ? niceNum(num)
+    //         : niceNum(num*1000)+' m' ;
+    //
+    // const niceNum = num=>
+    //   (num || num===0)
+    //     ? (Math.round(num*1000)/1000).toString()
+    //     : '_' ;
+    //
+    // const niceTime = (time=498705720) =>
+    //   time < Infinity
+    //     ? new Date(time).toTimeString().slice(0,14)
+    //     : 'Never' ;
+    //
+    // const checkInClosingIn = checkinCloses=>
+    //   Math.max (checkinCloses-Date.now(), 0) ;
 
 
     // NB Using covering refunds -
@@ -494,7 +541,8 @@ return(<>
               ...accountSetters(availableAccounts,9),
               'Reopen Check-in' : ()=>{ sendTransaction('reopenProofsWindow', {_poll : pollUrl }) },
               'Fetch from chain (or click pizza)' : ()=>{ fetchAndUpdate(); },
-              'Hide Menu' : ()=>{ setBurgerView(false); }
+              'Hide Menu' : ()=>{ setBurgerView(false); },
+              'Pop up toast' : ()=>{ setToastView(!toastView && 'Whoop Whoop'); }
             }
           }}
         />
@@ -559,7 +607,7 @@ return(<>
         <Section
           id='rep-refund'
           buttonSuper= { checkedIn ? checkInIsClosed ? '' : 'Reclaim your rep \nonce check-in is closed' : 'Check in to reclaim your rep' }
-          buttonText= { !repStaked ? 'Unstake me now' : `Your reputaion is restored 😎` }   // U+1F60E}
+          buttonText= { !repStaked ? 'Unstake me now' : `Your reputation is restored 😎` }   // U+1F60E}
           buttonText= { 'Unstake me now' }
           buttonAction= { claimRep }
           buttonDisabled= { !checkedIn || !checkInIsClosed ||  !repStaked }
@@ -573,27 +621,70 @@ return(<>
         <Section
           id='venue-refund'
           buttonText= { venueRefundDue(venueCost,youPaidForVenue)
-            ? `Refund ${niceNum(venueRefundDue(venueCost,youPaidForVenue)/1000)}k TT`
+            ? `Refund ${ kiloNiceNum(venueRefundDue(venueCost,youPaidForVenue)) }TT`
             : `We're all square 😎`   // U+1F60E
           }
           buttonAction= { venueRefundDue(venueCost,youPaidForVenue) ? doVenueRefund : ()=>{ console.log('v()',venueCost,youPaidForVenue,venueRefundDue(venueCost,youPaidForVenue)); } }
-          buttonDisabled= { null  }  // NB In order to keep it visible, the buttonAction is disabled with && instead.
+          buttonDisabled= { !venueRefundDue(venueCost,youPaidForVenue)  }  // NB In order to keep it visible, the buttonAction is disabled with && instead.
           sectionHidden= { !youPaidForVenue }
+          buttonStyles= { !venueRefundDue(venueCost,youPaidForVenue) && 'button__disabled__venue-refund-special-case'  }
         >
           <div className="centre-align">
-            Venue cost was { niceNum(venueCost)/1000 }k TT
+            Venue cost was { kiloNiceNum(venueCost) }TT
           </div>
           <div className="centre-align">
-            You paid <span className="hype hype-small">{ niceNum(youPaidForVenue)/1000 }k TT</span>
+            You paid <span className="hype hype-small">{ kiloNiceNum(youPaidForVenue) }TT</span>
           </div>
         </Section>
 
         <LogoBottom refresh={ ()=>{ fetchAndUpdate(); }} />
 
+        { null &&
+        <TransitionGroup className="todo-list">
+          <CSSTransition
+            key={ 'meh' }
+            in={ Boolean(toastView) }
+            timeout={500}
+            classNames="item"
+          >
+
+
+            <div className={ cN('toast', 'item') } >
+              { toastView }
+
+              { toastView &&
+                <Button
+                  className="remove-btn"
+                  variant="danger"
+                  size="sm"
+                >
+                  &times;
+                </Button>
+              }
+            </div>
+
+          </CSSTransition>
+
+        </TransitionGroup>
+        }
+
+        { defaultToastFilter(modalView) && toastView &&
+          <Toast visible={ ()=>Boolean(toastView) } hide={ ()=>{ setToastView(null) } }>
+            <div className="toast__header">
+              { eventToastOutput(toastView).header }
+            </div>
+            <div className="toast-text">
+              { eventToastOutput(toastView).text }
+            </div>
+
+          </Toast>
+        }
+
         { modalView &&
           <div className="modal-container">
             <div className="modal-background" onClick={ (ev)=>{ if (ev.target===ev.currentTarget) setModalView(null); } } >
-              { modalView==='check in'
+              { // check in is the only FormModal - if it's not check in, use an InfoModal which does more automatically
+              modalView==='check in'
                 ? <FormModal
                     modal = { modalView }
                     clearModal= { ()=>{ setModalView(null) } }
@@ -649,15 +740,16 @@ return(<>
                     <div className="hype-small">Refunded to:</div>
                     { caughtEvents
                         .filter(event=> event.eventName==='venuePotDisbursed')
+                        .sort(event=> prioritiseThirdPartyEvents(event, ownAddress))
                         .map (event=>{
                           const { returnValues } = event;
                           const { amount, by, to } = returnValues;
                           return <div className={ cN("w100") }>
                             <span className={ cN("address42", "w70") }>{ to } </span>
                             <span className={ cN("address42", "w30r") }>
-                              <div className={ cN("hype") }>{ niceNum(amount/1000) }k TT</div>
+                              <div className={ cN("hype") }>{ kiloNiceNum(amount) }TT</div>
                             { price &&
-                              <div className={ cN("hype-small","sub-right") }> (USD { niceNum(amount*price) })</div>
+                              <div className={ cN("hype-small","sub-righToastt") }> (USD { niceNum(amount*price) })</div>
                             }
                             </span>
                          </div>
@@ -671,7 +763,7 @@ return(<>
                 : <>
                     <div className={ cN("modal-info__header", "w100", "hype-small") }> Reputation update </div>
                     { caughtEvents
-                        .filter(event=> event.eventName==='repRefund' && 'event.returnValues.staker===ownAddress')
+                        .filter(event=> event.eventName==='repRefund' && event.returnValues.staker===ownAddress)
                         .map (event=>{
                           const { returnValues } = event;
                           const { staker, staked, refunded } = returnValues;

@@ -1,0 +1,94 @@
+body {
+  height: 100%;
+  min-height: 100%;
+  position: fixed;
+  top: 0;
+  left: 0;
+  bottom: 0;
+  right: 0;
+  overflow: auto;
+
+}
+
+.backstage {
+  position: fixed;
+  top: 0;
+  left: 0;
+  bottom: 0;
+  right: 0;
+  overflow: auto;
+  height: 100vh;
+  min-height: 100vh;
+}
+
+.backstage-text {
+  background : #cbd9;
+  padding: 1vw;
+  border-radius: 1vw;
+  font-size : 3.5vw;
+  font-weight: 600;
+  color: black;
+}
+
+.backstage-text span {
+  margin-top: 1vh;
+  margin-bottom: 3vh;
+  padding-bottom: 0.25vh;
+  background-color: transparent;
+}
+
+.form-section__header {
+  font-size: 5vw;
+}
+
+.main-header {
+  text-align: center;
+  font-size: 6vw;
+}
+
+.bar-horiz__thick__padded {
+  position: relative;
+  clear: both;
+  margin-top: 1vh;
+  margin-bottom: 1vh;
+  left: 5%;
+  width: 90%;
+  height: 1vh;
+  border-radius: 1vw;
+  background-color: #636a;
+}
+
+.toggle-button {
+  width: 10vw;
+  min-width: 10vw;
+  border-radius: 1vw;
+  border: 1px solid #312;
+  background-color: #625 !important;
+  color: #fcd;
+}
+
+
+.bg_rigger {
+  background: url('../assets/backstage tall with rigger h-1600.jpg');
+  background-opacity : 0.5;
+  background-repeat: no-repeat;
+  background-attachment: fixed;
+  background-position: 100% 100%;
+  background-size: 200vw;
+}
+
+.bg_openair {
+  background: url('../assets/openair stage h851.jpg');
+  background-repeat: no-repeat;
+  background-attachment: fixed;
+  background-position: 100% 100%;
+  background-size: 100vw 100vh;
+}
+
+.qrcode__large {
+  position: absolute;
+  top: 10%;
+  left: 5%;
+  width : 90%;
+  border-radius: 4%;
+}

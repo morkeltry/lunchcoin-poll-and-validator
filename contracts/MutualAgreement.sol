@@ -22,6 +22,8 @@ contract MutualAgreement {
       uint rep;
       TimeRange[] available;
       uint availabilityExpires;
+      bool locked;
+      bool released;
       mapping (address => uint) venueContribution;
     }
 
@@ -39,12 +41,12 @@ contract MutualAgreement {
       address venuePayer;
       uint8 minParticipants;
       TimeRange eventTime;
+      bool stakingClosed;
       bool proofsWindowClosed;
       mapping (address => Stake) staked;
       mapping (address => uint16) ownCheckInIndex;           // 1-indexed: ownCheckInIndex[s]==0 => nothing there.
       Dibs[] dibsCalled;
     }
-
 
     struct PollExternal {
       address initiator;
@@ -80,6 +82,7 @@ contract MutualAgreement {
     address[] knownMiners;
     uint initialRep = 2000;      // will move to Poll
     uint topupRep = 1500;        // will move to Poll
+    bool anyoneCanMine = true;   // will move to Poll
     address __selfAddy ;
 
 
@@ -94,7 +97,8 @@ contract MutualAgreement {
     // constants: Do not use space in storage.
     uint8 constant vType=1;
     string constant vDesc = "mutual agreement";
-    bool usingRealMoney = false;
+    uint constant never = 5377017599;
+    bool constant usingRealMoney = false;
 
     struct proofCounter {
         bool fakeProof;
@@ -135,7 +139,7 @@ contract MutualAgreement {
     // }
 
     constructor () public {
-      uint initialRep = 2000;      // will move to Poll
+      uint initialRep = 2000;     // will move to Poll
       uint topupRep = 1500;       // will move to Poll
     }
 
@@ -179,7 +183,6 @@ function getValuesWhichtheFuckenConstructorShouldHaveSet () public returns (uint
         revert ('Not authorised to mine rep');
     }
 
-
     modifier isInitiator(string memory _poll) {
       if (pollData[_poll].initiator == msg.sender || pollData[_poll].initiator == address(0))
         _;
@@ -187,9 +190,9 @@ function getValuesWhichtheFuckenConstructorShouldHaveSet () public returns (uint
         revert ('Venue cost may only be set by initator of the poll');
     }
 
-    event logStuff (string);
-    modifier isStaker(string memory _poll) {
-      address[] memory stakers = getStakerAddresses(_poll);
+    // any staker OR venue contributor
+    function isStaker(string memory poll) public returns (bool) {
+      address[] memory stakers = getStakerAddresses(poll);
       bool senderIsPresent;
 
       for(uint i = 0; i < stakers.length; i++) {
@@ -197,10 +200,16 @@ function getValuesWhichtheFuckenConstructorShouldHaveSet () public returns (uint
           senderIsPresent = true;
         }
       }
-      require(senderIsPresent, "Function may only be called by a staker on this poll");
+      return senderIsPresent;
+    }
+
+    // only rep stakers, not venue contributors
+    modifier onlyStaker(string memory poll) {
+      require((isStaker(poll) && pollData[poll].staked[msg.sender].rep>0), "Function may only be called by a staker on this poll");
       _;
     }
 
+    event logStuff (string);
     function doEmit (string memory message) public {
       emit logStuff (message);
     }
@@ -295,17 +304,31 @@ function getValuesWhichtheFuckenConstructorShouldHaveSet () public returns (uint
       // tried a number of ways and it is always reverting (when called via checkIn)
     }
 
-    function setString (string memory _poll, string memory _mapName, uint8 _vt, string memory data) public {
-      bytes32 hash = keccak256(abi.encodePacked(_poll, encodeFunctionName(_mapName), _vt));
-      allTheData[hash] = stringToBytes32Array(data);
+    // function setString (string memory _poll, string memory _mapName, uint8 _vt, string memory data) public {
+    //   bytes32 hash = keccak256(abi.encodePacked(_poll, encodeFunctionName(_mapName), _vt));
+    //   allTheData[hash] = stringToBytes32Array(data);
+    // }
+
+
+    // NB vulnerable until proper poll factory in place, since isInitiator allows any caller if poll.iniator == 0x0
+    function setVenueCost (string memory poll, int cost) public isInitiator(poll) {
+      pollData[poll].venueCost = cost;
     }
 
-
-    // NB vulnerable until proper poll facoty in place, since isInitiator allows any caller if poll.iniator == 0x0
-    function setVenueCost (string memory _poll, int _cost) public isInitiator(_poll) {
-      pollData[_poll].venueCost = _cost;
+    // NB vulnerable until proper poll factory in place, since isInitiator allows any caller if poll.iniator == 0x0
+    event eventTimeSet(string poll, uint start, uint end);
+    function setEventTime (string memory poll, uint start, uint end) public isInitiator(poll) {
+      pollData[poll].eventTime = TimeRange(start, end);
+      emit eventTimeSet(poll, start, end);
     }
 
+    // NB vulnerable until proper poll factory in place, since isInitiator allows any caller if poll.iniator == 0x0
+    event eventStakingClosed(string poll, uint at);
+    function closeStaking (string memory poll) public isInitiator(poll) {
+      pollData[poll].stakingClosed = true;
+      releaseStakes(poll);
+      emit eventStakingClosed(poll, now);
+    }
 
     function setRep (string memory _poll, address _staker, uint _rep) public {
       rep[_staker] = _rep;
@@ -315,7 +338,40 @@ function getValuesWhichtheFuckenConstructorShouldHaveSet () public returns (uint
       return rep[_staker];
     }
 
-    function mineRep(address recipient) public returns (uint newRep) {
+    function addMiner(address miner) public onlyOwner() {
+      require(knownMiners.length < 65535, 'This aint the Yukon, buddy');
+
+      if (knownMiners.length < 50)
+        for(uint16 i=0; i < knownMiners.length; i++) {
+          if (knownMiners[i] == miner)
+            return;
+        }
+      knownMiners.push(miner);
+      }
+
+    function removeMiner(address miner) public onlyOwner() {
+      for(uint16 i=0; i < knownMiners.length; i++) {
+        if (knownMiners[i] == miner)
+          knownMiners[i]=address(0);
+      }
+    }
+
+    function mineRep(address recipient) public isMiner() returns (uint newRep) {
+      return doMine(recipient);
+    }
+
+    function anyoneMineRep() public returns (uint newRep) {
+      if (anyoneCanMine)
+        return doMine(msg.sender);
+      else
+        return 0;
+    }
+
+    function canAnyoneMine(bool answer) public onlyOwner() {
+      anyoneCanMine = answer;
+    }
+
+    function doMine(address recipient) private returns (uint newRep) {
       if (stakerKnown[recipient])
         newRep = topupRep;
       else {
@@ -336,7 +392,7 @@ function getValuesWhichtheFuckenConstructorShouldHaveSet () public returns (uint
       // msg.sender.call.value(amount)("");
     }
 
-    event newPollCreated(string);
+    event newPollCreated(string poll);
     function createPoll(string memory poll, address initiator, uint minStake, int venueCost, address venuePayer, uint8 participants) public {
       require (!isPoll(poll), 'Poll exists already.');
       require (minStake>0, 'minStake must be set');
@@ -349,27 +405,67 @@ function getValuesWhichtheFuckenConstructorShouldHaveSet () public returns (uint
       pollData[poll].venuePayer = venuePayer;
       pollData[poll].minParticipants = participants;
 
+
       emit newPollCreated(poll);
     }
 
+    function coversTimeRange (TimeRange memory outer, TimeRange memory inner) internal returns (bool) {
+      if (outer.start<=inner.start && inner.end<=outer.end)
+        return true;
+      else
+        return false;
+    }
 
+    function isCommittedToSomeTime (string memory poll, address staker) public returns (bool) {
+      for (uint16 i=0; i<pollData[poll].staked[staker].available.length; i++) {
+        if (coversTimeRange(pollData[poll].eventTime, pollData[poll].staked[staker].available[i]))
+          return true;
+      }
+      return false;
+    }
 
-    event whassahash(bytes);
-    event whassakeccack(bytes32);
+    event stakeReleased (string poll, address staker);
+    event stakeLocked (string poll, address staker);
+    function releaseStakes (string memory poll) isInitiator(poll) public {
+      address[] memory stakers = getStakerAddresses(poll);
+      bool eventTimeIsSet;
+
+      if (pollData[poll].eventTime.end>0 && pollData[poll].eventTime.end<never)
+        eventTimeIsSet = true;
+      for (uint16 i=0; i<stakers.length; i++) {
+        if (!eventTimeIsSet) {
+          pollData[poll].staked[stakers[i]].released=true;
+          emit stakeReleased(poll, stakers[i]);
+        } else
+          if (isCommittedToSomeTime(poll, stakers[i])) {
+            pollData[poll].staked[stakers[i]].locked=true;
+            emit stakeLocked(poll, stakers[i]);
+          } else {
+            pollData[poll].staked[stakers[i]].released=true;
+            emit stakeReleased(poll, stakers[i]);
+          }
+      }
+    }
+
+    // event whassahash(bytes);
+    // event whassakeccack(bytes32);
     function getStakersProof (string memory _poll, address _staker) public returns (bytes32[] memory) {
       bytes32 hash = keccak256(abi.encodePacked(_poll, encodeFunctionName("proof"), _staker, vType));
       return (allTheData[hash]);
     }
 
-    function getProofEmitHashesOnlyWithStaker (string memory _poll, string memory _mapName, address _stakerOrZero, uint8 _vt, bytes32[] memory data) public {
-      bytes32 hash = keccak256(abi.encodePacked(_poll, encodeFunctionName(_mapName), _stakerOrZero, _vt));
-      emit gpResult(_poll, _mapName, _stakerOrZero, _vt, getStakersProof(_poll, _stakerOrZero));
-    }
+    // function getProofEmitHashesOnlyWithStaker (string memory _poll, string memory _mapName, address _stakerOrZero, uint8 _vt, bytes32[] memory data) public {
+    //   bytes32 hash = keccak256(abi.encodePacked(_poll, encodeFunctionName(_mapName), _stakerOrZero, _vt));
+    //   emit gpResult(_poll, _mapName, _stakerOrZero, _vt, getStakersProof(_poll, _stakerOrZero));
+    // }
 
 
-    function addStaker (string memory _poll, address _staker, uint8 _vt) public {
-      bytes32 hash = keccak256(abi.encodePacked(_poll, encodeFunctionName("staker"), _vt));
-      allTheData[hash].push (bytes32(bytes20(_staker)));
+    function addStaker (string memory poll, address staker, uint8 vt) public {
+      bytes32[] memory rawStakers = get(poll, "staker");
+      require(rawStakers.length < 65535, 'Too many stakes. Try a pitchfork instead');
+
+      bytes32 hash = keccak256(abi.encodePacked(poll, encodeFunctionName("staker"), vt));
+      allTheData[hash].push (bytes32(bytes20(staker)));
     }
 
     function getStakerAddresses (string memory _poll ) public view returns (address[] memory) {
@@ -396,15 +492,17 @@ function getValuesWhichtheFuckenConstructorShouldHaveSet () public returns (uint
       return (proofs);
     }
 
-    event gpResult(string, string, address, uint8, bytes32[]);
-    function setCheckedInWithStaker (string memory _poll, string memory _mapName, address _impersonatedStaker, uint8 _vt, bytes32[] memory data) public {
-      bytes32 hash = keccak256(abi.encodePacked(_poll, encodeFunctionName(_mapName), _impersonatedStaker, _vt));
-      emit whassahash(abi.encodePacked(_poll, encodeFunctionName(_mapName), _impersonatedStaker, _vt));
-      emit whassakeccack(hash);
-      allTheData[hash] = data;
-      emit gpResult(_poll, _mapName, _impersonatedStaker, _vt, getStakersProof(_poll, _impersonatedStaker));
-    }
+    // event gpResult(string, string, address, uint8, bytes32[]);
+    // function setCheckedInWithStaker (string memory _poll, string memory _mapName, address _impersonatedStaker, uint8 _vt, bytes32[] memory data) public {
+    //   bytes32 hash = keccak256(abi.encodePacked(_poll, encodeFunctionName(_mapName), _impersonatedStaker, _vt));
+    //   emit whassahash(abi.encodePacked(_poll, encodeFunctionName(_mapName), _impersonatedStaker, _vt));
+    //   emit whassakeccack(hash);
+    //   allTheData[hash] = data;
+    //   emit gpResult(_poll, _mapName, _impersonatedStaker, _vt, getStakersProof(_poll, _impersonatedStaker));
+    // }
 
+
+    // deprecated - use addProof
     function checkIn (string memory _poll, address _impersonatedStaker, address[] memory _newProof) public {
       address sender = _impersonatedStaker;   //  should be msg.sender
       uint16 idx = pollData[_poll].ownCheckInIndex[sender];
@@ -434,7 +532,7 @@ function getValuesWhichtheFuckenConstructorShouldHaveSet () public returns (uint
       pollData[_poll].ownCheckInIndex[sender] = idx+1;
     }
 
-    event proofUpdated(address);
+    event proofUpdated(address staker);
     function addProof (string memory _poll, address _impersonatedStaker, address[] memory _newProof) public {
       address sender = _impersonatedStaker;   //  should be msg.sender
       bytes32[] memory proofB32 = new bytes32[](_newProof.length);
@@ -451,14 +549,19 @@ function getValuesWhichtheFuckenConstructorShouldHaveSet () public returns (uint
       addProof (_poll, msg.sender, _newProof);
     }
 
+    // TODO!
+    function allstakersSubmittedProofs (string memory poll) public returns (bool) {
+      return true;
+    }
 
+
+    // NB allstakersSubmittedProofs is still TODO!
     event proofsWindowClosed (string poll, address by);
-    function closeProofsWindow (string memory _poll) public {
-      // require (isElibgible(msg.sender), "msg.sender did not stake in this poll");
-      // require (time.now()>.pollData[_poll].eventTime.end || AllstakersSubmittedProofs(), "Not all stakers have submitted proofs and the event is not yet over");
+    function closeProofsWindow (string memory poll) onlyStaker(poll) public {
+      require (now > pollData[poll].eventTime.end || allstakersSubmittedProofs(poll), "Not all stakers have submitted proofs and the event is not yet over");
       // require (, "");
-      pollData[_poll].proofsWindowClosed = true;
-      emit proofsWindowClosed (_poll, msg.sender);
+      pollData[poll].proofsWindowClosed = true;
+      emit proofsWindowClosed (poll, msg.sender);
 
       // NB here assuming that poll can be closed once all stakers have submitted a proof.
       // The alternative would allow a non-attending staker to hold up refunds (by refusing to submit 'I can't make it')
@@ -475,19 +578,44 @@ function getValuesWhichtheFuckenConstructorShouldHaveSet () public returns (uint
     }
 
 
-    event stakeNotAccepted(address, string);
-    event disreputableStakerIgnored(address, string);
-    event staked(address, string, uint);
-    event venueContribution(address, string, uint);
+    event expiryWasSet(string poll, address staker, uint availabilityExpires);
+    event availabilityAdded(string poll, address staker, uint start, uint end);
+    function addAvailability (string memory poll, uint start, uint end, uint confirmBefore) onlyStaker(poll) public {
+      require (end>now, 'Cannot add availability in the past');
+      require ((confirmBefore==0 || confirmBefore>=now), 'Cannot set expiry in the past');
+      require(knownMiners.length < 65535, 'Too available. Have some self-respect');
+
+      TimeRange memory available = TimeRange(start, end);
+
+      if (confirmBefore > pollData[poll].staked[msg.sender].availabilityExpires) {
+        pollData[poll].staked[msg.sender].availabilityExpires = confirmBefore;
+        emit expiryWasSet(poll, msg.sender, confirmBefore);
+      }
+
+      pollData[poll].staked[msg.sender].available.push(available);
+      emit availabilityAdded(poll, msg.sender, start, end);
+    }
+
+
+    event stakeNotAccepted(address staker, string poll);
+    event disreputableStakerIgnored(address staker, string poll);
+    event staked(address staker, string poll, uint amount);
+    event madeVenueContribution(address staker, string poll, uint amount);
     // TODO: accept one TimeRange for all stakes.
     // TODO: accept TimeRanges per stake (need to change up the data structures!)
-    function addStake (string memory poll, uint repStake, address beneficiary) onlyOwner payable public {
-      address sender = msg.sender;
-      if (msg.value>0) {
+
+    // NB addFakeStake only does NOT add anyone to stakers unless there no existing stakers (do it manually)
+    function addFakeStake (string memory poll, address impersonatedStaker, uint repStake, uint venueContribution, address beneficiary ) onlyOwner public {
+      bytes32[] memory rawStakers = get(poll, "staker");
+      address sender = impersonatedStaker;
+
+      if (venueContribution>0) {
         uint currentVC = pollData[poll].staked[sender].venueContribution[beneficiary];
-        pollData[poll].staked[sender].venueContribution[beneficiary] += msg.value;
-        pollData[poll].venuePot += msg.value;
-        emit staked(sender, poll, msg.value);
+        pollData[poll].staked[sender].venueContribution[beneficiary] += venueContribution;
+        pollData[poll].venuePot += venueContribution;
+        if (rawStakers.length==0)
+          addStaker (poll, sender, vType);
+        emit madeVenueContribution(sender, poll, venueContribution);
       }
       if (repStake>0) {
         if (repStake<pollData[poll].minStake) {
@@ -496,31 +624,88 @@ function getValuesWhichtheFuckenConstructorShouldHaveSet () public returns (uint
         if (rep[sender]<repStake) {
           emit disreputableStakerIgnored(sender, poll);
         } else {
-          rep[sender] -= repStake;
-          pollData[poll].staked[sender].rep += repStake;
-          emit staked(sender, poll, repStake);
+          if (!pollData[poll].stakingClosed) {
+            rep[sender] -= repStake;
+            if (rawStakers.length==0)
+              addStaker (poll, sender, vType);
+            pollData[poll].staked[sender].rep += repStake;
+            emit staked(sender, poll, repStake);
+          } else {
+            emit staked(sender, poll, 0);
+          }
         }
       }
     }
 
-    function addFakeStake (string memory _poll, address _impersonatedStaker, uint _rep, uint _venueContribution, address _beneficiary ) public {
-      address sender = _impersonatedStaker;
-      if (_venueContribution>0) {
-        uint currentVC = pollData[_poll].staked[sender].venueContribution[_beneficiary];
-        pollData[_poll].staked[sender].venueContribution[_beneficiary] += _venueContribution;
-        pollData[_poll].venuePot += _venueContribution;
-        emit staked(sender, _poll, _venueContribution);
+    function addUnboundedStake (string memory poll, uint repStake, address beneficiary) payable public {
+      address sender = msg.sender;
+      if (msg.value>0) {
+        uint currentVC = pollData[poll].staked[sender].venueContribution[beneficiary];
+        pollData[poll].staked[sender].venueContribution[beneficiary] += msg.value;
+        pollData[poll].venuePot += msg.value;
+        if (!isStaker(poll))
+          addStaker (poll, sender, vType);
+        emit madeVenueContribution(sender, poll, msg.value);
       }
-      if (_rep>0) {
-        if (_rep<pollData[_poll].minStake) {
-          emit stakeNotAccepted(sender, _poll);              // aNt!p4ttrnn ###
+      if (repStake>0) {
+        if (repStake<pollData[poll].minStake) {
+          emit stakeNotAccepted(sender, poll);              // aNt!p4ttrnn ###
         } else
-        if (rep[sender]<_rep) {
-          emit disreputableStakerIgnored(sender, _poll);
+        if (rep[sender]<repStake) {
+          emit disreputableStakerIgnored(sender, poll);
         } else {
-          rep[sender] -= _rep;
-          pollData[_poll].staked[sender].rep += _rep;
-          emit staked(sender, _poll, _rep);
+          if (!pollData[poll].stakingClosed) {
+            rep[sender] -= repStake;
+            if (!isStaker(poll))
+              addStaker (poll, sender, vType);
+            pollData[poll].staked[sender].rep += repStake;
+            emit staked(sender, poll, repStake);
+          } else {
+            emit staked(sender, poll, 0);
+          }
+        }
+      }
+    }
+
+    function addStake (string memory poll, uint repStake, address beneficiary, TimeRange[] memory availability, uint confirmBefore) payable public {
+      require ((confirmBefore==0 || confirmBefore>=now), 'Cannot set expiry in the past');
+
+      address sender = msg.sender;
+      if (msg.value>0) {
+        uint currentVC = pollData[poll].staked[sender].venueContribution[beneficiary];
+        pollData[poll].staked[sender].venueContribution[beneficiary] += msg.value;
+        pollData[poll].venuePot += msg.value;
+        if (!isStaker(poll))
+          addStaker (poll, sender, vType);
+        emit madeVenueContribution(sender, poll, msg.value);
+      }
+      if (repStake>0) {
+        if (repStake<pollData[poll].minStake) {
+          emit stakeNotAccepted(sender, poll);              // aNt!p4ttrnn ###
+        } else
+        if (rep[sender]<repStake) {
+          emit disreputableStakerIgnored(sender, poll);
+        } else {
+          if (!pollData[poll].stakingClosed) {
+            rep[sender] -= repStake;
+            if (!isStaker(poll))
+              addStaker (poll, sender, vType);
+            pollData[poll].staked[sender].rep += repStake;
+            emit staked(sender, poll, repStake);
+          } else {
+            emit staked(sender, poll, 0);
+          }
+        }
+      }
+
+      if (confirmBefore > pollData[poll].staked[sender].availabilityExpires) {
+        pollData[poll].staked[sender].availabilityExpires = confirmBefore;
+        emit expiryWasSet(poll, msg.sender, confirmBefore);
+      }
+
+      for(uint16 i=0; i < availability.length; i++) {
+        if (availability[i].end > now) {
+          addAvailability (poll, availability[i].start, availability[i].end, confirmBefore);
         }
       }
     }
@@ -547,13 +732,13 @@ function getValuesWhichtheFuckenConstructorShouldHaveSet () public returns (uint
 
     // NB refundVenueStake and refundStake BOTH call this, so one will revert.
     // TODO: Add checks into those functions
-    event emptyStakeRemoved (string _poll, address _staker);
+    event emptyStakeRemoved (string poll, address staker);
     function removeEmptyStake (string memory _poll, address _staker) public {
-      // uint rep=pollData[_poll].staked[msg.sender].rep;
-      // uint venueContributions = totalVenueContribs (_poll, _staker);
-      // require (rep==0 && venueContributions==0, 'Staker has non empty stake or venue contribution');
-      // delete pollData[_poll].staked[msg.sender];
-      // emit emptyStakeRemoved(_poll, msg.sender);
+      uint rep=pollData[_poll].staked[msg.sender].rep;
+      uint venueContributions = totalVenueContribs (_poll, _staker);
+      require (rep==0 && venueContributions==0, 'Staker has non empty stake or venue contribution');
+      delete pollData[_poll].staked[msg.sender];
+      emit emptyStakeRemoved(_poll, msg.sender);
     }
 
     // NB these require returning complex type.
@@ -601,10 +786,12 @@ function getValuesWhichtheFuckenConstructorShouldHaveSet () public returns (uint
 
     // NB proportional refunds are not vulnerable to gas exhaustion but covering refunds may be.
     // Hence populating the 0x0 staker's stake with the refunded stakes, to maintain the size of stakes compared to venuePot.
-    event venuePotDisbursed (string _poll, address to, address by, uint amount);
+    event venuePotDisbursed (string poll, address to, address by, uint amount);
     // Any staker can call refund of excess venue pot.
     // Disbursement to venue payer must wait until initiator has actively set venue payer (eg to self);
-    function refundVenueStakes(string memory _poll) public isStaker(_poll) {
+    // NB ONLY successful stakers on the poll will have venueContribs refunded
+    // -need some way for non rep stakers to be included in getStakerAddresses
+    function refundVenueStakes(string memory _poll) public onlyStaker(_poll) {
       address[] memory stakers = getStakerAddresses(_poll);
       int equalShare = (pollData[_poll].venueCost) / int(stakers.length);
       uint pot = pollData[_poll].venuePot;
@@ -697,8 +884,8 @@ function getValuesWhichtheFuckenConstructorShouldHaveSet () public returns (uint
 
 
     event repRefund (address staker, uint staked, uint refunded);
-    event refundFail (address _staker);
-    function refundStake (string memory _poll, bytes32 _reveal) public isStaker(_poll) {
+    event refundFail (address staker);
+    function refundStake (string memory _poll, bytes32 _reveal) public onlyStaker(_poll) {
       require (pollData[_poll].staked[msg.sender].rep > 0, 'Sender has nothing staked for this poll');
       // Will ownCheckInIndex be a thing?
       // require (pollData[_poll].ownCheckInIndex[msg.sender] > 0, 'Sender has not submitted an attendance proof for this poll');
@@ -711,9 +898,13 @@ function getValuesWhichtheFuckenConstructorShouldHaveSet () public returns (uint
         return;
       }
 
-      uint refund = num.mul(pollData[_poll].staked[msg.sender].rep) / denom;
-      if (rep[msg.sender] + refund > maxRep())
-        refund = pollData[_poll].staked[msg.sender].rep;
+      // refund = original stake, but if accepted (ie event was in time range) increase by multiplier, up until the maximum.
+      uint refund = pollData[_poll].staked[msg.sender].rep;
+      if (pollData[_poll].staked[msg.sender].locked) {
+        refund = num.mul(pollData[_poll].staked[msg.sender].rep) / denom;
+        if (rep[msg.sender] + refund > maxRep())
+          refund = maxRep()-rep[msg.sender];
+      }
 
       pollData[_poll].staked[msg.sender].rep = 0;
       rep[msg.sender] += refund;
@@ -750,7 +941,8 @@ function getValuesWhichtheFuckenConstructorShouldHaveSet () public returns (uint
     }
 
 
-    event numberLoggerLikeImUsingFuckingJava (string, uint);
+    // event numberLoggerLikeImUsingFuckingJava (string, uint);
+
     // cheapo validator - this one just counts how many people included you in their proof, with no attempt at making the proofs agree.
     // currently counts votes in favour of each stakers, which will help, but doesn't flag which poroofs disagree
     function validate(address _pollContract, string memory _poll, bytes32 _reveal) public returns (bool) {
@@ -779,7 +971,7 @@ function getValuesWhichtheFuckenConstructorShouldHaveSet () public returns (uint
             if (stakers[i]==msg.sender)
               sendersIndex=i+1;
         }
-        // sendersIndex will not be 0, since validate is private and should be called only be refundStake, which has isStaker modifier
+        // sendersIndex will not be 0, since validate is private and should be called only be refundStake, which has onlyStaker modifier
         assert (sendersIndex>0);
 
         for(i = 0; i < stakers.length; i++) {
@@ -830,17 +1022,17 @@ function getValuesWhichtheFuckenConstructorShouldHaveSet () public returns (uint
 
     // split a serialised string of addresses (as received from main contract).
     // NB - only works in this validator - other validators will use multiple types within serialised string
-    function splitToAddresses(string memory _concatenated) internal pure returns (address[] memory result) {
-        strings.slice memory delim = ",".toSlice();
-        strings.slice memory source = _concatenated.toSlice();
-        address[] memory parts = new address[](source.count(delim));
-
-        for(uint i = 0; i < parts.length; i++) {
-           parts[i] = source.split(delim).toString().toAddress();
-        }
-        return parts;
-
-    }
+    // function splitToAddresses(string memory _concatenated) internal pure returns (address[] memory result) {
+    //     strings.slice memory delim = ",".toSlice();
+    //     strings.slice memory source = _concatenated.toSlice();
+    //     address[] memory parts = new address[](source.count(delim));
+    //
+    //     for(uint i = 0; i < parts.length; i++) {
+    //        parts[i] = source.split(delim).toString().toAddress();
+    //     }
+    //     return parts;
+    //
+    // }
 
     function bytesToAddress(bytes memory _bytes) public pure returns (address) {
       address tempAddress;
@@ -850,36 +1042,36 @@ function getValuesWhichtheFuckenConstructorShouldHaveSet () public returns (uint
       return tempAddress;
     }
 
-    function toString(address account) public pure returns(string memory) {
-        return toString(abi.encodePacked(account), 5);
-    }
-
-    function toString(uint256 value) public pure returns(string memory) {
-        return toString(abi.encodePacked(value), 0);
-    }
-
-    function toString(bytes32 value) public pure returns(string memory) {
-        return toString(abi.encodePacked(value), 0);
-    }
-
-    function toString(bytes memory data, uint16 len) public pure returns(string memory) {
-        bytes memory alphabet = "0123456789abcdef";
-        uint16 strLen = 20;  // It's 20. The length is just fucking 20.  uint16(data.length);
-        // Pretty simple if statement - why won't it work ?
-        // if (len>0) {
-        //     strLen = len;
-        // }
-
-
-        bytes memory str = new bytes(2 + strLen * 2);
-        str[0] = '0';
-        str[1] = 'x';
-        for (uint i = 0; i < strLen; i++) {
-            str[2+i*2] = alphabet[uint(uint8(data[i] >> 4))];
-            str[3+i*2] = alphabet[uint(uint8(data[i] & 0x0f))];
-        }
-        return string(str);
-    }
+    // function toString(address account) public pure returns(string memory) {
+    //     return toString(abi.encodePacked(account), 5);
+    // }
+    //
+    // function toString(uint256 value) public pure returns(string memory) {
+    //     return toString(abi.encodePacked(value), 0);
+    // }
+    //
+    // function toString(bytes32 value) public pure returns(string memory) {
+    //     return toString(abi.encodePacked(value), 0);
+    // }
+    //
+    // function toString(bytes memory data, uint16 len) public pure returns(string memory) {
+    //     bytes memory alphabet = "0123456789abcdef";
+    //     uint16 strLen = 20;  // It's 20. The length is just fucking 20.  uint16(data.length);
+    //     // Pretty simple if statement - why won't it work ?
+    //     // if (len>0) {
+    //     //     strLen = len;
+    //     // }
+    //
+    //
+    //     bytes memory str = new bytes(2 + strLen * 2);
+    //     str[0] = '0';
+    //     str[1] = 'x';
+    //     for (uint i = 0; i < strLen; i++) {
+    //         str[2+i*2] = alphabet[uint(uint8(data[i] >> 4))];
+    //         str[3+i*2] = alphabet[uint(uint8(data[i] & 0x0f))];
+    //     }
+    //     return string(str);
+    // }
 
 
     function bytes32ToBytes(bytes32 _bytes32) public pure returns (bytes memory){
@@ -914,84 +1106,85 @@ function getValuesWhichtheFuckenConstructorShouldHaveSet () public returns (uint
         return string(bytesArray);
     }
 
-    function bytes32ArrayToString (bytes32[] memory data) public pure returns (string memory ) {
-        bytes memory bytesString = new bytes(data.length * 32);
-        uint urlLength;
-        uint i=0;
-        for (i=0; i<data.length; i++) {
-            for (uint j=0; j<32; j++) {
-                byte char = byte(bytes32(uint(data[i]) * 2 ** (8 * j)));
-                if (char != 0) {
-                    bytesString[urlLength] = char;
-                    urlLength += 1;
-                }
-            }
-        }
-        bytes memory bytesStringTrimmed = new bytes(urlLength);
-        for (i=0; i<urlLength; i++) {
-            bytesStringTrimmed[i] = bytesString[i];
-        }
-        return string(bytesStringTrimmed);
-    }
+    // function bytes32ArrayToString (bytes32[] memory data) public pure returns (string memory ) {
+    //     bytes memory bytesString = new bytes(data.length * 32);
+    //     uint urlLength;
+    //     uint i=0;
+    //     for (i=0; i<data.length; i++) {
+    //         for (uint j=0; j<32; j++) {
+    //             byte char = byte(bytes32(uint(data[i]) * 2 ** (8 * j)));
+    //             if (char != 0) {
+    //                 bytesString[urlLength] = char;
+    //                 urlLength += 1;
+    //             }
+    //         }
+    //     }
+    //     bytes memory bytesStringTrimmed = new bytes(urlLength);
+    //     for (i=0; i<urlLength; i++) {
+    //         bytesStringTrimmed[i] = bytesString[i];
+    //     }
+    //     return string(bytesStringTrimmed);
+    // }
 
-    function stringToBytes32Array(string memory source) public pure returns (bytes32[] memory result) {
-        // uint16 words = uint16( (bytes(source).length+31)/32 );
-        uint16 words = 1;
-        for(uint16 i=0; i<=words; i++) {
-          uint16 offset = 32*(i+1);
-          bytes32 word;
-          assembly {
-            word := mload(add(source, offset))
-          }
-          result[i] = word;
-        }
-        return result;
-    }
+    // function stringToBytes32Array(string memory source) public pure returns (bytes32[] memory result) {
+    //     // uint16 words = uint16( (bytes(source).length+31)/32 );
+    //     uint16 words = 1;
+    //     for(uint16 i=0; i<=words; i++) {
+    //       uint16 offset = 32*(i+1);
+    //       bytes32 word;
+    //       assembly {
+    //         word := mload(add(source, offset))
+    //       }
+    //       result[i] = word;
+    //     }
+    //     return result;
+    // }
 
     // TODO !!!
     // function bytes32ToUint (bytes32 data) returns (uint) {
     //     return 2;
     // }
 
-    function bytesSplit32(bytes  memory data) public pure returns (bytes32, bytes memory ) {
-        uint8 splitAt = 32;                             // all (if variable split, pass in splitAt)
-        uint256 taillength = 0;
-        if (data.length > splitAt)
-            taillength = data.length-splitAt;
-        bytes32 temp;
-        // bytes32 head;                                   // 32b split
-        bytes memory head = new bytes(splitAt);         // variable length split
-        bytes memory tail = new bytes(taillength);
-        for(uint i=0;i<=data.length-1;i++){
-            if (i<splitAt)
-                head[i] = bytes(data)[i] ;
-            else
-                tail[i-splitAt] = bytes(data)[i] ;
-        }
-        return (bytesToBytes32(head), tail);
-    }
+    // function bytesSplit32(bytes  memory data) public pure returns (bytes32, bytes memory ) {
+    //     uint8 splitAt = 32;                             // all (if variable split, pass in splitAt)
+    //     uint256 taillength = 0;
+    //     if (data.length > splitAt)
+    //         taillength = data.length-splitAt;
+    //     bytes32 temp;
+    //     // bytes32 head;                                   // 32b split
+    //     bytes memory head = new bytes(splitAt);         // variable length split
+    //     bytes memory tail = new bytes(taillength);
+    //     for(uint i=0;i<=data.length-1;i++){
+    //         if (i<splitAt)
+    //             head[i] = bytes(data)[i] ;
+    //         else
+    //             tail[i-splitAt] = bytes(data)[i] ;
+    //     }
+    //     return (bytesToBytes32(head), tail);
+    // }
 
     // calls fallback function of pollAddress, passing 4 byte encoded function name to remote contract to select method.
     // NB future better: just get the ABI of the finished Poll conmtract, and use that!
     // NB in sol 0.6 + fallback cannot return anything
     // NB future optimisation : we are not using the functionality of string here, since string must have come from a bytes32
-    event CrossContractValidateBegin();
-    event CrossContractValidateEnd();
-    function crossContractCall (bytes4 fnNameHash, string  memory poll, uint256 valid, uint8 vt) public returns (bytes32[] memory) {
-    address pollContract = pollAddress;
 
-        emit CrossContractValidateBegin();
-        assembly {
-            let ptr := mload(0x40)
-            calldatacopy(ptr, 0, calldatasize)
-            let result := delegatecall(gas, pollContract, ptr, calldatasize, 0, 0)
-            let size := returndatasize
-            returndatacopy(ptr, 0, size)
-            switch result
-            case 0 { revert(ptr, size) }
-            default { return(ptr, size) }
-        }
-        emit CrossContractValidateEnd();
-    }
+    // event CrossContractValidateBegin();
+    // event CrossContractValidateEnd();
+    // function crossContractCall (bytes4 fnNameHash, string  memory poll, uint256 valid, uint8 vt) public returns (bytes32[] memory) {
+    // address pollContract = pollAddress;
+    //
+    //     emit CrossContractValidateBegin();
+    //     assembly {
+    //         let ptr := mload(0x40)
+    //         calldatacopy(ptr, 0, calldatasize)
+    //         let result := delegatecall(gas, pollContract, ptr, calldatasize, 0, 0)
+    //         let size := returndatasize
+    //         returndatacopy(ptr, 0, size)
+    //         switch result
+    //         case 0 { revert(ptr, size) }
+    //         default { return(ptr, size) }
+    //     }
+    //     emit CrossContractValidateEnd();
+    // }
 
 }
