@@ -11,8 +11,8 @@ if (envVars.length>2)
 
 
 
-// const environment = 'production';
-const environment = process.env.REACT_APP_NODE_ENV || process.env.NODE_ENV || 'production';
+const environment = 'production';
+// const environment = process.env.REACT_APP_NODE_ENV || process.env.NODE_ENV || 'production';
 let authWeb3Type = environment==='production' ? 'browser' : 'local';
 
 let providerUrl = {
@@ -24,6 +24,7 @@ let web3;
 let authWeb3;
 let wsProvider = new Web3.providers.WebsocketProvider(providerUrl,{timeout: 4800000} );
 let wpUp = true;
+let awaitAccess;
 
 web3 = new Web3(wsProvider);
 if (!web3.eth.net)
@@ -92,10 +93,8 @@ let IMPLEMENTATION_INSTANCE;
 let IMPLEMENTATION_INSTANCE_FOR_SEND;
 let IMPLEMENTATION_ADDRESS;
 
-let OWN_ADDRESS;
 let availableAccounts;
-
-let awaitAccess;
+let OWN_ADDRESS;
 
 let d;
 const time = d=> d.toTimeString().slice(0,8);
@@ -117,6 +116,20 @@ const wpIsUp = async (timeout)=> new Promise ((resolve, reject)=> {
       clearInterval(t);
       reject(`Gave up trying websocket after ${timeout}ms.`);
     })
+})
+
+
+export const refetchOwnAddress = ()=> new Promise( async (resolve, reject) => {
+  if (!authWeb3.eth)
+    reject (new Error('no web3 provider able to provide account info'));
+  // assume awaitAccess is already a Promise, since refetchOwnAddress should not be called until after connnectToWeb3 has at least been started.
+  await awaitAccess;
+  authWeb3.eth.getAccounts((err, accounts) => {
+    OWN_ADDRESS = accounts[0];
+    setTimeout(()=>{ awaitAccess = null; }, 1);
+    if (err) reject(err);
+    resolve(OWN_ADDRESS)
+  });
 })
 
 export function connectToWeb3() {
@@ -144,6 +157,9 @@ export function connectToWeb3() {
         console.log(`PollArtifacts does not have the current network! ${NETWORK_ID}`);
       if (!ValidatorArtifacts.networks[NETWORK_ID])
         console.log(`ValidatorArtifacts does not have the current network! ${NETWORK_ID}`);
+
+      if (!TokenProxyArtifacts.networks[NETWORK_ID] || !PollArtifacts.networks[NETWORK_ID] || !ValidatorArtifacts.networks[NETWORK_ID])
+        reject (new Error(environment === 'production' ? 'The lunchcoin app is searching for a version of the smart contract which is out of date. This may mean that Lunchcoin is in the process of a contract update, which could take some time' : 'Contract mismatch'));
 
       ProxyAddress = TokenProxyArtifacts.networks[NETWORK_ID].address;
       PollAddress = PollArtifacts.networks[NETWORK_ID].address;
@@ -185,14 +201,20 @@ export function connectToWeb3() {
           default:
             break;
           }
+
           awaitAccess = awaitAccess
-            || window.ethereum.request && window.ethereum.request({ method: 'eth_requestAccounts' })
-            || window.ethereum.enable() ;
+            || ( authWeb3Type==='local' && Promise.resolve() )    // skip awaiting metamask if authWeb3Type==='local'
+            || window.ethereum.request && window.ethereum.request({ method: 'eth_requestAccounts' })  // else try new form of metamask enable request
+            || window.ethereum.enable() ;                                                 // or the older form
 
           awaitAccess
-            .then(()=>{
+            .then((promiseResponse)=>{
+              if (promiseResponse)
+                console.log('Works without this resolve value - this should only resolve to something if metamask is enabled and is new. Heres the resolve value:', promiseResponse);
               authWeb3.eth.getAccounts((err, accounts) => {
-                awaitAccess = null;
+                // avoid race condition with other bits awaiting awaitAccess
+                // setTimeout(cb, 0) should also work, as it should await whole event loop.
+                setTimeout(()=>{ awaitAccess = null; }, 1);
                 if (err) reject(err);
                 availableAccounts = accounts;
                 OWN_ADDRESS = accounts[0];
@@ -231,6 +253,24 @@ export function getImplementationAddress() {
 }
 
 
+export const runConstructorManuallyFfs = ()=> {
+  callTransaction('getInitialisedValues')
+    .then(response=> {
+      console.log('constructor should have set', response);
+      if (!response.some(el=> el || Number(el))) {
+        console.log(`but apparently it didn't`);
+        sendTransaction('fakeConstructor')
+          .then(response=> {
+            console.log('constructor values were set manually.');
+          })
+          .catch(e => {
+            console.log('could not manually set constructor values:', e);
+          })
+      }
+    });
+}
+
+
 export async function updateKnownPolls( options ) {
     // returns the list of events that are in the latest version of the contract
     // const { setWatchers } = options;
@@ -241,33 +281,44 @@ export async function updateKnownPolls( options ) {
 }
 
 
-export async function getImplementationEvents( options={ setWatchers:false }, eventListeners={} ) {
-    // returns the list of events that are in the latest version of the contract
-    let rv = [];
-    console.log(options);
-    console.log(eventListeners);
-    const { setWatchers } = options;
-    console.log(IMPLEMENTATION_ABI);
-    console.log(IMPLEMENTATION_INSTANCE.events);
-    IMPLEMENTATION_ABI.forEach(ele => {
-        if (ele.type === "event") {
-            console.log(`Found event`, ele);
-            let objectToBeAppended = {};
-            objectToBeAppended["eventName"] = ele["name"];
-            let argsObject = [];
+export async function getImplementationEvents(options={ setWatchers:false }, eventListeners={} ) {
+  // returns the list of events that are in the latest version of the contract
 
-            ele.inputs.forEach(input => {
-                argsObject.push(`${input.name} (${input.type})`);
-            });
-            if (setWatchers){
-              setEventWatcher(ele["name"], eventListeners[ele["name"]]);
-            }
-            objectToBeAppended["signature"] = ele["signature"];
+  const filterByPoll = pollUrl => watcher => (result, eventName)=> {
+    const eventPoll = result.returnValues.poll || result.returnValues._poll;
+    if ((pollUrl && pollUrl.length>0) && (eventPoll && eventPoll.length) && pollUrl != eventPoll) {
+      console.log(`${eventName} event ignored:`, result.returnValues);
+      return
+    } else
+      if (typeof watcher ==='function')
+        watcher(result, eventName);
+  }
 
-            rv.push(objectToBeAppended);
-        }
-    });
-    return rv;
+  let rv = [];
+  const { pollUrl, setWatchers } = options;
+  if (setWatchers)
+    console.log('listeners:',eventListeners);
+  console.log(IMPLEMENTATION_ABI);
+  console.log(IMPLEMENTATION_INSTANCE.events);
+  IMPLEMENTATION_ABI.forEach(ele => {
+    if (ele.type === "event") {
+      let objectToBeAppended = {};
+      objectToBeAppended["eventName"] = ele["name"];
+      let argsObject = [];
+
+      ele.inputs.forEach(input => {
+        argsObject.push(`${input.name} (${input.type})`);
+      });
+      if (setWatchers){
+        // NB setEventWatcher uses console.log as default action
+        setEventWatcher( ele["name"], filterByPoll(pollUrl)(eventListeners[ele["name"]]) );
+      }
+      objectToBeAppended["signature"] = ele["signature"];
+
+      rv.push(objectToBeAppended);
+    }
+  });
+  return rv;
 }
 
 const withErrLog = (eventName, actionFn)=> {
@@ -303,7 +354,7 @@ export async function getImplementationFunctions() {
     // returns the list of functions that are in the latest version of the contract
     let rv = [];
     IMPLEMENTATION_ABI.forEach(ele => {
-  console.log(ele.type);
+        console.log(`${ele.name}: ${ele.type}`);
         if (ele.type === "function") {
             // console.log(`Found function`, ele);
             let objectToBeAppended = {};
@@ -332,12 +383,15 @@ function checkForTokenHandlingArgument(arg) {
 
 function checkWithABI(currentFunc, functionName, args, resolve, reject) {
     let rv = [];
-  console.log(currentFunc.inputs);
-  console.log(functionName, args);
+    console.log(functionName, args);
+    console.log(currentFunc.inputs);
     currentFunc.inputs.forEach(input => {
-        console.log(input.name, args, args[input.name]);
+        if (typeof args[input.name]==='number')
+          args[input.name] = args[input.name].toString();
+        // console.log(input.name, args, args[input.name]);
         if (!args[input.name]) {
             console.log(`Will reject from checkWithABI: ${input.name} not found in ${functionName}'s args`,args);
+            console.log(` ${input.name}='${args[input.name]}' of type ${typeof args[input.name]}`);
             reject(new Error("INVALID ARGUMENTS: Invalid Number of arguments"));
         }
         let callValue = args[input.name];
@@ -372,6 +426,8 @@ function checkWithABI(currentFunc, functionName, args, resolve, reject) {
         } else if ((inputType === "string" || inputType.substr(0, 5) === "bytes") && !inputType.endsWith(']')) {
             // Nothing to do here bz everything is acceptable
             rv.push(callValue);
+        } else if (inputType === "bool") {
+            rv.push((callValue==='false' || callValue==='0') ? false : Boolean(callValue) );
         } else if (inputType.endsWith(']')) {
             console.log('Will parse:',callValue);
             rv.push( Array.isArray(callValue)
@@ -392,7 +448,8 @@ async function checkFunctionFormatting(functionName, args) {
         let found = ProxyABI.find(element => {
             return element.name === functionName;
         });
-        console.log(functionName, found);
+        if (found)
+          console.log(`Ooh - found ${functionName} in the Proxy without going to Implementation! :`, found);
         // Checks Proxy before Implementation!
         if (found) {
             // Function present in Proxy Contract
@@ -415,7 +472,7 @@ function unpackRVs (result, outputs) {
   // console.log(typeof result, result);
     outputs = outputs.forEach ((output,idx)=> {
       // console.log('output',output);
-      if (output && output["type"].substr(0, 4) === "uint") {
+      if (output && (output["type"].substr(0, 4) === "uint" || output["type"].substr(0, 3) === "int")) {
         if (typeof result==="object")
           result[idx] = (parseInt(result[idx].valueOf()));
         else if (typeof result==="object")        // why is this unreachable code here?
@@ -462,7 +519,7 @@ export function callTransaction(functionName, args) {
       checkFunctionFormatting(functionName, args)
         .then(async ({rv, outputs}) => {
           let attempt;
-          console.log(`Call to:`,IMPLEMENTATION_INSTANCE,functionName,args,rv);
+          console.log(`Call to (IMPLEMENTATION_INSTANCE):`,IMPLEMENTATION_INSTANCE,functionName,args,rv);
 
           let i=wsRetries;
           while (i--) {
@@ -471,8 +528,10 @@ export function callTransaction(functionName, args) {
             if (!web3.isReliable)
               await wpIsUp();
             attempt = IMPLEMENTATION_INSTANCE.methods[functionName](...rv)
-              .call({from: OWN_ADDRESS});
-            attempt
+              .call({from: OWN_ADDRESS})
+            // 1. .call returns its own Promise which needs a catch
+            // 2. Why even break up attempt here- doesn;t seem to make sense!
+            // attempt
               .then(result => {
                 console.log(functionName,': chain responded:', result);
                 unpackRVs (result, outputs);
@@ -495,7 +554,7 @@ export function callTransaction(functionName, args) {
 
 const logGasEstimate = (err, functionName, args, gasAmount) => {
   if (err) console.log('Gas error:',err);
-  console.log(`${functionName}(${args.join(', ')})- expected gas: ${gasAmount}`);
+  console.log(`expected gas for: ${functionName}(${args.join(', ')}) \nis: ${gasAmount}`);
 }
 
 export function sendTransaction(functionName, args) {
@@ -584,3 +643,7 @@ export const getDeets = ()=> ({
   ProxyInstanceForSend, PollInstanceForSend, ValidatorInstanceForSend,
   IMPLEMENTATION_ABI, IMPLEMENTATION_ADDRESS, IMPLEMENTATION_INSTANCE, IMPLEMENTATION_INSTANCE_FOR_SEND
 })
+
+export const setOwnAddyforAuthWeb3 = addy=> {
+  OWN_ADDRESS = addy;
+}

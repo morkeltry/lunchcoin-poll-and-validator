@@ -19,7 +19,7 @@
   top: 10vh;
   left: 4vw;
   padding : 6vh 4.5vh;
-  background-color: #314;
+  background-color: #314e;
   /* border: 1.5vw solid #639e; */
   box-shadow: 0 0 5px #628e, 0 0 10px #628e, 0 0 15px #ccf, 0 0 20px #50d, 0 0 35px #50d, 0 0 40px #50d, 0 0 50px #50d, 0 0 75px #50d;
   box-shadow:inset 0 0 5px #628e, 0 0 10px #628e, 0 0 20px #50d, 0 0 35px #50d, 0 0 40px #50d, 0 0 50px #50d, 0 0 75px #50d;
@@ -45,6 +45,19 @@
 
 .modal-form form {
   height: 100%;
+}
+
+.modal-form input[type=text] {
+  height: 3vh;
+  position: relative;
+  top: 1.5vw;
+  margin: 2vw;
+  padding: 2vw;
+  background-color: black;
+  color: #acf;
+  box-shadow: 0 0 0.5vh #936e, 0 0 1vh #936e, 0 0 1.5vh #fff, 0 0 2vh;
+  box-shadow:inset 0 0 0.5vh #936e, 0 0 1vh #936e, 0 0 2vh #FF1177;
+  border: 0px;
 }
 
 .modal-form input[type=checkbox] {
@@ -117,4 +130,77 @@
 .modal-info__header {
   font-size : 3vh;
   text-align: center;
+}
+
+.modal-form-text__on-light-bg {
+  font-weight: 500;
+  color: #acf;
+}
+
+
+.toast-enter {
+  width: 70vw;
+  bottom: 25vh;
+  transition: width 2s, bottom 4s;
+}
+.toast-enter-active {
+  width: 70vw;
+  bottom: 50vh;
+  transition: width 2s, bottom 4s;
+}
+.toast-exit {
+  width: 70vw;
+  bottom: 60vh;
+  transition: width 2ms, bottom 4s;
+}
+.toast-exit-active {
+  width: 70vw;
+  bottom: 10vh;
+  transition: width 2s, bottom 4s;
+}
+
+.toast {
+  position: fixed;
+  height: 11vh;
+  width: 70vw;
+  min-width: 70vw;
+  bottom: 5vh;
+  left: 15vw;
+  padding : 0.2vh 1vh;
+  font-size : 1.5vh;
+  transition: bottom 2s;
+  transition-timing-function: ease-in;
+  background-color: #314e;
+  /* fuckin bootstrap ~:( */
+  opacity: 1;
+  color: #red;
+  box-shadow: 0 0 3px #628c, 0 0 6px #628c, 0 0 9px #50dc, 0 0 12px #50dc, 0 0 21px #50da, 0 0 24px #50d8, 0 0 30px #50d6, 0 0 45px #50d4;
+  /* box-shadow:inset 0 0 3px #628e, 0 0 6px #628e, 0 0 12px #50d, 0 0 21px #50d, 0 0 24px #50d, 0 0 30px #50d, 0 0 45px #50d; */
+  border: 0px solid #f0f8;
+  border-radius: 2vw;
+
+  white-space: pre-wrap;
+  z-index: 6;
+}
+
+.toast__header {
+  padding : 0.5vh 0vh 0vh;
+  margin: -0.25vh -0.25vh 0.75vh;
+  font-size : 2.25vh;
+}
+
+
+.item-enter {
+  opacity: 0;
+}
+.item-enter-active {
+  opacity: 1;
+  transition: opacity 1500ms ease-in;
+}
+.item-exit {
+  opacity: 1;
+}
+.item-exit-active {
+  opacity: 0;
+  transition: opacity 1500ms ease-in;
 }

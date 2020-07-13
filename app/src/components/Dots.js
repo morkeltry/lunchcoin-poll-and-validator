@@ -6,12 +6,10 @@ import "../App.scss";
 import './checkInView.css';
 import './modalView.css';
 
+const ms=750;
+
 const Dots = props => {
-  const [dots, setDots] = useState (1);
-
-  setInterval(()=>{ setDots(dots%3+1) }, 1250);
-
-  return new Array(dots)
+  return new Array((Math.floor(Date.now()/ms))%3)
     .fill()
     .map(x=>'.')
     .join('')

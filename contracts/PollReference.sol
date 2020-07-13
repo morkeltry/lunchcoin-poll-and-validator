@@ -20,6 +20,9 @@ contract PollReference {
       uint rep;
       TimeRange[] available;
       uint availabilityExpires;
+      bool locked;
+      bool released;
+      mapping (address => uint) venueContribution;
     }
 
     struct Dibs {
@@ -36,6 +39,7 @@ contract PollReference {
       address venuePayer;
       uint8 minParticipants;
       TimeRange eventTime;
+      bool stakingClosed;
       bool proofsWindowClosed;
       mapping (address => Stake) staked;
       mapping (address => uint16) ownCheckInIndex;           // 1-indexed: ownCheckInIndex[s]==0 => nothing there.
@@ -57,12 +61,15 @@ contract PollReference {
     address[] knownMiners;
     uint initialRep = 2000;      // will move to Poll
     uint topupRep = 1500;        // will move to Poll
+    bool anyoneCanMine = true;   // will move to Poll
     address selfAddy ;
 
     // unused - previously for Storage Proxy
     //    mapping (address => bool) internal _allowedAccess;
 
-
+    // constants: Do not use space in storage.
+    uint constant never = 5377017599;
+    bool constant usingRealMoney = false;
     using strings for *;
     using stringcast for string;
 
@@ -70,7 +77,7 @@ contract PollReference {
         validators[1] = address(0xA145493CC19b0BC6C5a2cA86e9BA38BB435E3F5b);
         validatorNames[1] = "Mutual Agreement";
         selfAddy = address(this);
-        // constructed = 1;
+        knownMiners.push(owner);    // testing - was previously in Validator
     }
 
 
