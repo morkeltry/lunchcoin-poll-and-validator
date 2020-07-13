@@ -17,10 +17,10 @@ const showtimeify = text=>
 
 // Formmodal currently requires Form contents, including submit button to be passed as children
 const FormModal = props => {
-  const { children } = props;
+  const { position, children } = props;
   return (
     <div
-      className= "modal-form"
+      className={ cN('modal-form', position==='relative' && 'position-relative-hack ') }
     >
       { children }
       <div>

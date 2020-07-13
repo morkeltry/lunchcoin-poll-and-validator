@@ -408,6 +408,8 @@ function checkWithABI(currentFunc, functionName, args, resolve, reject) {
         } else if ((inputType === "string" || inputType.substr(0, 5) === "bytes") && !inputType.endsWith(']')) {
             // Nothing to do here bz everything is acceptable
             rv.push(callValue);
+        } else if (inputType === "bool") {
+            rv.push((callValue==='false' || callValue==='0') ? false : Boolean(callValue) );
         } else if (inputType.endsWith(']')) {
             console.log('Will parse:',callValue);
             rv.push( Array.isArray(callValue)
@@ -429,7 +431,7 @@ async function checkFunctionFormatting(functionName, args) {
             return element.name === functionName;
         });
         if (found)
-          console.log(`Ooh - found ${functionName} in the Proxy without going to Impoementation! :`, found);
+          console.log(`Ooh - found ${functionName} in the Proxy without going to Implementation! :`, found);
         // Checks Proxy before Implementation!
         if (found) {
             // Function present in Proxy Contract

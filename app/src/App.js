@@ -33,6 +33,14 @@ const App = props => {
          }
        />
       <Route
+        path="/testingonly"
+        render={ ()=>
+          <HttpsRedirect>
+            <TestingApp ownAddy={ ownAddy } />
+          </HttpsRedirect>
+         }
+       />
+      <Route
         path="/stake"
         render={ ()=>
           <HttpsRedirect>

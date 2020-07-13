@@ -18,6 +18,7 @@ import {Form} from "react-bootstrap";
 // import {LiveEvent} from "./LiveEvent";
 import "../App.scss";
 
+import { defaultPoll } from '../constants/constants.js';
 
 // import { owner } from './segregatedPanel/formConfig'
 const eventsObj = {};
@@ -30,7 +31,7 @@ const LunchcoinApp = props => {
   const [pollUrls, setPollUrls] = useState([]);   // unsorted
   const [polls, setPolls] = useState([]);         // objects, sorted
   const [livePolls, setLivePolls] = useState([]);
-  const [currentPoll, setCurrentPoll] = useState('doodle.com/poll/r9rb35fiibvs3aa5');
+  const [currentPoll, setCurrentPoll] = useState(defaultPoll);
   const [choosePoll, setChoosePoll] = useState(true);
   // const [, set] = useState();
   // const [, set] = useState();

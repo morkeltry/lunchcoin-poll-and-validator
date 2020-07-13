@@ -1,5 +1,6 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 
+import { ConnectionError } from 'web3';
 import cN from 'classnames';
 import Media from 'react-media';
 import QRCode from 'qrcode-svg';
@@ -19,7 +20,7 @@ import "../App.scss";
 import './checkInView.css';
 import "./starsView.css";
 
-
+// import { defaultPoll } from '../constants/constants.js';
 
 const MineApp = props => {
   const { x } = props;
@@ -28,7 +29,12 @@ const MineApp = props => {
   const [caughtEvents, setCaughtEvents] = useState([]);
   const [toastView, setToastView] = useState(null);
   const [btBeacon, setBtBeacon] = useState(true);
+  const [automine, setAutomine] = useState(false);
+  const [freeTt, setFreeTt] = useState(true);
   const [showQr, setShowQr] = useState(null);
+  const [error, setError] = useState(null);
+  const [web3Error, setWeb3Error] = useState(null);
+  const [noChainError, setNoChainError] = useState(null);
 
   const eventId = '16-07-2020';
   let seq = { eventId: 0 };
@@ -80,29 +86,63 @@ const MineApp = props => {
   }
 
   const mine = (miner, eventId, user)=> {
-    //sendTransaction ...
+    sendTransaction('anyoneMineRep')
+      .then((resp)=>{
+        console.log(`anyoneMineRep`, resp);
+        callTransaction('getRep', { staker: user })
+          .then((resp)=>{
+            console.log(`getRep`, resp);
+          })
+      })
+      .catch(err=>{ console.log(`anyoneMineRep failed`, err); });
   }
 
+  useEffect(()=> {
+    // getLocalCache();
+    connectToWeb3().then(addressObj => {
+      // getImplementationEvents({ pollUrl, setWatchers:true }, chainEventListeners );
+      if (!addressObj.OWN_ADDRESS)
+        console.log(`\n\n\n\nWarning - setOwnAddy(${addressObj.OWN_ADDRESS})\n\n\n\n`);
+      return addressObj.OWN_ADDRESS
+    }).then(addy=> {
+      setOwnAddy(addy);
+      // fetchAndUpdate(addy);
+    })
+      .catch(err=> {
+        // we should be catching here: 105: reject (new Error('no web3 provider'));
+        console.log('\n\nconnectToWeb3 FAILED\n\n');
+        console.log('fetchAndUpdate gave',err);
+        if (err.message==='connection not open on send()' || err instanceof ConnectionError)
+          setNoChainError(true)
+        else {
+          setWeb3Error(true);
+          setError(err.message);
+        }
+      })
+
+  }, []);
+
+
   return (
-    ownAddress
-      ? <div className={ cN('backstage') }>
-          <div className={ cN('huuuge', 'backstage-text') }>
-            Welcome, community star,
+    ownAddress===''
+      ? <div className={ cN('backstage', 'bg_openair' ) }>
+          <div className={ cN('backstage-text', 'huuuge') }>
+            Welcome, community star
+          </div>
+          <div className={ cN('backstage-text', 'main-header') }>
             please log in
           </div>
 
         </div>
 
-      : <div className={ cN('backstage', 'bg_openair  ') }>
-          LIKE, A FAUCET OR SOMETHING. PROBABLY.
+      : <div className={ cN('backstage', 'bg_openair') }>
 
           <div className={ cN('form-section') }>
             <div className={ cN('form-section__header', 'backstage-text', 'main-header' ) }>
               { 'Welcome' }
-              { ownAddress }
             </div>
-            <div className={ cN('', 'backstage-text') }>
-
+            <div className={ cN('main-header__sub', 'backstage-text') }>
+              { ownAddress }
             </div>
           </div>
 
@@ -116,7 +156,7 @@ const MineApp = props => {
               {time:'Sun Aug 16 18:00 - 22:30', eventName:'Community Social'},
               {time:'Sun Aug 30 18:00 - 22:30', eventName:'Community Social'},
             ].map( publicEvent=>
-                <div className={ cN('section flex-container') }>
+                <div className={ cN('section flex-container') } key={ publicEvent.time } >
                   <div className={'', 'backstage-text'}>
                     { publicEvent.time }
                   </div>
@@ -136,6 +176,15 @@ const MineApp = props => {
               <span className="">Initial mining event</span>
               <span className=""> is live</span>
             </div>
+
+            <div className={ cN('bar-horiz__thick__padded') }> </div>
+
+            <div className={ cN('') }>
+              <div className={ cN('form-section__header', 'backstage-text') }>
+                BT mining:
+              </div>
+            </div>
+
             <div className={ cN('', 'backstage-text') }>
               Bluetooth beacon:{'\u00A0\u00A0'}
               <span
@@ -146,12 +195,30 @@ const MineApp = props => {
               </span>
             </div>
             <div className={ cN('', 'backstage-text') }>
+              Bluetooth automining:{'\u00A0\u00A0'}
+              <span
+                className={ cN('toggle-button') }
+                onClick={ ()=>{ setAutomine(!automine) } }
+              >
+                { `\u00A0${automine ? '\u00A0ON' : 'OFF'}\u00A0\u00A0` }
+              </span>
+            </div>
+            <div className={ cN('', 'backstage-text') }>
+              Send new users 5TT for tx gas:{'\u00A0\u00A0'}
+              <span
+                className={ cN('toggle-button') }
+                onClick={ ()=>{ setFreeTt(!freeTt) } }
+              >
+                { `\u00A0${freeTt ? '\u00A0ON' : 'OFF'}\u00A0\u00A0` }
+              </span>
+            </div>
+            <div className={ cN('', 'backstage-text') }>
               Lunchcoin users on bluetooth:
             </div>
             {[
               ownAddress
             ].map (user=>
-              <div className={ cN('', 'backstage-text') }>
+              <div className={ cN('', 'backstage-text') } key={ user }>
                 <span className={ cN('', 'backstage-text') }>{ user }:</span>
                 <span className="">
                   <button
@@ -176,7 +243,7 @@ const MineApp = props => {
               QR mining:
             </div>
             <div className={ cN('backstage-text') }>
-              <span className={ cN('', 'backstage-text') }>QR mining requires one QR code per user who is physically present</span>
+              <span className={ cN('', 'backstage-text') }>QR mining uses a QR code for each physically present user</span>
               <span className="">
                 <button
                   id= { 'qr-mine' }

@@ -1,0 +1,24 @@
+.doodle-background {
+    background: url('../assets/doodle background long.jpeg');
+    background-repeat: no-repeat;
+    background-attachment: fixed;
+    background-position: 0% 0%;
+    background-size: 100vw;
+    /* background-color: black; */
+  }
+
+.background-opacity {
+  background-color: #4448;
+}
+
+.black {
+  background-color: black;
+}
+
+.red {
+  background-color: red;
+}
+
+.position-relative-hack {
+  position: relative;
+}

@@ -83,6 +83,8 @@ contract MutualAgreement {
     uint initialRep = 2000;      // will move to Poll
     uint topupRep = 1500;        // will move to Poll
     bool anyoneCanMine = true;   // will move to Poll
+    bool constructorHasRun;   // will move to Poll
+    bool initialValuesWereSet = true;   // will move to Poll
     address __selfAddy ;
 
 
@@ -139,13 +141,19 @@ contract MutualAgreement {
     // }
 
     constructor () public {
-      uint initialRep = 2000;     // will move to Poll
-      uint topupRep = 1500;       // will move to Poll
+      specialFakeConstructorJustForBrokenGanache ();
     }
 
-function getValuesWhichtheFuckenConstructorShouldHaveSet () public returns (uint, uint) {
-  return (initialRep, topupRep);
-}
+    function getValuesWhichtheFuckenConstructorShouldHaveSet () public returns (uint, uint) {
+      return (initialRep, topupRep);
+    }
+
+    function specialFakeConstructorJustForBrokenGanache () public {
+      constructorHasRun = true;
+      initialRep = 2000;     // will move to Poll
+      topupRep = 1500;       // will move to Poll
+      anyoneCanMine = true;       // temporary!!
+    }
 
     function initialiseDemo (string memory _poll) public {
 
@@ -154,6 +162,7 @@ function getValuesWhichtheFuckenConstructorShouldHaveSet () public returns (uint
       // pollData[_poll].staked[msg.sender].rep = 1;
       // pollData[_poll].staked[msg.sender].venueContribution =
       // pollData[_poll].staked[msg.sender].venueContribution[msg.sender] = 15000;
+      specialFakeConstructorJustForBrokenGanache ();
     }
 
     function _fallback() internal {
@@ -334,8 +343,8 @@ function getValuesWhichtheFuckenConstructorShouldHaveSet () public returns (uint
       rep[_staker] = _rep;
     }
 
-    function getRep (address _staker) public view returns (uint) {
-      return rep[_staker];
+    function getRep (address staker) public view returns (uint) {
+      return rep[staker];
     }
 
     function addMiner(address miner) public onlyOwner() {
@@ -369,6 +378,10 @@ function getValuesWhichtheFuckenConstructorShouldHaveSet () public returns (uint
 
     function canAnyoneMine(bool answer) public onlyOwner() {
       anyoneCanMine = answer;
+    }
+
+    function getAnyoneCanMine() public returns (bool){
+      return anyoneCanMine;
     }
 
     function doMine(address recipient) private returns (uint newRep) {

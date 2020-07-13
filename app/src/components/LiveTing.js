@@ -283,9 +283,9 @@ const LiveEvent = props => {
       .then(setPrice);
   }
 
-  const fetchAndUpdateRep = (_staker = ownAddress )=> new Promise((resolve, reject)=> {
-    console.log('ownAddy',ownAddress,'getRep', {_staker});
-    callTransaction('getRep', {_staker})
+  const fetchAndUpdateRep = (staker = ownAddress )=> new Promise((resolve, reject)=> {
+    console.log('ownAddy',ownAddress,'getRep', {staker});
+    callTransaction('getRep', {staker})
       .then(response=>{
         console.log('setting updatedRep');
         setUpdatedRep(response);
@@ -352,10 +352,10 @@ const LiveEvent = props => {
 
 
   const closeCheckin = ()=> {
-    sendTransaction('closeProofsWindow', {_poll : pollUrl })
+    sendTransaction('closeProofsWindow', { poll : pollUrl })
       .then(response=>{
         console.log('closeProofsWindow',response);
-        callTransaction('isProofsWindowClosed', {_poll : pollUrl })
+        callTransaction('isProofsWindowClosed', { poll : pollUrl })
         .then(response=>{
           console.log('isProofsWindowClosed: pollData(pollUrl)',response);
           setCheckInIsClosed(response);
