@@ -9721,12 +9721,12 @@
     "1594638796714": {
       "events": {},
       "links": {},
-      "address": "0x493Cf94328195687c514cCa0E6bdD48dd1dBD26B",
-      "transactionHash": "0x984de8de1ed5f4317c7ef4654330cc4de1801cc9b88156d676ae8523817ebfd1"
+      "address": "0x9550FdF913910677B627A0cb9D804f46c72A55a8",
+      "transactionHash": "0x49c955a7ac15ab61483217b4e18e1a1a8df7c5369ad260faa61c38ad30f98187"
     }
   },
   "schemaVersion": "3.0.2",
-  "updatedAt": "2020-07-13T13:04:02.539Z",
+  "updatedAt": "2020-07-13T16:33:37.502Z",
   "devdoc": {
     "author": "Arvind Kalra (github.com/arvindkalra) and Pranav Singhal (github.com/pranav-singhal)",
     "methods": {},

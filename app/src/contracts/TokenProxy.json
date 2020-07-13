@@ -1417,12 +1417,12 @@
     "1594638796714": {
       "events": {},
       "links": {},
-      "address": "0x40AaD459117116FfE7b6B4E5d39E44769b39A127",
-      "transactionHash": "0x2239e962a9c7491037468fe28872ed8f1011adf964c5259efb5f550d15cace45"
+      "address": "0xb6549243aE63cDDb0044bd279519Dad76995039C",
+      "transactionHash": "0x92174ac9757aeabec85149ef4d05d714c79886b8de8b2db4372f48a299691b6a"
     }
   },
   "schemaVersion": "3.0.2",
-  "updatedAt": "2020-07-13T13:04:02.533Z",
+  "updatedAt": "2020-07-13T16:33:37.496Z",
   "devdoc": {
     "author": "Arvind Kalra (github.com/arvindkalra) and Pranav Singhal (github.com/pranav-singhal)",
     "methods": {

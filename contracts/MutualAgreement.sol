@@ -141,14 +141,14 @@ contract MutualAgreement {
     // }
 
     constructor () public {
-      specialFakeConstructorJustForBrokenGanache ();
+      fakeConstructor ();
     }
 
-    function getValuesWhichtheFuckenConstructorShouldHaveSet () public returns (uint, uint) {
+    function getInitialisedValues () public returns (uint, uint) {
       return (initialRep, topupRep);
     }
 
-    function specialFakeConstructorJustForBrokenGanache () public {
+    function fakeConstructor () public {
       constructorHasRun = true;
       initialRep = 2000;     // will move to Poll
       topupRep = 1500;       // will move to Poll
@@ -156,13 +156,12 @@ contract MutualAgreement {
     }
 
     function initialiseDemo (string memory _poll) public {
-
       pollData[_poll].minStake = 1000;
       pollData[_poll].venueCost = 12500;
       // pollData[_poll].staked[msg.sender].rep = 1;
       // pollData[_poll].staked[msg.sender].venueContribution =
       // pollData[_poll].staked[msg.sender].venueContribution[msg.sender] = 15000;
-      specialFakeConstructorJustForBrokenGanache ();
+      fakeConstructor ();
     }
 
     function _fallback() internal {

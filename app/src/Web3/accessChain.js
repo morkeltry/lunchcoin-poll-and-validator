@@ -253,6 +253,24 @@ export function getImplementationAddress() {
 }
 
 
+export const runConstructorManuallyFfs = ()=> {
+  callTransaction('getInitialisedValues')
+    .then(response=> {
+      console.log('constructor should have set', response);
+      if (!response.some(el=> el || Number(el))) {
+        console.log(`but apparently it didn't`);
+        sendTransaction('fakeConstructor')
+          .then(response=> {
+            console.log('constructor values were set manually.');
+          })
+          .catch(e => {
+            console.log('could not manually set constructor values:', e);
+          })
+      }
+    });
+}
+
+
 export async function updateKnownPolls( options ) {
     // returns the list of events that are in the latest version of the contract
     // const { setWatchers } = options;
@@ -510,8 +528,10 @@ export function callTransaction(functionName, args) {
             if (!web3.isReliable)
               await wpIsUp();
             attempt = IMPLEMENTATION_INSTANCE.methods[functionName](...rv)
-              .call({from: OWN_ADDRESS});
-            attempt
+              .call({from: OWN_ADDRESS})
+            // 1. .call returns its own Promise which needs a catch
+            // 2. Why even break up attempt here- doesn;t seem to make sense!
+            // attempt
               .then(result => {
                 console.log(functionName,': chain responded:', result);
                 unpackRVs (result, outputs);

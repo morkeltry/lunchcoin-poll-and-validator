@@ -18,7 +18,7 @@ import "../App.scss";
 import './checkInView.css';
 
 import { connectToWeb3, refetchOwnAddress, getDeets, setOwnAddyforAuthWeb3,
-  getImplementationFunctions, getImplementationEvents,
+  getImplementationFunctions, getImplementationEvents, runConstructorManuallyFfs,
   callTransaction, sendTransaction, getFromStorage,
   myAccounts, } from "../Web3/accessChain";
 import { getPrice } from "../helpers/priceFeed.js";
@@ -420,6 +420,7 @@ const LiveEvent = props => {
       console.log(`\n\nsetOwnAddy(${addressObj.OWN_ADDRESS})\nis done. New ownAddy=${ownAddress} \n`);
       // setContractAddy(addressObj.IMPLEMENTATION_ADDRESS);
       setAvailableAccounts(addressObj.availableAccounts);
+      runConstructorManuallyFfs();
       return addressObj.OWN_ADDRESS
     }).then(addy=> {
       fetchAndUpdate(addy);
