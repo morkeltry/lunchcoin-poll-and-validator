@@ -145,7 +145,7 @@ contract MutualAgreement {
     }
 
     function getInitialisedValues () public returns (uint, uint) {
-      return (initialRep, topupRep);
+      return (constructorHasRun, anyoneCanMine, initialRep, topupRep);
     }
 
     function fakeConstructor () public {

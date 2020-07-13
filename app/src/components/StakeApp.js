@@ -57,7 +57,7 @@ const StakeApp = props => {
 
   const clearSelf = ()=> {
     console.log('cleared form');
-    setNewPollUrl(null);
+    // setNewPollUrl(null);
     setModalView(null);
     ['repStake', 'venueContrib', 'confirmBefore']
       .forEach(field=>{ setFormFields[field]('') });
@@ -96,7 +96,7 @@ const StakeApp = props => {
   const addStake = ()=>{
     const args = {
       poll : newPollUrl,
-      repStake : formFields.repStake,
+      repStake : formFields.repStake*1000,
       beneficiary : ownAddy,
       // availability : toTuple(formFields.availability.map(toTime)),
       // confirmBefore : formFields.confirmBefore,

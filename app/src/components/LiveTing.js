@@ -77,6 +77,11 @@ const LiveEvent = props => {
     = [setCheckInClosesRaw, setVenueCostRaw, setVenuePotRaw, setYouPaidForVenueRaw, setRepStakedRaw, setRepEverStakedRaw, setRepWasRaw, setRepMultiplierRaw, setMaxRepRaw, setUpdatedRepRaw ]
       .map(setter=> response=> { setter(Number(response)); });
 
+  const setOwnProofFromArray= proofsList=> {
+    const newProof = stakers.map((staker, idx)=> stakers.indexOf(staker) > -1 );
+    setOwnProof(newProof);
+  }
+
 // TODO: setRepWas setInfoModalResult
 
   clearInterval(t)
@@ -178,29 +183,17 @@ const LiveEvent = props => {
       .then(response=>{
         console.log('getproofsAsAddresses', response);
         setProofs(response.filter(proof=>proof.length));
-        if (response.some(proof=>proof.includes(freshAddy)))
-          setCheckedIn(true);
+
+        // INCORRECT!!
+
+        // if (response.some(proof=>proof.includes(freshAddy)))
+        //   setCheckedIn(true);
       })
       .catch(err=>{console.log(err);});
 
     // Instead get proof(OwnAddy) from storage
-    callTransaction('getStakerAddresses', {_poll : pollUrl})
-      .then(response=>{
-        console.log('getStakerAddresses', response);
-        setStakers (response);
-        if (response.indexOf(freshAddy || ownAddress)>-1)
-          callTransaction('getStakersProof', {_poll : pollUrl, _staker : freshAddy || ownAddress })
-            .then(response=>{
-              console.log('expecting array representing own proof:',response);
-              if (response.length) {
-                setOwnProof(response);
-                setCheckedIn(true);
-              } else
-                setCheckedIn(false);
-            })
-            .catch(err=>{console.log(err);});
-      })
-      .catch(err=>{console.log(err);});
+    fetchAndUpdateStakerStatus(freshAddy);
+
     callTransaction('totalRepStaked', {_poll : pollUrl, _staker : freshAddy || ownAddress })
       .then(response=>{
         console.log('totalRepStaked', response);
@@ -294,10 +287,32 @@ const LiveEvent = props => {
       .catch(err=>{ console.log(`getRep failed`, err); reject(err); });
   })
 
+
 // ----------------------- chain access functions (other than those above for useEffect)
+
+  const fetchAndUpdateStakerStatus = (freshAddy)=> {
+    callTransaction('getStakerAddresses', {_poll : pollUrl})
+      .then(response=>{
+        console.log('getStakerAddresses', response);
+        setStakers (response);
+        if (response.indexOf(freshAddy || ownAddress)>-1)
+          callTransaction('getStakersProof', {_poll : pollUrl, _staker : freshAddy || ownAddress })
+            .then(response=>{
+              console.log('expecting array representing own proof:',response);
+              if (response.length) {
+                setOwnProofFromArray(response);
+                setCheckedIn(true);
+              } else
+                setCheckedIn(false);
+            })
+            .catch(err=>{console.log(err);});
+      })
+      .catch(err=>{console.log(err);});
+  }
 
 
   const addProofBitByBit = async (args)=>{
+    // NB data structure changed - this should still work as structure of _newProof should be the same by the time we reach here
     const remaining = args._newProof.splice(1);
     return await sendTransaction('addProof', args)   // ownAddy is hack for demo - validator will be more complex than this!
       .then(async (resp)=>{
@@ -314,21 +329,27 @@ const LiveEvent = props => {
   // NB proof (_newProof) will eventually be more complex than an addy;
   // NB _impersonatedStaker is a temporary expedient for testing which will be removed
   const submitProof = ()=> {
-    const _newProof = ownProof;
     const _impersonatedStaker = ownAddress;
-    const args = {_poll: pollUrl, _newProof: ownProof, _impersonatedStaker } ;
+    const args = {
+      _poll: pollUrl,
+      _newProof: ownProof.map((tick, stakerNo)=> tick && stakers[stakerNo] ).filter(Boolean),
+      _impersonatedStaker
+    };
     let getproofsAsAddressesIsOK = true;
 
     setModalView(null);
+    console.log('\n\n\n\n\n\n\n');
+    if (args._newProof.length)
+      console.log('args OK', args, ownProof, args._newProof)
+    else
+      console.log('args NOT OK:', args, ownProof, args._newProof);
     sendTransaction('addProof', args)   // ownAddy is hack for demo - validator will be more complex than this!
       .then(response=>{
         if (getproofsAsAddressesIsOK)
         callTransaction('getproofsAsAddresses', {_poll : pollUrl})
           .then(response=>{
-            console.log('setting CheckedIn');
+            fetchAndUpdateStakerStatus(ownAddress);
             setProofs(response.filter(proof=>proof.length));
-            // setProofs(response);  // Cheekily accept the uninitilised empty proofs ;)
-            setCheckedIn(true);
           })
           .catch(err=>{ console.log(`getproofsAsAddresses failed`, err); });
       })
@@ -339,10 +360,9 @@ const LiveEvent = props => {
             if (getproofsAsAddressesIsOK)
             callTransaction('getproofsAsAddresses', {_poll : pollUrl})
               .then(response=>{
-                console.log('setting CheckedIn');
+                fetchAndUpdateStakerStatus(ownAddress);
                 setProofs(response.filter(proof=>proof.length));
                 // setProofs(response);  // Cheekily accept the uninitilised empty proofs ;)
-                setCheckedIn(true);
               })
               .catch(err=>{ console.log(`getproofsAsAddresses failed`, err); });
           })
@@ -355,7 +375,7 @@ const LiveEvent = props => {
     sendTransaction('closeProofsWindow', { poll : pollUrl })
       .then(response=>{
         console.log('closeProofsWindow',response);
-        callTransaction('isProofsWindowClosed', { poll : pollUrl })
+        callTransaction('isProofsWindowClosed', { _poll : pollUrl })
         .then(response=>{
           console.log('isProofsWindowClosed: pollData(pollUrl)',response);
           setCheckInIsClosed(response);
@@ -429,6 +449,8 @@ const LiveEvent = props => {
         // we should be catching here: 105: reject (new Error('no web3 provider'));
         console.log('\n\nconnectToWeb3 FAILED\n\n');
         console.log('fetchAndUpdate gave',err);
+
+        // VV this is incorrect - that error can also signify WS disconnected
         if (err.message==='connection not open on send()' || err instanceof ConnectionError)
           setNoChainError(true)
         else {
@@ -703,14 +725,13 @@ return(<>
                           <input
                             type="checkbox"
                             className="modal-checkbox w20r"
-                            selected= { ownProof[stakerNo] }
+                            checked= { ownProof[stakerNo] }
                             onClick= {()=>{
-                              let choice = !ownProof[stakerNo];
-                              if (choice)
-                                setOwnProof (ownProof.concat(stakers[stakerNo]))
-                              else
-                                setOwnProof( ownProof.map((tick,idx)=> (idx===stakerNo ? choice : tick) && stakers[stakerNo] ).filter(Boolean) );
-                              console.log('Setting:', choice, stakerNo, stakers[stakerNo], ownProof, ownProof.concat(stakers[stakerNo]), ownProof.map((tick,idx)=> (idx===stakerNo ? choice : tick) && stakers[stakerNo] ) );
+                              const newProof = [...ownProof];
+                              newProof[stakerNo]= !ownProof[stakerNo];
+                              console.log('Current:', ownProof[stakerNo] );
+                                setOwnProof( newProof );
+                              console.log('Setting:', newProof[stakerNo] );
                             }}
                           />
                         </div>
