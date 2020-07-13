@@ -2463,7 +2463,7 @@
                           "name": "this",
                           "nodeType": "Identifier",
                           "overloadedDeclarations": [],
-                          "referencedDeclaration": 9416,
+                          "referencedDeclaration": 9412,
                           "src": "2494:4:4",
                           "typeDescriptions": {
                             "typeIdentifier": "t_contract$_PollReference_$5094",
@@ -16690,7 +16690,7 @@
                           "name": "this",
                           "nodeType": "Identifier",
                           "overloadedDeclarations": [],
-                          "referencedDeclaration": 9416,
+                          "referencedDeclaration": 9412,
                           "src": "2494:4:4",
                           "typeDescriptions": {
                             "typeIdentifier": "t_contract$_PollReference_$5094",
@@ -29115,15 +29115,15 @@
     "version": "0.5.17+commit.d19bba13.Emscripten.clang"
   },
   "networks": {
-    "108": {
+    "1594674995409": {
       "events": {},
       "links": {},
-      "address": "0xC3dBA6b2e27c3CaFa756F44AFe8957C5E040c56D",
-      "transactionHash": "0x65d54c1e6b40e1aadcdeeb9908db83f365081d225a7800b90cd3507641f10c04"
+      "address": "0xd32B33Ada6A20690bCFCDB023557B5D0D3bBbfd4",
+      "transactionHash": "0x6c1a6ea5bc2d41a7ea6e0e5720edd779014f901d8fa73a85048cca1c9561a2c7"
     }
   },
   "schemaVersion": "3.0.2",
-  "updatedAt": "2020-07-13T21:38:48.483Z",
+  "updatedAt": "2020-07-13T21:46:49.144Z",
   "devdoc": {
     "methods": {}
   },
