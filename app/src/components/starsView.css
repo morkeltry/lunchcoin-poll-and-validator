@@ -51,6 +51,7 @@ body {
 }
 
 .main-header {
+  margin-top: 3vh;
   text-align: center;
   font-size: 6vw;
 }

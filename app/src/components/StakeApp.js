@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 
+import { ConnectionError } from 'web3';
 import cN from 'classnames';
 import Media from 'react-media';
 
@@ -8,10 +9,17 @@ import AddPollInfoField from "./AddPollInfoField";
 import LogoBottom from "./LogoBottom";
 // import {  } from "./";
 
+import { connectToWeb3, refetchOwnAddress, getDeets, setOwnAddyforAuthWeb3,
+  getImplementationFunctions, getImplementationEvents,
+  callTransaction, sendTransaction, getFromStorage,
+  myAccounts, } from "../Web3/accessChain";
+
 import '../App.scss';
 import './checkInView.css';
 import './modalView.css';
 import './stakingView.css';
+
+import { defaultPoll } from '../constants/constants.js';
 
 const showtimeify = text=>
   text ? `[${text.replace(/ /g,'_')}]` : text ;
@@ -35,19 +43,23 @@ const StakeApp = props => {
   const [ownAddy, setOwnAddy] = useState(null);
   const [popupView, setPopupView] = useState(null);
   const [modalView, setModalView] = useState(null);
-  const [newPollUrl, setNewPollUrl] = useState(null);
+  const [newPollUrl, setNewPollUrl] = useState(defaultPoll);
   const formFields = {};
   const setFormFields = {};
   [formFields.repStake, setFormFields.repStake] = useState('1.0');
   [formFields.venueContrib, setFormFields.venueContrib] = useState('0');
-  [formFields.availability, setFormFields.availability] = useState('');
+  [formFields.availability, setFormFields.availability] = useState([]);
   [formFields.confirmBefore, setFormFields.confirmBefore] = useState('');
+  const [error, setError] = useState(null);
+  const [web3Error, setWeb3Error] = useState(null);
+  const [noChainError, setNoChainError] = useState(null);
 
 
   const clearSelf = ()=> {
+    console.log('cleared form');
     setNewPollUrl(null);
     setModalView(null);
-    ['repStake', 'venueContrib', 'availability', 'confirmBefore']
+    ['repStake', 'venueContrib', 'confirmBefore']
       .forEach(field=>{ setFormFields[field]('') });
   }
 
@@ -78,10 +90,57 @@ const StakeApp = props => {
   })
 
 
-  const addStake = ()=>{
+// addUnboundedStake ( poll,  repStake,  beneficiary)
+// addStake ( poll,  repStake,  beneficiary, TimeRange[]  availability,  confirmBefore)
 
+  const addStake = ()=>{
+    const args = {
+      poll : newPollUrl,
+      repStake : formFields.repStake,
+      beneficiary : ownAddy,
+      // availability : toTuple(formFields.availability.map(toTime)),
+      // confirmBefore : formFields.confirmBefore,
+    }
+
+    console.log(args);
+    return sendTransaction('addUnboundedStake', args)
+      .then((resp)=>{
+        console.log(`addUnboundedStake`, resp);
+      })
+      .catch(err=>{ console.log(`addUnboundedStake failed`, err); });
+
+    // sendTransaction('addStake', args)
+    //   .then((resp)=>{
+    //     console.log(`addStake`, resp);
+    //   })
+    //   .catch(err=>{ console.log(`addStake failed`, err); });
   }
 
+
+  useEffect(()=> {
+    // getLocalCache();
+    connectToWeb3().then(addressObj => {
+      // getImplementationEvents({ pollUrl, setWatchers:true }, chainEventListeners );
+      if (!addressObj.OWN_ADDRESS)
+        console.log(`\n\n\n\nWarning - setOwnAddy(${addressObj.OWN_ADDRESS})\n\n\n\n`);
+      return addressObj.OWN_ADDRESS
+    }).then(addy=> {
+      setOwnAddy(addy);
+      // fetchAndUpdate(addy);
+    })
+      .catch(err=> {
+        // we should be catching here: 105: reject (new Error('no web3 provider'));
+        console.log('\n\nconnectToWeb3 FAILED\n\n');
+        console.log('fetchAndUpdate gave',err);
+        if (err.message==='connection not open on send()' || err instanceof ConnectionError)
+          setNoChainError(true)
+        else {
+          setWeb3Error(true);
+          setError(err.message);
+        }
+      })
+
+  }, []);
 
   return (
     (!modalView)
@@ -96,12 +155,14 @@ const StakeApp = props => {
 
               <AddPollInfoField
                 clear = { ()=>{ setPopupView(null); } }
+                textStyle = "modal-form-text__on-light-bg"
               >
                 { `Staker:` }
+                { null }
                 <input
                   id="staker"
                   type="text"
-                  size={42}
+                  size={ 45}
                   defaultValue={ ownAddy }
                   onChange={ dontChange }
                 />
@@ -109,13 +170,14 @@ const StakeApp = props => {
 
               <AddPollInfoField
                 clear = { ()=>{ setPopupView(null); } }
+                textStyle = "modal-form-text__on-light-bg"
               >
                 { 'Poll URL:'}
                 { null }
                 <input
                   id='new-poll-url-(modal)'
                   type="text"
-                  size={32}
+                  size={31}
                   defaultValue={ newPollUrl }
                   onChange={ handleInput('repStake') }
                 />
@@ -123,6 +185,7 @@ const StakeApp = props => {
 
               <AddPollInfoField
                 clear = { ()=>{ setPopupView(null); } }
+                textStyle = "modal-form-text__on-light-bg"
               >
                 { 'Reputation stake:' }
                 { 'Stakers must stake an amount of reputation (recommended: 1) to participate in the poll' }
@@ -139,6 +202,7 @@ const StakeApp = props => {
 
               <AddPollInfoField
                 clear = { ()=>{ setPopupView(null); } }
+                textStyle = "modal-form-text__on-light-bg"
               >
                 { 'Venue contribution (k TT):' }
                 { `If the initiator of a poll set a cost for the venue then, in future versions, stakers must contribute at minimum an
@@ -157,6 +221,7 @@ const StakeApp = props => {
               </AddPollInfoField>
               <AddPollInfoField
                 clear = { ()=>{ setPopupView(null); } }
+                textStyle = "modal-form-text__on-light-bg"
               >
                 { 'My availability:' }
                 { `You can set any number of time periods in which you can commit to attend.\n
@@ -177,6 +242,7 @@ const StakeApp = props => {
 
               <AddPollInfoField
                 clear = { ()=>{ setPopupView(null); } }
+                textStyle = "modal-form-text__on-light-bg"
               >
                 { 'My availability expires:' }
                 { `You can set a time after which, if the poll has not reached its minimum number of participants,

@@ -132,6 +132,10 @@
   text-align: center;
 }
 
+.modal-form-text__on-light-bg {
+  font-weight: 500;
+  color: #acf;
+}
 
 
 .toast-enter {

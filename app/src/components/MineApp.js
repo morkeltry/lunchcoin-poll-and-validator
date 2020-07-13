@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 
-import { ConnectionError } from "web3";
+import { ConnectionError } from 'web3';
 import cN from 'classnames';
 import Media from 'react-media';
 import QRCode from 'qrcode-svg';
@@ -20,7 +20,7 @@ import "../App.scss";
 import './checkInView.css';
 import "./starsView.css";
 
-
+// import { defaultPoll } from '../constants/constants.js';
 
 const MineApp = props => {
   const { x } = props;
@@ -29,6 +29,8 @@ const MineApp = props => {
   const [caughtEvents, setCaughtEvents] = useState([]);
   const [toastView, setToastView] = useState(null);
   const [btBeacon, setBtBeacon] = useState(true);
+  const [automine, setAutomine] = useState(false);
+  const [freeTt, setFreeTt] = useState(true);
   const [showQr, setShowQr] = useState(null);
   const [error, setError] = useState(null);
   const [web3Error, setWeb3Error] = useState(null);
@@ -84,10 +86,16 @@ const MineApp = props => {
   }
 
   const mine = (miner, eventId, user)=> {
-    //sendTransaction ...
+    sendTransaction('anyoneMineRep')
+      .then((resp)=>{
+        console.log(`anyoneMineRep`, resp);
+        callTransaction('getRep', { staker: user })
+          .then((resp)=>{
+            console.log(`getRep`, resp);
+          })
+      })
+      .catch(err=>{ console.log(`anyoneMineRep failed`, err); });
   }
-
-
 
   useEffect(()=> {
     // getLocalCache();
@@ -128,7 +136,6 @@ const MineApp = props => {
         </div>
 
       : <div className={ cN('backstage', 'bg_openair') }>
-          LIKE, A FAUCET OR SOMETHING. PROBABLY.
 
           <div className={ cN('form-section') }>
             <div className={ cN('form-section__header', 'backstage-text', 'main-header' ) }>
@@ -149,7 +156,7 @@ const MineApp = props => {
               {time:'Sun Aug 16 18:00 - 22:30', eventName:'Community Social'},
               {time:'Sun Aug 30 18:00 - 22:30', eventName:'Community Social'},
             ].map( publicEvent=>
-                <div className={ cN('section flex-container') }>
+                <div className={ cN('section flex-container') } key={ publicEvent.time } >
                   <div className={'', 'backstage-text'}>
                     { publicEvent.time }
                   </div>
@@ -169,6 +176,15 @@ const MineApp = props => {
               <span className="">Initial mining event</span>
               <span className=""> is live</span>
             </div>
+
+            <div className={ cN('bar-horiz__thick__padded') }> </div>
+
+            <div className={ cN('') }>
+              <div className={ cN('form-section__header', 'backstage-text') }>
+                BT mining:
+              </div>
+            </div>
+
             <div className={ cN('', 'backstage-text') }>
               Bluetooth beacon:{'\u00A0\u00A0'}
               <span
@@ -179,12 +195,30 @@ const MineApp = props => {
               </span>
             </div>
             <div className={ cN('', 'backstage-text') }>
+              Bluetooth automining:{'\u00A0\u00A0'}
+              <span
+                className={ cN('toggle-button') }
+                onClick={ ()=>{ setAutomine(!automine) } }
+              >
+                { `\u00A0${automine ? '\u00A0ON' : 'OFF'}\u00A0\u00A0` }
+              </span>
+            </div>
+            <div className={ cN('', 'backstage-text') }>
+              Send new users 5TT for tx gas:{'\u00A0\u00A0'}
+              <span
+                className={ cN('toggle-button') }
+                onClick={ ()=>{ setFreeTt(!freeTt) } }
+              >
+                { `\u00A0${freeTt ? '\u00A0ON' : 'OFF'}\u00A0\u00A0` }
+              </span>
+            </div>
+            <div className={ cN('', 'backstage-text') }>
               Lunchcoin users on bluetooth:
             </div>
             {[
               ownAddress
             ].map (user=>
-              <div className={ cN('', 'backstage-text') }>
+              <div className={ cN('', 'backstage-text') } key={ user }>
                 <span className={ cN('', 'backstage-text') }>{ user }:</span>
                 <span className="">
                   <button
