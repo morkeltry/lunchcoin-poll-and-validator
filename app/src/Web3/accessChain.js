@@ -11,8 +11,8 @@ if (envVars.length>2)
 
 
 
-const environment = 'production';
-// const environment = process.env.REACT_APP_NODE_ENV || process.env.NODE_ENV || 'production';
+// const environment = 'production';
+const environment = process.env.REACT_APP_NODE_ENV || process.env.NODE_ENV || 'production';
 let authWeb3Type = environment==='production' ? 'browser' : 'local';
 
 let providerUrl = {
