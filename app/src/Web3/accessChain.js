@@ -11,18 +11,31 @@ if (envVars.length>2)
 
 
 
-// const environment = 'production';
-const environment = process.env.REACT_APP_NODE_ENV || process.env.NODE_ENV || 'production';
+const environment = 'production';
+// const environment = process.env.REACT_APP_NODE_ENV || process.env.NODE_ENV || 'production';
 let authWeb3Type = environment==='production' ? 'browser' : 'local';
 
 let providerUrl = {
   development : 'ws://127.0.0.1:8545',
   production: 'wss://mainnet-ws.thundercore.com/:8545'
 }[environment];
-let wsRetries=2;
+// NB there is a lot of pastarific async (mixed with sync) code to attempt to detect and fix WS disconnects.
+// If options.reconnect.auto works, may as well remove it bit by bit...
+let wsRetries=2;  //for manual retry
+const wsProviderOptions = {
+  timeout: 4800000,
+  reconnect: {
+    auto: true,
+    delay: 750,
+    maxAttempts: 5,
+    onTimeout: false
+  }
+}
+
+
 let web3;
 let authWeb3;
-let wsProvider = new Web3.providers.WebsocketProvider(providerUrl,{timeout: 4800000} );
+let wsProvider = new Web3.providers.WebsocketProvider(providerUrl, wsProviderOptions );
 let wpUp = true;
 let awaitAccess;
 
@@ -38,27 +51,28 @@ if (environment!== 'production'){
 if (providerUrl.indexOf('127.0.0.1')>-1)
   web3.isReliable = true;
 
-const reconnect = (wp = wsProvider)=> {
-    console.log(`${time(d)}.${ms(d)}: Attempting to reconnect...`);
+const reconnect = (wp = wsProvider)=> new Promise( (resolve, reject)=> {
+    console.log(`${exactTime()}: Attempting to reconnect...`);
     wp = new Web3.providers.WebsocketProvider(providerUrl);
 
     wp.on('connect', function () {
       let d=new Date();
-      console.log(`${time(d)}.${ms(d)}: WSS Reconnected`);
+      console.log(`${exactTime()}: WSS Reconnected`);
+      web3.setProvider(wp);
+      wpUp = true;
+      resolve();
     });
-    web3.setProvider(wp);
-    wpUp = true;
-}
+})
 
 wsProvider.on('error', e => {
   wpUp = false;
-  console.log(`${time(d)}.${ms(d)}: WS Error`, e);
+  console.log(`${exactTime()}: WS Error`, e);
   reconnect(wsProvider);
   // retry!
 });
 wsProvider.on('end', e => {
   wpUp = false;
-  console.log(`${time(new Date())}.${ms(d)}: WS closed`);
+  console.log(`${exactTime()}: WS closed`);
   reconnect(wsProvider);
 });
 
@@ -98,9 +112,12 @@ let OWN_ADDRESS;
 
 let d;
 const time = d=> d.toTimeString().slice(0,8);
-const ms = d=> (d%1000).toFixed(0);
+const ms = d=> (d%1000).toFixed(0).padStart(3,'0');
+const exactTime = ()=> `${time(new Date())}.${ms(new Date())}`
 
 const wpIsUp = async (timeout)=> new Promise ((resolve, reject)=> {
+  // this is caching, or forming a closure or some other confusing thing!!
+  console.log(`${exactTime()}: web3 is ${ wpUp ? 'UP' : 'DOWN' }`);
   if (wpUp)
     resolve();
   let t2;
@@ -108,7 +125,10 @@ const wpIsUp = async (timeout)=> new Promise ((resolve, reject)=> {
     if (wpUp) {
       clearTimeout(t2);
       clearInterval(t);
+      console.log(`${exactTime()}: web3 is UP - wpIsUp will resolve`);
       resolve();
+    } else {
+      console.log(`${exactTime()}: web3 is DOWN`);
     }
   }, 199);
   if (timeout)
@@ -253,6 +273,25 @@ export function getImplementationAddress() {
 }
 
 
+export const runConstructorManuallyFfs = ()=> {
+  callTransaction('getInitialisedValues')
+    .then(response=> {
+      console.log('constructor should have set', response);
+      if (!Object.values(response).some(el=> el || Number(el))) {
+        console.log(`but apparently it didn't`);
+        sendTransaction('fakeConstructor')
+          .then(response=> {
+            console.log('constructor values were set manually.');
+          })
+          .catch(e => {
+            console.log('could not manually set constructor values:', e);
+          })
+      }
+    })
+    .catch(e=>{ console.log('FFS:',e); })
+}
+
+
 export async function updateKnownPolls( options ) {
     // returns the list of events that are in the latest version of the contract
     // const { setWatchers } = options;
@@ -306,7 +345,7 @@ export async function getImplementationEvents(options={ setWatchers:false }, eve
 const withErrLog = (eventName, actionFn)=> {
   const errFn= actionFn.errFn || (err=>{
     if (err.message!=='CONNECTION ERROR: The connection closed unexpectedly')
-      console.log(time(new Date()),err, err.stack);
+      console.log(time(new Date()), 'event error', err, err.stack);
   });
   return (err, result)=>
     err
@@ -510,8 +549,10 @@ export function callTransaction(functionName, args) {
             if (!web3.isReliable)
               await wpIsUp();
             attempt = IMPLEMENTATION_INSTANCE.methods[functionName](...rv)
-              .call({from: OWN_ADDRESS});
-            attempt
+              .call({from: OWN_ADDRESS})
+            // 1. .call returns its own Promise which needs a catch
+            // 2. Why even break up attempt here- doesn;t seem to make sense!
+            // attempt
               .then(result => {
                 console.log(functionName,': chain responded:', result);
                 unpackRVs (result, outputs);
@@ -519,10 +560,36 @@ export function callTransaction(functionName, args) {
                 resolve(result);
               })
               .catch(err=> {
-                if (err.message==='CONNECTION ERROR: The connection closed unexpectedly')
-                  reconnect();
-                console.log(`${functionName} fail:`,err); reject(err)
-              });
+                // did the error message change??
+                // (this bit untested as probably now redundant)
+                if (err.message==='(call) CONNECTION ERROR: The connection closed unexpectedly') {
+                  wpUp = false;
+                  console.log('attempting reconnect');
+                  reconnect()
+                    // wpIsUp.then didn;t work..
+                    .then(()=> {
+                      console.log('WS seems to have reconnected. Retrying...');
+                      callTransaction(functionName, args)
+                        .then( resolve )
+                        .catch(e=> { console.log('oh, this is bad', e); });
+                    })
+                    .catch(e2=> {
+                      console.log('multiple errors :(');
+                      console.log(`First: `, err);
+                      console.log(`then: `, e2);
+                      reject(err)
+                      reject(e2)
+                    }) ;
+
+                }
+                console.log(`${exactTime()}: (call) ${functionName} fail:`,err);
+                console.log(`${ wpUp ? 'but WS had not fired "end" or "error"' : 'natch - as wp is down' }`);
+                // wpIsUp just for the LOGZZ
+                wpIsUp()
+                // pass through notification of the error (catch in React and render in state)
+                reject(err)
+              }) ;
+
             }
           })
         .catch(err => {
@@ -543,6 +610,7 @@ export function sendTransaction(functionName, args) {
             .then(({rv, outputs}) => {
                 let gas;
                 console.log(`Send to (${functionName}):`,IMPLEMENTATION_INSTANCE_FOR_SEND);
+                console.log(args);
                 console.log('got back from checkFF ready to send:',{rv, outputs});
                 IMPLEMENTATION_INSTANCE_FOR_SEND.methods[functionName](...rv)
                     .estimateGas({from: OWN_ADDRESS})
@@ -561,10 +629,12 @@ export function sendTransaction(functionName, args) {
                           resolve(result);
                         })
                     })
-                    .catch(e=>{console.log(`${functionName} fail:`,e); reject(e)});
+                    .catch( e=> {
+                      console.log(`(send) ${functionName} fail:`,e);
+                    });
             })
             .catch(err => {
-                console.log(`Bad format for ${functionName}`, err);
+                console.log(`(send) Bad format for ${functionName}`, err);
                 reject(err);
             });
     });

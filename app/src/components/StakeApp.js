@@ -10,7 +10,7 @@ import LogoBottom from "./LogoBottom";
 // import {  } from "./";
 
 import { connectToWeb3, refetchOwnAddress, getDeets, setOwnAddyforAuthWeb3,
-  getImplementationFunctions, getImplementationEvents,
+  getImplementationFunctions, getImplementationEvents, runConstructorManuallyFfs,
   callTransaction, sendTransaction, getFromStorage,
   myAccounts, } from "../Web3/accessChain";
 
@@ -57,7 +57,7 @@ const StakeApp = props => {
 
   const clearSelf = ()=> {
     console.log('cleared form');
-    setNewPollUrl(null);
+    // setNewPollUrl(null);
     setModalView(null);
     ['repStake', 'venueContrib', 'confirmBefore']
       .forEach(field=>{ setFormFields[field]('') });
@@ -96,7 +96,7 @@ const StakeApp = props => {
   const addStake = ()=>{
     const args = {
       poll : newPollUrl,
-      repStake : formFields.repStake,
+      repStake : formFields.repStake*1000,
       beneficiary : ownAddy,
       // availability : toTuple(formFields.availability.map(toTime)),
       // confirmBefore : formFields.confirmBefore,

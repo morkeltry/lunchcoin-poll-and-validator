@@ -6,7 +6,7 @@ import Media from 'react-media';
 import QRCode from 'qrcode-svg';
 
 import { connectToWeb3, refetchOwnAddress, getDeets, setOwnAddyforAuthWeb3,
-  getImplementationFunctions, getImplementationEvents,
+  getImplementationFunctions, getImplementationEvents, runConstructorManuallyFfs,
   callTransaction, sendTransaction, getFromStorage,
   myAccounts, } from "../Web3/accessChain";
 
