@@ -1,7 +1,9 @@
 import React, { useEffect, useState } from "react";
 
+import cN from 'classnames';
 // import {connectToWeb3, getImplementationFunctions, getImplementationEvents, setEventWatchers, switchTo} from "../Web3/adminPanel";
 import {connectToWeb3, getImplementationFunctions, getImplementationEvents, switchTo } from "../../Web3/accessChain";
+
 import SegregatedPanel from "./segregatedPanel/SegregatedPanel";
 import Button from "react-bootstrap/Button";
 import Container from "react-bootstrap/Container";
@@ -21,7 +23,7 @@ const readPanelViewBoolean = true;
 const writePanelViewBoolean = true;
 
 const AdminPanel = props => {
-  const { ownAddy } = props;
+  const { ownAddy, belowFold } = props;
   const [readForm, setReadForm] = useState(readFormArray);
   const [writeForm, setWriteForm] = useState(writeFormArray);
   const [events, setEvents] = useState(eventsObj);
@@ -102,7 +104,7 @@ const AdminPanel = props => {
   }
 
   return (
-    <div className='admin-panel'>
+    <div className= { cN('admin-panel', belowFold && 'admin-panel__below-fold') }>
       <Container fluid={"true"}>
         <Navbar expand="lg">
 

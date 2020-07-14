@@ -62,8 +62,10 @@
 
 .modal-form input[type=checkbox] {
   height: 3vh;
+  width: 2.5vh;
   position: relative;
   top: 1.5vw;
+  left: 3vw;
   margin: 1vw;
   background-color: black;
   box-shadow: 0 0 0.5vh #936e, 0 0 1vh #936e, 0 0 1.5vh #fff, 0 0 2vh;
@@ -71,16 +73,19 @@
 }
 
 .modal-form input[type=checkbox]:checked {
-  height: 3vh;
-  position: relative;
-  top: 1.5vw;
-  margin: 1vw;
   /* Default blue:  */
   box-shadow: 0 0 0.5vh #3daee9, 0 0 1vh #3daee9, 0 0 1.5vh #fff, 0 0 2vh;
   box-shadow:inset 0 0 1vh #3daee9, 0 0 3vh #3daee9, 0 0 4vh #FF1177;
   /* Green:  */
   /* box-shadow: 0 0 0.5vh #6f3, 0 0 1vh #6f3, 0 0 1.5vh #fff, 0 0 2vh;
   box-shadow:inset 0 0 1vh #6f3, 0 0 3vh #6f3, 0 0 4vh #FF1177; */
+}
+
+.modal__v-squash input[type=checkbox] {
+  height: 2.5vh;
+  top: 1.5vw;
+  margin: 0vh;
+  padding: 0.2vh;
 }
 
 
@@ -94,6 +99,11 @@
   left: 10%;
 }
 
+.modal__v-squash button {
+  position: absolute;
+  top: 77vh;           /*  explcit height to get round weird changes on :active */
+  bottom: 2.5vh;
+}
 
 .modal-button__form-button {
 
@@ -122,6 +132,12 @@
   right: 9.5%;
 }
 
+.modal__v-squash button:active {
+  position: absolute;
+  top: 77.5vh;
+  bottom: 1.5vh;
+}
+
 .modal-info__loading {
   font-size : 3vh;
   text-align: center;
@@ -137,6 +153,14 @@
   color: #acf;
 }
 
+.modal-form__to-w320 {
+  font-size : 3.7vw;
+}
+
+.modal__v-squash {
+  padding : 0.1vh auto;
+  margin : 0 auto;
+}
 
 .toast-enter {
   width: 70vw;

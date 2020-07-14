@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useLayoutEffect } from 'react';
+import Media from 'react-media';
 import { CSSTransition, TransitionGroup } from 'react-transition-group';
 import { ConnectionError } from "web3";
 import cN from 'classnames';
@@ -41,7 +42,7 @@ const LiveEvent = props => {
   const [polls, setPolls] = useState([]);
   const [livePolls, setLivePolls] = useState([]);
   const [ownAddress, setOwnAddy] = useState(OWN_ADDRESS);
-  const [modalView, setModalView] = useState(null);
+  const [modalView, setModalView] = useState('check in');
   const [burgerView, setBurgerView] = useState(false);
   const [toastView, setToastView] = useState(null);
   const [web3Error, setWeb3Error] = useState(null);
@@ -532,6 +533,21 @@ const LiveEvent = props => {
       fn (ev.formArgs);
     }
 
+    const shouldVSquash = (matches, childrenLength)=>
+      !(
+        matches.w320
+        ||
+            ( childrenLength
+              || (modalView==='check in' && stakers.length)>11
+              || (modalView==='venue refund' && caughtEvents.length)
+            ) >11
+        ||
+            ( childrenLength
+              || (modalView==='check in' && stakers.length)
+              || (modalView==='venue refund' && caughtEvents.length)
+            ) >9 && matches.h880
+      )
+
     const accountSetters = (availableAccounts,n)=>{
       const result = {};
       const accounts = new Array(n)
@@ -660,7 +676,12 @@ return(<>
           </div>
         </Section>
 
-        <LogoBottom refresh={ ()=>{ fetchAndUpdate(); }} />
+        <Media queries={{ w320: "(max-width: 479px)", h880: "(max-height: 879px)" }}>
+          { matches =>
+              shouldVSquash(matches)
+                && <LogoBottom refresh={ ()=>{ fetchAndUpdate(); }} />
+          }
+        </Media>
 
         { null &&
         <TransitionGroup className="todo-list">
@@ -713,36 +734,57 @@ return(<>
                     clearModal= { ()=>{ setModalView(null) } }
                     submit= { submitProof  /*NB not yet implemented in FormModal - see submit below */ }
                   >
-                    <div>{ ownAddress }</div>
-                    <div className=""><span className="">Validator:</span><span className=""> Mutual Agreement</span></div>
-                    <div className="">Check in your friends</div>
-                    <form>
-                      { stakers.map((staker,stakerNo)=>
-                        <div key={staker} className="w100">
-                          <span className="address42">
-                            { staker }
-                          </span>
-                          <input
-                            type="checkbox"
-                            className="modal-checkbox w20r"
-                            checked= { ownProof[stakerNo] }
-                            onClick= {()=>{
-                              const newProof = [...ownProof];
-                              newProof[stakerNo]= !ownProof[stakerNo];
-                              console.log('Current:', ownProof[stakerNo] );
-                                setOwnProof( newProof );
-                              console.log('Setting:', newProof[stakerNo] );
-                            }}
-                          />
+                    <Media queries={{ w320: "(max-width: 479px)" }}>
+                      { matches => <>
+
+                        <div>{ ownAddress }</div>
+                        <div className=""><span className="hype-small">Validator:</span><span className=""> Mutual Agreement</span></div>
+                        <div className={ cN(
+                            'w100 text__centred__heavy',
+                            'w100 text__centred__heavy__nonsquash'
+                          )}>
+                            Check in your friends
                         </div>
-                      )}
-                      <button
-                        className = { cN('modal-button', 'modal-button__form-button') }
-                        onClick = { asSubmit(submitProof) }
-                      >
-                        Check In
-                      </button>
-                    </form>
+                        <form className = { cN(
+                              'horiz-align',
+                              (stakers.length>9) && 'modal__v-squash'
+                            ) }>
+                          <div className="horiz-aligned-elements-container">
+                            { stakers.map((staker,stakerNo)=>
+                              <div key={staker} className="w100">
+                                <span className="address42">
+                                  { staker }
+                                </span>
+                                <span className="w20r">
+                                  <input
+                                    type="checkbox"
+                                    className="modal-checkbox w20r"
+                                    checked= { ownProof[stakerNo] }
+                                    onClick= {()=>{
+                                      const newProof = [...ownProof];
+                                      newProof[stakerNo]= !ownProof[stakerNo];
+                                      console.log('Current:', ownProof[stakerNo] );
+                                        setOwnProof( newProof );
+                                      console.log('Setting:', newProof[stakerNo] );
+                                    }}
+                                  />
+                                </span>
+                              </div>
+                            )}
+                          </div>
+                          <button
+                            className = { cN(
+                              'modal-button',
+                              'modal-button__form-button',
+                            ) }
+                            onClick = { asSubmit(submitProof) }
+                          >
+                            Check In
+                          </button>
+                        </form>
+
+                      </> }
+                    </Media>
                   </FormModal>
                 : <InfoModal
                     modal = { modalView }
@@ -815,7 +857,7 @@ return(<>
 
 
     </div>
-    { true &&
+    { false &&
       <AdminLogger ownAddy={ ownAddress } />
     }
   </>)

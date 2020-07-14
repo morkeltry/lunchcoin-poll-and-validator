@@ -1,4 +1,5 @@
 import React from 'react';
+import Media from 'react-media';
 
 import cN from 'classnames';
 
@@ -19,13 +20,22 @@ const showtimeify = text=>
 const FormModal = props => {
   const { position, children } = props;
   return (
-    <div
-      className={ cN('modal-form', position==='relative' && 'position-relative-hack ') }
-    >
-      { children }
-      <div>
-      </div>
-    </div>
+        <Media queries={{ w320: "(max-width: 479px)" }}>
+          { matches =>
+            <div
+              className={ cN(
+                'modal-form',
+                matches.w320 && 'modal-form__to-w320',
+                (children.length>99) && 'modal__v-squash',
+                position==='relative' && 'position-relative-hack '
+              ) }
+              >
+                { children }
+                <div>
+                </div>
+              </div>
+          }
+        </Media>
   )
 }
 
