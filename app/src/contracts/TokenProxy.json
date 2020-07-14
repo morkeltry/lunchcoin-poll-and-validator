@@ -1402,15 +1402,15 @@
     "version": "0.5.17+commit.d19bba13.Emscripten.clang"
   },
   "networks": {
-    "1594674995409": {
+    "108": {
       "events": {},
       "links": {},
-      "address": "0x22F68e4165872d78CefE63dFfA298377d1573f3B",
-      "transactionHash": "0xc92a2a8719bf0cb26dcb5c8b79734ed298af8f3263fc660f6cec649ebd5664ef"
+      "address": "0x96e15D41CaE2EddbA24bc7B1AFA78B983B74cCCD",
+      "transactionHash": "0xf78480354fac9b2085e3c9b64865704a9f8f34f003130c7b63ce5aef1981d497"
     }
   },
   "schemaVersion": "3.0.2",
-  "updatedAt": "2020-07-13T21:46:49.114Z",
+  "updatedAt": "2020-07-14T12:52:33.093Z",
   "devdoc": {
     "author": "Arvind Kalra (github.com/arvindkalra) and Pranav Singhal (github.com/pranav-singhal)",
     "methods": {
