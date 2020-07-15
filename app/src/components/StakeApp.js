@@ -21,7 +21,7 @@ import './checkInView.css';
 import './modalView.css';
 import './stakingView.css';
 
-import { defaultPoll } from '../constants/constants.js';
+import { defaultPoll, alwaysStakeSomeRep } from '../constants/constants.js';
 
 const showtimeify = text=>
   text ? `[${text.replace(/ /g,'_')}]` : text ;
@@ -66,7 +66,7 @@ const StakeApp = props => {
     toastClearer = setTimeout(()=> { setToastViewRaw('') }, toastTimeout(tV));
   }
 
-  const toastTimeout = toastView => 3000;
+  const toastTimeout = toastView => 4000;
 
   // pass this to Toast
   // returns false (ie supress) if any modal is up.
@@ -85,6 +85,9 @@ const StakeApp = props => {
       { eventName, returnValues, age: Date.now() }
     ));
 
+    if (['disreputableStakerIgnored'].includes(eventName)) {
+        setToastView( { event: eventName, ...returnValues } );
+    }
     if (['repRefund', 'proofsWindowClosed', 'venuePotDisbursed'].includes(eventName)) {
       if (Object.values(returnValues).includes(ownAddy)) {
         // const { } = result.returnValues;
@@ -140,6 +143,7 @@ const StakeApp = props => {
     setTimeout (()=>{ setModalView(null) }, 1000);
     ['repStake', 'venueContrib', 'confirmBefore']
       .forEach(field=>{ setFormFields[field]('') });
+    setFormFields.repStake('1.0');
   }
 
   const dontChange = ()=>{}
@@ -179,20 +183,50 @@ const StakeApp = props => {
   const addStake = ()=>{
     const args = {
       poll : newPollUrl,
-      repStake : formFields.repStake*1000,
+      repStake : (formFields.repStake || alwaysStakeSomeRep )*1000,
       beneficiary : ownAddy,
       // availability : toTuple(formFields.availability.map(toTime)),
       // confirmBefore : formFields.confirmBefore,
     }
 
+    if (args.repStake==0 && formFields.venueContrib==0) {
+      setError ('No stake or contribution set'); // you can choose to set a zero repStake,
+    }                                            // but only in order to contirbute to the venue
+                                                 // however, the contract will set your stake to zero and fail silently if stakingIsClosed
+    if (formFields.repStake == 0) {
+      if (formFields.venueContrib == 0) {
+        setToastView( { event: 'zeroStakeAttempt' } );
+        return Promise.reject({ message: 'zeroStakeAttempt' });
+      } else
+        setToastView({
+          event: 'venuePaidWithNoRepStake',
+          venueContrib: formFields.venueContrib,
+          beneficiary: (args.beneficiary!==ownAddy) && args.beneficiary
+        });
+    }
+
     console.log(args);
+    // TODO: wait for the genuine staked event in additional to this conditional and fake event!!
+    if (args.repStake>0 || formFields.venueContrib>0)
     return sendTransaction('addUnboundedStake', args)
       .then((resp)=>{
-        console.log(`addUnboundedStake`, resp);
-        setToastView({
-          event: 'Placed a stake',
-          stake: args.repStake
-        });
+        console.log(`addUnboundedStake suceeded but that doesn't mean it worked! (check other chain calls to find out)`, resp);
+        // NB this detects the total stake, NOT whether this stake was successful!
+        // TODO: better events in the contract's addStake.
+        callTransaction('totalRepStaked', { _poll: args.poll, _staker: ownAddy,})
+          .then (rep=> {
+            console.log(`Well here's the damn result! :`,rep);
+            if (rep>0)
+              setToastView({
+                event: 'Placed a stake',
+                stake: args.repStake,
+                totalRepStaked: rep
+              });
+            else
+              setToastView({ event: 'disreputableStakerIgnored' });
+              setError ('Wasteman detected');
+              return Promise.reject({ message: 'disreputableStakerIgnored' });
+          })
       })
       .catch(err=>{ console.log(`addUnboundedStake failed`, err); });
 

@@ -9,8 +9,10 @@ import { connectToWeb3, refetchOwnAddress, getDeets, setOwnAddyforAuthWeb3,
   getImplementationFunctions, getImplementationEvents, runConstructorManuallyFfs,
   callTransaction, sendTransaction, getFromStorage,
   myAccounts, } from "../Web3/accessChain";
+import { eventToastOutput } from '../helpers/outputFormatting.js';
 
 import InfoModal from "./InfoModal";
+import Toast from "./Toast";
 // import {  } from "./";
 // import {  } from "./";
 // import {  } from "./";
@@ -18,16 +20,20 @@ import InfoModal from "./InfoModal";
 
 import "../App.scss";
 import './checkInView.css';
+import './stakingView.css';
+import './modalView.css';
 import "./starsView.css";
 
 // import { defaultPoll } from '../constants/constants.js';
+
+let toastClearer;
 
 const MineApp = props => {
   const { x } = props;
 
   const [ownAddress, setOwnAddy] = useState('');
   const [caughtEvents, setCaughtEvents] = useState([]);
-  const [toastView, setToastView] = useState(null);
+  const [toastView, setToastViewRaw] = useState(null);
   const [btBeacon, setBtBeacon] = useState(true);
   const [automine, setAutomine] = useState(false);
   const [freeTt, setFreeTt] = useState(true);
@@ -35,6 +41,13 @@ const MineApp = props => {
   const [error, setError] = useState(null);
   const [web3Error, setWeb3Error] = useState(null);
   const [noChainError, setNoChainError] = useState(null);
+
+  const setToastView = tV=>{
+    setToastViewRaw( tV );
+    toastClearer = setTimeout(()=> { setToastViewRaw('') }, toastTimeout(tV));
+  }
+
+  const toastTimeout = toastView => 4000;
 
   const eventId = '16-07-2020';
   let seq = { eventId: 0 };
@@ -52,7 +65,6 @@ const MineApp = props => {
       if (Object.values(returnValues).includes(ownAddy)) {
         // const { } = result.returnValues;
         setToastView( { event: eventName, ...returnValues } );
-        setTimeout(()=> { setToastView('') }, 5000);
       } else {
         console.log(`toast not set, ${returnValues.to} || ${returnValues.staker}!=${ownAddy}`);
       }
@@ -91,6 +103,12 @@ const MineApp = props => {
         console.log(`anyoneMineRep`, resp);
         callTransaction('getRep', { staker: user })
           .then((resp)=>{
+            setToastView({
+              event: 'thirdPartyRepMined',
+              publicEvent: eventId,
+              user,
+              newRep: resp
+            });
             console.log(`getRep`, resp);
           })
       })
@@ -271,6 +289,23 @@ const MineApp = props => {
               />
             </InfoModal>
           }
+
+        {
+        toastView &&
+          <Toast
+            visible={ ()=>Boolean(toastView) }
+            hide={ ()=>{ setToastView(null) } }
+          >
+            <div className="toast__header">
+              { eventToastOutput(toastView).header }
+            </div>
+            <div className="toast-text">
+              { eventToastOutput(toastView).text }
+            </div>
+
+          </Toast>
+        }
+
         </div>
   )
 }
