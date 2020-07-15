@@ -6,13 +6,15 @@ import Media from 'react-media';
 
 import FormModal from "./FormModal";
 import AddPollInfoField from "./AddPollInfoField";
+import Toast from "./Toast";
 import LogoBottom from "./LogoBottom";
 // import {  } from "./";
 
 import { connectToWeb3, refetchOwnAddress, getDeets, setOwnAddyforAuthWeb3,
   getImplementationFunctions, getImplementationEvents, runConstructorManuallyFfs,
   callTransaction, sendTransaction, getFromStorage,
-  myAccounts, } from "../Web3/accessChain";
+  myAccounts, } from '../Web3/accessChain';
+import { eventToastOutput } from '../helpers/outputFormatting.js';
 
 import '../App.scss';
 import './checkInView.css';
@@ -37,12 +39,16 @@ const toTuple = ()=>{
 
 }
 
+let toastClearer;
+
 const StakeApp = props => {
   const { pollUrl } = props;
 
   const [ownAddy, setOwnAddy] = useState(null);
+  const [caughtEvents, setCaughtEvents] = useState([]);
   const [popupView, setPopupView] = useState(null);
   const [modalView, setModalView] = useState(null);
+  const [toastView, setToastViewRaw] = useState(null);
   const [newPollUrl, setNewPollUrl] = useState(defaultPoll);
   const formFields = {};
   const setFormFields = {};
@@ -55,10 +61,83 @@ const StakeApp = props => {
   const [noChainError, setNoChainError] = useState(null);
 
 
+  const setToastView = tV=>{
+    setToastViewRaw( tV );
+    toastClearer = setTimeout(()=> { setToastViewRaw('') }, toastTimeout(tV));
+  }
+
+  const toastTimeout = toastView => 3000;
+
+  // pass this to Toast
+  // returns false (ie supress) if any modal is up.
+  // the logic is- it's like .filter, not like supress
+  const defaultToastFilter = modalView => !Boolean(modalView);
+
+  const catchRelevantEvent = async (result, eventName)=> {
+    const { returnValues } = result;
+    const ownAddy = await refetchOwnAddress();
+    // const ownAddy = getDeets().OWN_ADDRESS;
+    console.log(`(according to accessChain:) ${getDeets().OWN_ADDRESS}`);
+    console.log(eventName);
+    console.log(result.raw);
+    console.log(result.returnValues);
+    setCaughtEvents( prevState=> prevState.concat(
+      { eventName, returnValues, age: Date.now() }
+    ));
+
+    if (['repRefund', 'proofsWindowClosed', 'venuePotDisbursed'].includes(eventName)) {
+      if (Object.values(returnValues).includes(ownAddy)) {
+        // const { } = result.returnValues;
+        setToastView( { event: eventName, ...returnValues } );
+      } else {
+        console.log(`toast not set, ${returnValues.to} || ${returnValues.staker}!=${ownAddy}`);
+      }
+    }
+
+  }
+
+  const chainEventListeners = {
+
+    // proofUpdated: {
+    //
+    // },
+    // proofsWindowClosed: {
+    //
+    // },
+    // refundFail: {
+    //
+    // },
+
+    repRefund: (result, eventName)=> {
+      catchRelevantEvent(result, eventName);
+      if (!ownAddy || ownAddy.length<42) {
+        console.log(`Caught rep event, but it looks like state has reverted to inital value:/ ownAddress=${ownAddy}, retrieved from state again=${'showOwnAddy()'}. Refetching from web3.`);
+        refetchOwnAddress().then(ownAddy => {
+          console.log('\n\nrefetchOwnAddress SUCEEDED\n\n');
+          fetchRep(ownAddy)
+            .then (response=> {
+              setToastView( { event: 'Rep refunded', response } );
+            });
+        })
+      } else
+      fetchRep();
+    },
+    venuePotDisbursed: catchRelevantEvent,
+
+  }
+
+  const fetchRep = (staker = ownAddy )=> new Promise((resolve, reject)=> {
+    console.log('ownAddy',ownAddy,'getRep', {staker});
+    callTransaction('getRep', {staker})
+      .then(resolve)
+      .catch(err=>{ console.log(`getRep failed`, err); reject(err); });
+  })
+
+
   const clearSelf = ()=> {
     console.log('cleared form');
     // setNewPollUrl(null);
-    setModalView(null);
+    setTimeout (()=>{ setModalView(null) }, 1000);
     ['repStake', 'venueContrib', 'confirmBefore']
       .forEach(field=>{ setFormFields[field]('') });
   }
@@ -66,7 +145,11 @@ const StakeApp = props => {
   const dontChange = ()=>{}
 
   const handleInput = field=> ev=> {
-    setFormFields[field](ev.target.value);
+    if (field==='pollUrl') {
+      let url=ev.target.value;
+      setNewPollUrl(url);
+    } else
+      setFormFields[field](ev.target.value);
   }
 
   const validPollAddress = url =>
@@ -106,6 +189,10 @@ const StakeApp = props => {
     return sendTransaction('addUnboundedStake', args)
       .then((resp)=>{
         console.log(`addUnboundedStake`, resp);
+        setToastView({
+          event: 'Placed a stake',
+          stake: args.repStake
+        });
       })
       .catch(err=>{ console.log(`addUnboundedStake failed`, err); });
 
@@ -151,7 +238,9 @@ const StakeApp = props => {
               clearModal= { ()=>{  } }
               position= "relative"
             >
-              <div className=""><span className="">Stake some rep so you can choose times on a Lunchcoin poll</span></div>
+              <div className={ cN("hype-small", "modal-form-text__on-light-bg") }>
+                <span className="">Stake some rep so you can choose times on a Lunchcoin poll</span>
+              </div>
 
               <AddPollInfoField
                 clear = { ()=>{ setPopupView(null); } }
@@ -162,7 +251,7 @@ const StakeApp = props => {
                 <input
                   id="staker"
                   type="text"
-                  size={ 45}
+                  size={ 45 }
                   defaultValue={ ownAddy }
                   onChange={ dontChange }
                 />
@@ -175,11 +264,11 @@ const StakeApp = props => {
                 { 'Poll URL:'}
                 { null }
                 <input
-                  id='new-poll-url-(modal)'
+                  id='poll-url'
                   type="text"
                   size={31}
                   defaultValue={ newPollUrl }
-                  onChange={ handleInput('repStake') }
+                  onChange={ handleInput('pollUrl') }
                 />
               </AddPollInfoField>
 
@@ -193,7 +282,7 @@ const StakeApp = props => {
                   id="minimum-stake"
                   type="text"
                   size={6}
-                  defaultValue={ '1.0' }
+                  defaultValue={ formFields.repStake }
                   onChange={ handleInput('repStake') }
                   onFocus={ null /* ev=>{ warning(ev,`Different polls may require a different amount of reputation to stake on, but there is no reason to stake more reputation than the minimum for the particular poll`); } */ }
                   onSubmit={ ()=>{ let x= x*1000 } }
@@ -266,7 +355,7 @@ const StakeApp = props => {
                 onClick = { ()=> {
                   addStake()
                     .then(()=>{
-                      setModalView('Success. All is aces');
+                      // setModalView('Success. All is aces');
                       clearSelf();
                     })
                     .catch (e=>{
@@ -282,6 +371,23 @@ const StakeApp = props => {
             <LogoBottom />
           </div>
         </div>
+
+        {
+        toastView &&
+          <Toast
+            visible={ ()=>Boolean(toastView) }
+            hide={ ()=>{ setToastView(null) } }
+          >
+            <div className="toast__header">
+              { eventToastOutput(toastView).header }
+            </div>
+            <div className="toast-text">
+              { eventToastOutput(toastView).text }
+            </div>
+
+          </Toast>
+        }
+
       </>
 
     : <div className="huuuge">

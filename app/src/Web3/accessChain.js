@@ -115,9 +115,10 @@ const time = d=> d.toTimeString().slice(0,8);
 const ms = d=> (d%1000).toFixed(0).padStart(3,'0');
 const exactTime = ()=> `${time(new Date())}.${ms(new Date())}`
 
+// this is caching, or forming a closure or some other confusing thing!!
+// maybe remove it?
 const wpIsUp = async (timeout)=> new Promise ((resolve, reject)=> {
-  // this is caching, or forming a closure or some other confusing thing!!
-  console.log(`${exactTime()}: web3 is ${ wpUp ? 'UP' : 'DOWN' }`);
+  // console.log(`${exactTime()}: web3 is ${ wpUp ? 'UP' : 'DOWN' }`);
   if (wpUp)
     resolve();
   let t2;
@@ -457,9 +458,9 @@ function checkWithABI(currentFunc, functionName, args, resolve, reject) {
             );
           }
     });
-    console.log(`resolving with ${rv.length} RVs for ${currentFunc.outputs.length} outputs.`);
-    if (rv.length!==currentFunc.outputs.length)
-      console.log(rv);
+    // console.log(`resolving with ${rv.length} RVs for ${currentFunc.outputs.length} outputs.`);
+    // if (rv.length!==currentFunc.outputs.length)
+    //   console.log(rv);
     resolve({rv, outputs: currentFunc.outputs });
 }
 
@@ -483,7 +484,7 @@ async function checkFunctionFormatting(functionName, args) {
             if (!nowFound)
               console.log(`${functionName} was not found. Did you rename it?`);
             // Function present in Implementation Contract
-            console.log('checkWithABI', nowFound, functionName, args);
+            // console.log('checkWithABI', nowFound, functionName, args);
             checkWithABI(nowFound, functionName, args, resolve, reject);
         }
     });
@@ -502,7 +503,6 @@ function unpackRVs (result, outputs) {
         if (output && output["type"].substr(0, 5) === "tuple")
             result[idx] = `Can't yet handle returned tuples, sorry!`;
     }});
-    console.log(typeof result, result);
     return result;
 }
 
@@ -544,8 +544,6 @@ export function callTransaction(functionName, args) {
 
           let i=wsRetries;
           while (i--) {
-            console.log(web3.isReliable);
-            console.log(await wpIsUp());
             if (!web3.isReliable)
               await wpIsUp();
             attempt = IMPLEMENTATION_INSTANCE.methods[functionName](...rv)
