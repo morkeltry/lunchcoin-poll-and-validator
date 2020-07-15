@@ -212,8 +212,12 @@
   padding : 0.5vh 0vh 0vh;
   margin: -0.25vh -0.25vh 0.75vh;
   font-size : 2.25vh;
+  color: pink;;
 }
 
+.toast-text {
+  color: pink;
+}
 
 .item-enter {
   opacity: 0;

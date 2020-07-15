@@ -397,7 +397,6 @@ const LiveEvent = props => {
  // refundStake (string memory _poll, bytes32 _reveal)
 
   const claimRep = ()=> {
-    // Not yet implemented in contract!
     setModalView('reclaim rep');
     setSentTransaction([Date.now(),'reclaim rep']);
     sendTransaction('refundStake', {_poll: pollUrl, _reveal: emptyBytes32 })
@@ -405,7 +404,8 @@ const LiveEvent = props => {
         setTimeout(()=>{
         callTransaction('totalRepStaked', {_poll: pollUrl, _staker: ownAddress })
           .then(response=>{
-            console.log(response);
+            if (response>0)
+              console.log(response);
           })
         },500)
       })
@@ -721,7 +721,9 @@ return( <>
 
 
           { defaultToastFilter(modalView) && toastView &&
-            <Toast visible={ ()=>Boolean(toastView) } hide={ ()=>{ setToastView(null) } }>
+            <Toast visible={ ()=>Boolean(toastView) } hide={ ()=>{ setToastView(null) } }
+              content={[ toastView, eventToastOutput(toastView) ]}
+            >
               <div className="toast__header">
                 { eventToastOutput(toastView).header }
               </div>

@@ -10,6 +10,9 @@ import './modalView.css';
 
 const Toast = props => {
   const { visible, hide,  children } = props;
+  if (props.content)
+    console.log(props.content);
+
   return (
     <CSSTransition
       in={ ()=>Boolean(visible) }

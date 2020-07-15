@@ -81,10 +81,16 @@ export const eventToastOutput = (tv, ownAddy)=> {
     return emptyResult
   };
   if ( firstPartyEvents.includes(toastView.event)) {
+    console.log(`Formatting output for caught first party event: ${toastView.event}`, toastView);
     switch (toastView.event) {
       case 'Placed a stake' :
         result.header='Placed a stake';
         result.text=`You placed a stake ( ${niceNum(toastView.stake/1000)} rep )`;
+        break;
+      case 'repRefund' :
+        result.header='Rep stake returned';
+        result.text=`Your staked reputation was reclaimed. Staked:${niceNum(toastView.staked/1000)}, Returned:${niceNum(toastView.refunded/1000)}`;
+        console.log('SHould pass to Toast:', result);
         break;
       default :
         return emptyResult
@@ -93,6 +99,7 @@ export const eventToastOutput = (tv, ownAddy)=> {
     return result
   };
   if ( broadcastEvents.includes(toastView.event)) {
+    console.log(`Formatting output for caught broadcast event: ${toastView.event}`, toastView);
     switch (toastView.event) {
       case 'newPollCreated' :
         // await Promise.race([
@@ -124,14 +131,11 @@ export const eventToastOutput = (tv, ownAddy)=> {
     return result
   };
   if ( thirdPartyEvents.includes(toastView.event)) {
+    console.log(`Formatting output for caught third party event: ${toastView.event}`, toastView);
     switch (toastView.event) {
       case 'venuePotDisbursed' :
         result.header='Some of your venue contribution was refunded';
         result.text=`Called by ${ toastView.by }\nYou received ${ kiloNiceNum(toastView.amount )}TT`
-        break;
-      case 'repRefund' :
-        result.header='Rep stake returned';
-        result.text=`Your staked reputation was reclaimed. Staked:${niceNum(toastView.staked/1000)}, Returned:${niceNum(toastView.refunded/1000)}`;
         break;
       case 'stakeReleased' :
         result.header='Rep stake released';
