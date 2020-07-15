@@ -150,7 +150,7 @@
 
 .modal-form-text__on-light-bg {
   font-weight: 500;
-  color: #acf;
+  color: #edf;
 }
 
 .modal-form__to-w320 {
@@ -158,7 +158,8 @@
 }
 
 .modal__v-squash {
-  padding : 0.1vh auto;
+  padding-top : 0.1vh;
+  padding-bottom : 0.1vh;
   margin : 0 auto;
 }
 

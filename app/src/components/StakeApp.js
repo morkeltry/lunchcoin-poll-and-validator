@@ -145,7 +145,11 @@ const StakeApp = props => {
   const dontChange = ()=>{}
 
   const handleInput = field=> ev=> {
-    setFormFields[field](ev.target.value);
+    if (field==='pollUrl') {
+      let url=ev.target.value;
+      setNewPollUrl(url);
+    } else
+      setFormFields[field](ev.target.value);
   }
 
   const validPollAddress = url =>
@@ -234,7 +238,9 @@ const StakeApp = props => {
               clearModal= { ()=>{  } }
               position= "relative"
             >
-              <div className=""><span className="">Stake some rep so you can choose times on a Lunchcoin poll</span></div>
+              <div className={ cN("hype-small", "modal-form-text__on-light-bg") }>
+                <span className="">Stake some rep so you can choose times on a Lunchcoin poll</span>
+              </div>
 
               <AddPollInfoField
                 clear = { ()=>{ setPopupView(null); } }
@@ -245,7 +251,7 @@ const StakeApp = props => {
                 <input
                   id="staker"
                   type="text"
-                  size={ 45}
+                  size={ 45 }
                   defaultValue={ ownAddy }
                   onChange={ dontChange }
                 />
@@ -258,11 +264,11 @@ const StakeApp = props => {
                 { 'Poll URL:'}
                 { null }
                 <input
-                  id='new-poll-url-(modal)'
+                  id='poll-url'
                   type="text"
                   size={31}
                   defaultValue={ newPollUrl }
-                  onChange={ handleInput('repStake') }
+                  onChange={ handleInput('pollUrl') }
                 />
               </AddPollInfoField>
 

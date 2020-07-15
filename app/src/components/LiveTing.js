@@ -43,7 +43,7 @@ const LiveEvent = props => {
   const [polls, setPolls] = useState([]);
   const [livePolls, setLivePolls] = useState([]);
   const [ownAddress, setOwnAddy] = useState(OWN_ADDRESS);
-  const [modalView, setModalView] = useState('check in');
+  const [modalView, setModalView] = useState(null);
   const [burgerView, setBurgerView] = useState(false);
   const [toastView, setToastViewRaw] = useState(null);
   const [web3Error, setWeb3Error] = useState(null);
@@ -754,7 +754,7 @@ return( <>
                           </div>
                           <form className = { cN(
                                 'horiz-align',
-                                (stakers.length>9) && 'modal__v-squash'
+                                shouldVSquash(matches) && 'modal__v-squash'
                               ) }>
                             <div className="horiz-aligned-elements-container">
                               { stakers.map((staker,stakerNo)=>
@@ -807,27 +807,58 @@ return( <>
                     { modalView==='venue refund'
                     ? <>
                       <div className="hype-small">Refunded to:</div>
-                      { caughtEvents
-                          .filter(event=> event.eventName==='venuePotDisbursed')
-                          .sort(event=> prioritiseThirdPartyEvents(event, ownAddress))
-                          .map (event=>{
-                            const { returnValues } = event;
-                            const { amount, by, to } = returnValues;
-                            return <div className={ cN("w100") }>
-                              <span className={ cN("address42", "w70") }>{ to } </span>
-                              <span className={ cN("address42", "w30r") }>
-                                <div className={ cN("hype") }>{ kiloNiceNum(amount) }TT</div>
-                              { price &&
-                                <div className={ cN("hype-small","sub-right") }> (USD { niceNum(amount*price) })</div>
-                              }
-                              </span>
-                           </div>
-                           /*
-                            TODO: add responsive alternative to hype, hype-small
+                      <div className= { cN(
+                        'horiz-aligned-elements-container',
+                        shouldVSquash(matches) && 'modal__v-squash'
+                      )}>
+                        { caughtEvents
+                            .filter(event=> event.eventName==='venuePotDisbursed')
+                            .sort(event=> prioritiseThirdPartyEvents(event, ownAddress))
+                            .map (event=>{
+                              const { returnValues } = event;
+                              const { amount, by, to } = returnValues;
+                              return <div className={ cN(
+                                'w100',
+                                shouldVSquash(matches) && 'modal__v-squash'
+                              ) }>
+                                <span className={ cN('address42', 'w70') }>{ to } </span>
+                                <span className={ cN(
+                                    'address42',
+                                    'w30r',
+                                    shouldVSquash(matches) && 'w30r__v-squash',
+                                    shouldVSquash(matches) && caughtEvents.length>12 && 'w30r__v-very-squash',
+                                ) }>
+                                  { shouldVSquash(matches)
+                                    ? <>
+                                        <span className={ cN('hype-small') }>
+                                          { kiloNiceNum(amount) }TT
+                                        </span>
+                                        { price &&
+                                          <span className={ cN('sub-right') }>
+                                             (USD { niceNum(amount*price) })
+                                          </span>
+                                        }
+                                      </>
+                                    : <>
+                                        <div className={ cN('hype') }>
+                                          { kiloNiceNum(amount) }TT
+                                        </div>
+                                        { price &&
+                                          <div className={ cN('sub-right', 'hype-small') }>
+                                             (USD { niceNum(amount*price) })
+                                          </div>
+                                        }
+                                      </>
+                                  }
+                                </span>
+                             </div>
+                             /*
+                              TODO: add responsive alternative to hype, hype-small
 
-                           */
-                         })
-                       }
+                             */
+                           })
+                         }
+                     </div>
                     </>
                   : <>
                       <div className={ cN("modal-info__header", "w100", "hype-small") }> Reputation update </div>
