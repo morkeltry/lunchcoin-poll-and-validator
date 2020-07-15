@@ -37,7 +37,7 @@ const state={
 const loggingEvents = ['logStuff', 'emptyStakeRemoved' ];
 const broadcastEvents = ['newPollCreated', 'eventTimeSet', 'eventStakingClosed', 'proofsWindowClosed' ];
 const thirdPartyEvents = ['venuePotDisbursed', 'stakeReleased', 'stakeLocked' ];
-const firstPartyEvents = ['staked', 'stakeNotAccepted', 'disreputableStakerIgnored', 'proofUpdated', 'repRefund', 'refundFail', 'expiryWasSet', 'availabilityAdded', 'madeVenueContribution' ];
+const firstPartyEvents = ['staked', 'Placed a stake', 'stakeNotAccepted', 'disreputableStakerIgnored', 'proofUpdated', 'repRefund', 'refundFail', 'expiryWasSet', 'availabilityAdded', 'madeVenueContribution' ];
 
 
 const releaseStateIfOver = maxSize=> {
@@ -74,11 +74,23 @@ export const eventToastOutput = (tv, ownAddy)=> {
   const toastView = tv || {};
   const emptyResult = { header: null, text: null };
   const result = emptyResult;
+
+  if (!tv)
+    return emptyResult
   if ( loggingEvents.includes(toastView.event)) {
     return emptyResult
   };
   if ( firstPartyEvents.includes(toastView.event)) {
-    return emptyResult
+    switch (toastView.event) {
+      case 'Placed a stake' :
+        result.header='Placed a stake';
+        result.text=`You placed a stake ( ${niceNum(toastView.stake/1000)} rep )`;
+        break;
+      default :
+        return emptyResult
+    }
+    console.log(`returning ${result}`,result);
+    return result
   };
   if ( broadcastEvents.includes(toastView.event)) {
     switch (toastView.event) {
@@ -117,6 +129,10 @@ export const eventToastOutput = (tv, ownAddy)=> {
         result.header='Some of your venue contribution was refunded';
         result.text=`Called by ${ toastView.by }\nYou received ${ kiloNiceNum(toastView.amount )}TT`
         break;
+      case 'repRefund' :
+        result.header='Rep stake returned';
+        result.text=`Your staked reputation was reclaimed. Staked:${niceNum(toastView.staked/1000)}, Returned:${niceNum(toastView.refunded/1000)}`;
+        break;
       case 'stakeReleased' :
         result.header='Rep stake released';
         result.text=`Your staked reputation was released and can now be reclaimed.`;
@@ -132,6 +148,7 @@ export const eventToastOutput = (tv, ownAddy)=> {
     }
     return result
   };
+  return emptyResult
 }
 
 export const prioritiseThirdPartyEvents = (event, ownAddy)=>
@@ -188,7 +205,7 @@ export const unixifyTimes = resp=>
 
 export const kiloNiceNum = num=>
   num >= 1000000
-    ? niceNum(num/1000000)+' M'
+    ? niceNum(num/1000000)+'M '
     : num >= 1000
       ? niceNum(num/1000)+' k'
       : (num >= 1 || num==0)

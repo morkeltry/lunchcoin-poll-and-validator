@@ -32,6 +32,7 @@ const ether = 1e18;
 const kEther = 1e21;
 let OWN_ADDRESS = '0x000123';
 let t=[];
+let toastClearer;
 
 const LiveEvent = props => {
   const { pollUrl, setOwnAddyParent } = props;
@@ -44,7 +45,7 @@ const LiveEvent = props => {
   const [ownAddress, setOwnAddy] = useState(OWN_ADDRESS);
   const [modalView, setModalView] = useState('check in');
   const [burgerView, setBurgerView] = useState(false);
-  const [toastView, setToastView] = useState(null);
+  const [toastView, setToastViewRaw] = useState(null);
   const [web3Error, setWeb3Error] = useState(null);
   const [error, setError] = useState(null);
   const [hideFunctions, setHideFunctions] = useState(true);
@@ -78,6 +79,11 @@ const LiveEvent = props => {
     = [setCheckInClosesRaw, setVenueCostRaw, setVenuePotRaw, setYouPaidForVenueRaw, setRepStakedRaw, setRepEverStakedRaw, setRepWasRaw, setRepMultiplierRaw, setMaxRepRaw, setUpdatedRepRaw ]
       .map(setter=> response=> { setter(Number(response)); });
 
+  const setToastView = tV=>{
+    setToastViewRaw( tV );
+    toastClearer = setTimeout(()=> { setToastViewRaw(null) }, toastTimeout(tV));
+  }
+
   const setOwnProofFromArray= proofsList=> {
     const newProof = stakers.map((staker, idx)=> stakers.indexOf(staker) > -1 );
     setOwnProof(newProof);
@@ -88,6 +94,9 @@ const LiveEvent = props => {
   clearInterval(t)
   // t[0]= setInterval(()=>{ showOwnAddy() }, 15000);
 
+
+  const toastTimeout = toastView => 50000*1000;
+
   // pass this to Toast
   // returns false (ie supress) if any modal is up.
   // the logic is- it's like .filter, not like supress
@@ -97,6 +106,7 @@ const LiveEvent = props => {
     const { returnValues } = result;
     const ownAddy = await refetchOwnAddress();
     // const ownAddy = getDeets().OWN_ADDRESS;
+    console.log('\n\n\n\n\n\n\n\n\n\n\n\n\n');
     console.log(`(according to accessChain:) ${getDeets().OWN_ADDRESS}`);
     console.log(eventName);
     console.log(result.raw);
@@ -109,7 +119,6 @@ const LiveEvent = props => {
       if (Object.values(returnValues).includes(ownAddy)) {
         // const { } = result.returnValues;
         setToastView( { event: eventName, ...returnValues } );
-        setTimeout(()=> { setToastView('') }, 5000);
       } else {
         console.log(`toast not set, ${returnValues.to} || ${returnValues.staker}!=${ownAddy}`);
       }
@@ -534,19 +543,17 @@ const LiveEvent = props => {
     }
 
     const shouldVSquash = (matches, childrenLength)=>
-      !(
-        matches.w320
-        ||
-            ( childrenLength
-              || (modalView==='check in' && stakers.length)>11
-              || (modalView==='venue refund' && caughtEvents.length)
-            ) >11
-        ||
-            ( childrenLength
-              || (modalView==='check in' && stakers.length)
-              || (modalView==='venue refund' && caughtEvents.length)
-            ) >9 && matches.h880
-      )
+      (matches.w320 && modalView)
+      ||
+          ( childrenLength
+            || (modalView==='check in' && stakers.length)>11
+            || (modalView==='venue refund' && caughtEvents.length)
+          ) >11
+      ||
+          ( childrenLength
+            || (modalView==='check in' && stakers.length)
+            || (modalView==='venue refund' && caughtEvents.length)
+          ) >9 && matches.h880 ;
 
     const accountSetters = (availableAccounts,n)=>{
       const result = {};
@@ -564,299 +571,300 @@ const LiveEvent = props => {
       return result
     }
 
-return(<>
-    <div className={'checkin-view'}>
+return( <>
+    <Media queries={{ w320: "(max-width: 479px)", h880: "(max-height: 879px)" }}>
+      { matches =>
+        <div className={'checkin-view'}>
 
-        <Header
-          live={ true }
-          pollName={ pollName }
-          pollUrl={ pollUrl }
-          burger= {{
-            show : true,
-            expand : burgerView,
-            setBurgerView,
-            menuItems: {
-              'Hide/Show all functions' : ()=>{ console.log('hide:',!hideFunctions); setHideFunctions(!hideFunctions); },
-              ...accountSetters(availableAccounts,9),
-              'Reopen Check-in' : ()=>{ sendTransaction('reopenProofsWindow', {_poll : pollUrl }) },
-              'Fetch from chain (or click pizza)' : ()=>{ fetchAndUpdate(); },
-              'Hide Menu' : ()=>{ setBurgerView(false); },
-              'Pop up toast' : ()=>{ setToastView(!toastView && 'Whoop Whoop'); }
+          <Header
+            live={ true }
+            pollName={ pollName }
+            pollUrl={ pollUrl }
+            burger= {{
+              show : true,
+              expand : burgerView,
+              setBurgerView,
+              menuItems: {
+                'Hide/Show all functions' : ()=>{ console.log('hide:',!hideFunctions); setHideFunctions(!hideFunctions); },
+                ...accountSetters(availableAccounts,9),
+                'Reopen Check-in' : ()=>{ sendTransaction('reopenProofsWindow', {_poll : pollUrl }) },
+                'Fetch from chain (or click pizza)' : ()=>{ fetchAndUpdate(); },
+                'Hide Menu' : ()=>{ setBurgerView(false); },
+                'Pop up toast' : ()=>{ setToastView(!toastView && 'Whoop Whoop'); }
+              }
+            }}
+          />
+
+          <Section
+            id='checkin'
+            buttonSuper= { `You are ${ checkedIn ? '' : 'not ' }checked in ${ !checkedIn && checkInIsClosed ? '\nbut check-in is closed' : '' }` }
+            buttonText= { checkedIn ? 'Update check-in proofs' : 'Check In' }
+            buttonAction= { ()=>{ setModalView('check in'); setCaughtEvents([]); } }
+            buttonDisabled= { checkInIsClosed || !checkInClosingIn(checkInCloses) }
+          >
+            <div className="strong left-align">
+              <span className="address42"> { ownAddress } </span> (you)
+            </div>
+            <div className="strong right-align">
+              staked <span className="hype hanging"> { niceNum(repStaked/1000) } Rep </span>
+            </div>
+          </Section>
+
+          <div className="full-width thin-section">
+            { !checkInIsClosed && checkInClosingIn(checkInCloses)
+              ? `${checkInCloses<5*60000 ? 'Hurry Hurry, check-in closing, yo!' : 'Check-in will close:'} ${ niceTime(checkInCloses) }`
+              : 'Check-in is closed'
             }
-          }}
-        />
 
-        <Section
-          id='checkin'
-          buttonSuper= { `You are ${ checkedIn ? '' : 'not ' }checked in ${ !checkedIn && checkInIsClosed ? '\nbut check-in is closed' : '' }` }
-          buttonText= { checkedIn ? 'Update check-in proofs' : 'Check In' }
-          buttonAction= { ()=>{ setModalView('check in'); setCaughtEvents([]); } }
-          buttonDisabled= { checkInIsClosed || !checkInClosingIn(checkInCloses) }
-        >
-          <div className="strong left-align">
-            <span className="address42"> { ownAddress } </span> (you)
           </div>
-          <div className="strong right-align">
-            staked <span className="hype hanging"> { niceNum(repStaked/1000) } Rep </span>
-          </div>
-        </Section>
 
-        <div className="full-width thin-section">
-          { !checkInIsClosed && checkInClosingIn(checkInCloses)
-            ? `${checkInCloses<5*60000 ? 'Hurry Hurry, check-in closing, yo!' : 'Check-in will close:'} ${ niceTime(checkInCloses) }`
-            : 'Check-in is closed'
+          { mismatchedProofs.length && checkedIn &&
+              <Section
+                id='proof-mismatch'
+                error = { true }
+                buttonText= { 'Update check-in proofs' }
+                buttonAction= { ()=>{ setModalView('check in'); setCaughtEvents([]); }}
+                buttonDisabled= { !checkInClosingIn(checkInCloses) }
+              >
+                <div className="left-align">
+                  <span className="strong hype">
+                  { `${mismatchedProofs.length}/${proofs.length} ` }
+                  </span>
+                  { proofMismatchMessage() }
+                </div>
+              </Section>
+            || null
+          }
+
+
+          <Section
+            id='close-checkin'
+            buttonSuper= { checkInIsClosed || !checkInClosingIn(checkInCloses) ? '' : 'Close check-in cannot be undone' }
+            buttonText= { 'Close check-in early' }
+            buttonAction= { closeCheckin }
+            buttonDisabled= { checkInIsClosed || !checkInClosingIn(checkInCloses) || proofs.length < stakers.length }
+            buttonHidden= { !checkInClosingIn(checkInCloses) }
+          >
+            <div className="left-align">
+              <span className="strong hype">
+              { `${proofs.length}/${stakers.length} ` }
+              </span>
+                stakers checked in
+            </div>
+          </Section>
+
+          <Section
+            id='rep-refund'
+            buttonSuper= { checkedIn ? checkInIsClosed ? '' : 'Reclaim your rep \nonce check-in is closed' : 'Check in to reclaim your rep' }
+            buttonText= { !repStaked ? 'Unstake me now' : `Your reputation is restored 😎` }   // U+1F60E}
+            buttonText= { 'Unstake me now' }
+            buttonAction= { claimRep }
+            buttonDisabled= { !checkedIn || !checkInIsClosed ||  !repStaked }
+            sectionHidden= { !repEverStaked }
+          >
+            <div className="strong right-align">
+              You staked <span className="hype hanging"> { niceNum(repStaked/1000) } Rep </span>
+            </div>
+          </Section>
+
+          <Section
+            id='venue-refund'
+            buttonText= { venueRefundDue(venueCost,youPaidForVenue)
+              ? `Refund ${ kiloNiceNum(venueRefundDue(venueCost,youPaidForVenue)) }TT`
+              : `We're all square 😎`   // U+1F60E
+            }
+            buttonAction= { venueRefundDue(venueCost,youPaidForVenue) ? doVenueRefund : ()=>{ console.log('v()',venueCost,youPaidForVenue,venueRefundDue(venueCost,youPaidForVenue)); } }
+            buttonDisabled= { !venueRefundDue(venueCost,youPaidForVenue)  }  // NB In order to keep it visible, the buttonAction is disabled with && instead.
+            sectionHidden= { !youPaidForVenue }
+            buttonStyles= { !venueRefundDue(venueCost,youPaidForVenue) && 'button__disabled__venue-refund-special-case'  }
+          >
+            <div className="centre-align">
+              Venue cost was { kiloNiceNum(venueCost) }TT
+            </div>
+            <div className="centre-align">
+              You paid <span className="hype hype-small">{ kiloNiceNum(youPaidForVenue) }TT</span>
+            </div>
+          </Section>
+
+
+          { !shouldVSquash(matches) &&
+            <LogoBottom refresh={ ()=>{ fetchAndUpdate(); }} />
+          }
+
+
+          { null &&
+          <TransitionGroup className="todo-list">
+            <CSSTransition
+              key={ 'meh' }
+              in={ Boolean(toastView) }
+              timeout={500}
+              classNames="item"
+            >
+
+              <div className={ cN('toast', 'item') } >
+                { toastView }
+
+                { toastView &&
+                  <Button
+                    className="remove-btn"
+                    variant="danger"
+                    size="sm"
+                  >
+                    &times;
+                  </Button>
+                }
+              </div>
+
+            </CSSTransition>
+          </TransitionGroup>
+          }
+
+
+          { defaultToastFilter(modalView) && toastView &&
+            <Toast visible={ ()=>Boolean(toastView) } hide={ ()=>{ setToastView(null) } }>
+              <div className="toast__header">
+                { eventToastOutput(toastView).header }
+              </div>
+              <div className="toast-text">
+                { eventToastOutput(toastView).text }
+              </div>
+
+            </Toast>
+          }
+
+
+          { modalView &&
+            <div className="modal-container">
+              <div className="modal-background" onClick={ (ev)=>{ if (ev.target===ev.currentTarget) setModalView(null); } } >
+                { // check in is the only FormModal - if it's not check in, use an InfoModal which does more automatically
+                modalView==='check in'
+                  ? <FormModal
+                      modal = { modalView }
+                      clearModal= { ()=>{ setModalView(null) } }
+                      submit= { submitProof  /*NB not yet implemented in FormModal - see submit below */ }
+                    >
+
+                          <div>{ ownAddress }</div>
+                          <div className=""><span className="hype-small">Validator:</span><span className=""> Mutual Agreement</span></div>
+                          <div className={ cN(
+                              'w100 text__centred__heavy',
+                              'w100 text__centred__heavy__nonsquash'
+                            )}>
+                              Check in your friends
+                          </div>
+                          <form className = { cN(
+                                'horiz-align',
+                                (stakers.length>9) && 'modal__v-squash'
+                              ) }>
+                            <div className="horiz-aligned-elements-container">
+                              { stakers.map((staker,stakerNo)=>
+                                <div key={`${stakerNo}:${staker}`} className="w100">
+                                  <span className="address42">
+                                    { staker }
+                                  </span>
+                                  <span className="w20r">
+                                    <input
+                                      type="checkbox"
+                                      className="modal-checkbox w20r"
+                                      checked= { ownProof[stakerNo] }
+                                      onClick= {()=>{
+                                        const newProof = [...ownProof];
+                                        newProof[stakerNo]= !ownProof[stakerNo];
+                                        setOwnProof( newProof );
+                                      }}
+                                    />
+                                  </span>
+                                </div>
+                              )}
+                            </div>
+                            <button
+                              className = { cN(
+                                'modal-button',
+                                'modal-button__form-button',
+                              ) }
+                              onClick = { asSubmit(submitProof) }
+                            >
+                              Check In
+                            </button>
+                          </form>
+                    </FormModal>
+
+
+                  : <InfoModal
+                      modal = { modalView }
+                      clearModal= { modalView === 'reclaim rep'
+                                      ? ()=>{ setRepWas(updatedRep); setModalView(null) }
+                                      : ()=>{ setModalView(null) }
+                                  }
+                      shouldVSquash = { shouldVSquash(matches) }
+                      buttonText= { modalView==='venue refund' ? 'Cool!' : 'Whoop whoop!' }
+                      loadingText= { modalView==='venue refund' ? 'Waiting for refund confirmations' : `Current rep: ${ niceNum(repWas/1000) }. Updating...` }
+                      loading = { modalView==='venue refund'
+                        ? !caughtEvents.filter(event=> event.eventName==='venuePotDisbursed').length
+                        : !caughtEvents.filter(event=> event.eventName==='repRefund' && "event.returnValues.staker===ownAddress").length
+                      }
+                    >
+                    { modalView==='venue refund'
+                    ? <>
+                      <div className="hype-small">Refunded to:</div>
+                      { caughtEvents
+                          .filter(event=> event.eventName==='venuePotDisbursed')
+                          .sort(event=> prioritiseThirdPartyEvents(event, ownAddress))
+                          .map (event=>{
+                            const { returnValues } = event;
+                            const { amount, by, to } = returnValues;
+                            return <div className={ cN("w100") }>
+                              <span className={ cN("address42", "w70") }>{ to } </span>
+                              <span className={ cN("address42", "w30r") }>
+                                <div className={ cN("hype") }>{ kiloNiceNum(amount) }TT</div>
+                              { price &&
+                                <div className={ cN("hype-small","sub-right") }> (USD { niceNum(amount*price) })</div>
+                              }
+                              </span>
+                           </div>
+                           /*
+                            TODO: add responsive alternative to hype, hype-small
+
+                           */
+                         })
+                       }
+                    </>
+                  : <>
+                      <div className={ cN("modal-info__header", "w100", "hype-small") }> Reputation update </div>
+                      { caughtEvents
+                          .filter(event=> event.eventName==='repRefund' && event.returnValues.staker===ownAddress)
+                          .map (event=>{
+                            const { returnValues } = event;
+                            const { staker, staked, refunded } = returnValues;
+                            return <React.Fragment key={`${staker}${staked}${refunded}`}>
+                              <div className={ cN("hype-small", "w70") }>Your rep was: { niceNum(repWas/1000) } </div>
+                              <div className="w70"><span className="hype-small">+ stake </span>({ niceNum(repStaked/1000) }) X {repMultiplier} = <span className="hype-small">{ niceNum(repMultiplier*repStaked/1000) } </span></div>
+                              { updatedRep && updatedRep>=maxRep &&
+                                <div className="w70"><span className="hype-small">Maximum rep</span>: <span className="hype-small">{ niceNum(maxRep/1000) } </span></div>
+                              }
+                              <div>Your rep is now:
+                                <span className={ cN("hype") }>
+                                  {'  '}{ updatedRep===null ? <Dots /> : niceNum(updatedRep/1000) }
+                                </span>
+                              </div>
+                            </React.Fragment>
+                          })
+                      }
+                    </>
+
+                    }
+                    </InfoModal>
+                }
+              </div>
+            </div>
           }
 
         </div>
-
-        { mismatchedProofs.length && checkedIn &&
-            <Section
-              id='proof-mismatch'
-              error = { true }
-              buttonText= { 'Update check-in proofs' }
-              buttonAction= { ()=>{ setModalView('check in'); setCaughtEvents([]); }}
-              buttonDisabled= { !checkInClosingIn(checkInCloses) }
-            >
-              <div className="left-align">
-                <span className="strong hype">
-                { `${mismatchedProofs.length}/${proofs.length} ` }
-                </span>
-                { proofMismatchMessage() }
-              </div>
-            </Section>
-          || null
-        }
-
-        <Section
-          id='close-checkin'
-          buttonSuper= { checkInIsClosed || !checkInClosingIn(checkInCloses) ? '' : 'Close check-in cannot be undone' }
-          buttonText= { 'Close check-in early' }
-          buttonAction= { closeCheckin }
-          buttonDisabled= { checkInIsClosed || !checkInClosingIn(checkInCloses) || proofs.length < stakers.length }
-          buttonHidden= { !checkInClosingIn(checkInCloses) }
-        >
-          <div className="left-align">
-            <span className="strong hype">
-            { `${proofs.length}/${stakers.length} ` }
-            </span>
-              stakers checked in
-          </div>
-        </Section>
-
-        <Section
-          id='rep-refund'
-          buttonSuper= { checkedIn ? checkInIsClosed ? '' : 'Reclaim your rep \nonce check-in is closed' : 'Check in to reclaim your rep' }
-          buttonText= { !repStaked ? 'Unstake me now' : `Your reputation is restored 😎` }   // U+1F60E}
-          buttonText= { 'Unstake me now' }
-          buttonAction= { claimRep }
-          buttonDisabled= { !checkedIn || !checkInIsClosed ||  !repStaked }
-          sectionHidden= { !repEverStaked }
-        >
-          <div className="strong right-align">
-            You staked <span className="hype hanging"> { niceNum(repStaked/1000) } Rep </span>
-          </div>
-        </Section>
-
-        <Section
-          id='venue-refund'
-          buttonText= { venueRefundDue(venueCost,youPaidForVenue)
-            ? `Refund ${ kiloNiceNum(venueRefundDue(venueCost,youPaidForVenue)) }TT`
-            : `We're all square 😎`   // U+1F60E
-          }
-          buttonAction= { venueRefundDue(venueCost,youPaidForVenue) ? doVenueRefund : ()=>{ console.log('v()',venueCost,youPaidForVenue,venueRefundDue(venueCost,youPaidForVenue)); } }
-          buttonDisabled= { !venueRefundDue(venueCost,youPaidForVenue)  }  // NB In order to keep it visible, the buttonAction is disabled with && instead.
-          sectionHidden= { !youPaidForVenue }
-          buttonStyles= { !venueRefundDue(venueCost,youPaidForVenue) && 'button__disabled__venue-refund-special-case'  }
-        >
-          <div className="centre-align">
-            Venue cost was { kiloNiceNum(venueCost) }TT
-          </div>
-          <div className="centre-align">
-            You paid <span className="hype hype-small">{ kiloNiceNum(youPaidForVenue) }TT</span>
-          </div>
-        </Section>
-
-        <Media queries={{ w320: "(max-width: 479px)", h880: "(max-height: 879px)" }}>
-          { matches =>
-              shouldVSquash(matches)
-                && <LogoBottom refresh={ ()=>{ fetchAndUpdate(); }} />
-          }
-        </Media>
-
-        { null &&
-        <TransitionGroup className="todo-list">
-          <CSSTransition
-            key={ 'meh' }
-            in={ Boolean(toastView) }
-            timeout={500}
-            classNames="item"
-          >
-
-
-            <div className={ cN('toast', 'item') } >
-              { toastView }
-
-              { toastView &&
-                <Button
-                  className="remove-btn"
-                  variant="danger"
-                  size="sm"
-                >
-                  &times;
-                </Button>
-              }
-            </div>
-
-          </CSSTransition>
-
-        </TransitionGroup>
-        }
-
-        { defaultToastFilter(modalView) && toastView &&
-          <Toast visible={ ()=>Boolean(toastView) } hide={ ()=>{ setToastView(null) } }>
-            <div className="toast__header">
-              { eventToastOutput(toastView).header }
-            </div>
-            <div className="toast-text">
-              { eventToastOutput(toastView).text }
-            </div>
-
-          </Toast>
-        }
-
-        { modalView &&
-          <div className="modal-container">
-            <div className="modal-background" onClick={ (ev)=>{ if (ev.target===ev.currentTarget) setModalView(null); } } >
-              { // check in is the only FormModal - if it's not check in, use an InfoModal which does more automatically
-              modalView==='check in'
-                ? <FormModal
-                    modal = { modalView }
-                    clearModal= { ()=>{ setModalView(null) } }
-                    submit= { submitProof  /*NB not yet implemented in FormModal - see submit below */ }
-                  >
-                    <Media queries={{ w320: "(max-width: 479px)" }}>
-                      { matches => <>
-
-                        <div>{ ownAddress }</div>
-                        <div className=""><span className="hype-small">Validator:</span><span className=""> Mutual Agreement</span></div>
-                        <div className={ cN(
-                            'w100 text__centred__heavy',
-                            'w100 text__centred__heavy__nonsquash'
-                          )}>
-                            Check in your friends
-                        </div>
-                        <form className = { cN(
-                              'horiz-align',
-                              (stakers.length>9) && 'modal__v-squash'
-                            ) }>
-                          <div className="horiz-aligned-elements-container">
-                            { stakers.map((staker,stakerNo)=>
-                              <div key={staker} className="w100">
-                                <span className="address42">
-                                  { staker }
-                                </span>
-                                <span className="w20r">
-                                  <input
-                                    type="checkbox"
-                                    className="modal-checkbox w20r"
-                                    checked= { ownProof[stakerNo] }
-                                    onClick= {()=>{
-                                      const newProof = [...ownProof];
-                                      newProof[stakerNo]= !ownProof[stakerNo];
-                                      console.log('Current:', ownProof[stakerNo] );
-                                        setOwnProof( newProof );
-                                      console.log('Setting:', newProof[stakerNo] );
-                                    }}
-                                  />
-                                </span>
-                              </div>
-                            )}
-                          </div>
-                          <button
-                            className = { cN(
-                              'modal-button',
-                              'modal-button__form-button',
-                            ) }
-                            onClick = { asSubmit(submitProof) }
-                          >
-                            Check In
-                          </button>
-                        </form>
-
-                      </> }
-                    </Media>
-                  </FormModal>
-                : <InfoModal
-                    modal = { modalView }
-                    clearModal= { modalView === 'reclaim rep'
-                                    ? ()=>{ setRepWas(updatedRep); setModalView(null) }
-                                    : ()=>{ setModalView(null) }
-                                }
-                    buttonText= { modalView==='venue refund' ? 'Cool!' : 'Whoop whoop!' }
-                    loadingText= { modalView==='venue refund' ? 'Waiting for refund confirmations' : `Current rep: ${ niceNum(repWas/1000) }. Updating...` }
-                    loading = { modalView==='venue refund'
-                      ? !caughtEvents.filter(event=> event.eventName==='venuePotDisbursed').length
-                      : !caughtEvents.filter(event=> event.eventName==='repRefund' && "event.returnValues.staker===ownAddress").length
-                    }
-                  >
-                  { modalView==='venue refund'
-                  ? <>
-                    <div className="hype-small">Refunded to:</div>
-                    { caughtEvents
-                        .filter(event=> event.eventName==='venuePotDisbursed')
-                        .sort(event=> prioritiseThirdPartyEvents(event, ownAddress))
-                        .map (event=>{
-                          const { returnValues } = event;
-                          const { amount, by, to } = returnValues;
-                          return <div className={ cN("w100") }>
-                            <span className={ cN("address42", "w70") }>{ to } </span>
-                            <span className={ cN("address42", "w30r") }>
-                              <div className={ cN("hype") }>{ kiloNiceNum(amount) }TT</div>
-                            { price &&
-                              <div className={ cN("hype-small","sub-righToastt") }> (USD { niceNum(amount*price) })</div>
-                            }
-                            </span>
-                         </div>
-                         /*
-                          TODO: add responsive alternative to hype, hype-small
-
-                         */
-                       })
-                     }
-                  </>
-                : <>
-                    <div className={ cN("modal-info__header", "w100", "hype-small") }> Reputation update </div>
-                    { caughtEvents
-                        .filter(event=> event.eventName==='repRefund' && event.returnValues.staker===ownAddress)
-                        .map (event=>{
-                          const { returnValues } = event;
-                          const { staker, staked, refunded } = returnValues;
-                          return <React.Fragment key={`${staker}${staked}${refunded}`}>
-                            <div className={ cN("hype-small", "w70") }>Your rep was: { niceNum(repWas/1000) } </div>
-                            <div className="w70"><span className="hype-small">+ stake </span>({ niceNum(repStaked/1000) }) X {repMultiplier} = <span className="hype-small">{ niceNum(repMultiplier*repStaked/1000) } </span></div>
-                            { updatedRep && updatedRep>=maxRep &&
-                              <div className="w70"><span className="hype-small">Maximum rep</span>: <span className="hype-small">{ niceNum(maxRep/1000) } </span></div>
-                            }
-                            <div>Your rep is now:
-                              <span className={ cN("hype") }>
-                                {'  '}{ updatedRep===null ? <Dots /> : niceNum(updatedRep/1000) }
-                              </span>
-                            </div>
-                          </React.Fragment>
-                        })
-                    }
-                  </>
-
-                  }
-                  </InfoModal>
-              }
-            </div>
-          </div>
-        }
+      }
+    </Media>
 
 
 
-    </div>
     { false &&
       <AdminLogger ownAddy={ ownAddress } />
     }
