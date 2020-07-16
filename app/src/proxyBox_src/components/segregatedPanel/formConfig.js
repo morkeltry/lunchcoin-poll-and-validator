@@ -1,5 +1,5 @@
 export const globalDefaults = {
-  _poll : 'doodle.com/poll/r9rb35fiibvs3aa5', poll : 'doodle.com/poll/r9rb35fiibvs3aa5',
+  _poll : 'doodle.com/poll/pafac68krk4z57gg', poll : 'doodle.com/poll/pafac68krk4z57gg',
   _vt : 1, vt : 1,
   _newProof : '[]',
   _mapName : 'staker',
@@ -32,7 +32,7 @@ export const byFuncDefaults = {
     _mapName : 'proof',
   },
   pollData : {
-    '' : 'doodle.com/poll/r9rb35fiibvs3aa5'
+    '' : 'doodle.com/poll/pafac68krk4z57gg'
   },
   addStaker : {
     '' : ''
@@ -89,8 +89,8 @@ const dontShow = {
   // may use these for testing, but check caveats!!
   'set',  'get', 'setByHash',  'getByHash', // 'getProofEmitHashesOnlyWithStaker',
   // not working - use addProofs instead
-  'checkIn', 'setCheckedInWithStaker',
-  'validatorNames', 'validators', 'setString', 'justSetStuff',
+  // 'checkIn', 'setCheckedInWithStaker',
+  // 'validatorNames', 'validators', 'setString', 'justSetStuff',
   'serialiseStakers', 'serialiseProofs', 'deserialiseStakers',
   'proofType', 'bytesToAddress', 'toString', 'splitToAddresses',
   'bytes32ToBytes', 'bytesToBytes32', 'bytes32ToString', 'bytes32ArrayToString',

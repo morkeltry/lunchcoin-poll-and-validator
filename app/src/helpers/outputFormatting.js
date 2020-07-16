@@ -33,12 +33,15 @@ const state={
   pollName: {},
 };
 
-
 const loggingEvents = ['logStuff', 'emptyStakeRemoved' ];
 const broadcastEvents = ['newPollCreated', 'eventTimeSet', 'eventStakingClosed', 'proofsWindowClosed' ];
-const thirdPartyEvents = ['venuePotDisbursed', 'stakeReleased', 'stakeLocked' ];
-const firstPartyEvents = ['staked', 'Placed a stake', 'stakeNotAccepted', 'disreputableStakerIgnored', 'proofUpdated', 'repRefund', 'refundFail', 'expiryWasSet', 'availabilityAdded', 'madeVenueContribution' ];
-
+const thirdPartyEvents = ['venuePotDisbursed', 'stakeReleased', 'stakeLocked', 'thirdPartyRepMined' ]; // thirdPartyRepMined is a fake event!
+const firstPartyEvents = [
+  'staked', 'Placed a stake', 'stakeNotAccepted',   // chain events
+  'disreputableStakerIgnored',                      // fakeable chain event
+  'zeroStakeAttempt', 'venuePaidWithNoRepStake',    // fake events
+  'proofUpdated', 'repRefund', 'refundFail', 'expiryWasSet', 'availabilityAdded', 'madeVenueContribution'
+];
 
 const releaseStateIfOver = maxSize=> {
   Object.keys(state).forEach (key=>{
@@ -84,12 +87,32 @@ export const eventToastOutput = (tv, ownAddy)=> {
     console.log(`Formatting output for caught first party event: ${toastView.event}`, toastView);
     switch (toastView.event) {
       case 'Placed a stake' :
-        result.header='Placed a stake';
-        result.text=`You placed a stake ( ${niceNum(toastView.stake/1000)} rep )`;
+        let { stake } = toastView;
+        result.header = stake
+          ? 'Placed a stake'
+          : 'Try again!'
+        result.text = stake
+          ? `You placed a stake ( ${niceNum(toastView.stake/1000)} rep )${ toastView.totalRepStaked==stake ? '' : `\nTotal rep staked: ${niceNum(toastView.totalRepStaked/1000)} `}`
+          : 'Your rep stake did not place. Check the form fields'
         break;
       case 'repRefund' :
         result.header='Rep stake returned';
         result.text=`Your staked reputation was reclaimed. Staked:${niceNum(toastView.staked/1000)}, Returned:${niceNum(toastView.refunded/1000)}`;
+        console.log('SHould pass to Toast:', result);
+        break;
+      case 'disreputableStakerIgnored' :
+        result.header='Your reputation is shot :P';
+        result.text=`(or maybe you're just a new Lunchcoin user, in which case, welcome ;)\nYou cannot stake because you have insufficient reputation.\n Check the Public Events tab for the next event you can attend to top up your rep.`;
+        console.log('Should pass to Toast:', result);
+        break;
+      case 'zeroStakeAttempt' :
+        result.header = 'Zero stake attempt'
+        result.text = `You cannot place a stake with zero rep.\nPlease reenter your stake amount`;
+        break;
+      case 'venuePaidWithNoRepStake' :
+        result.header='You made a venue contribution. Thanks! ';
+        result.text=`You contributed ${kiloNiceNum(toastView.venueContrib/1000)}TT for the venue
+                      ${ toastView.beneficiary ? ` on behalf of ${toastView.beneficiary}.` : '' }\nYou will not be a staker on the poll unless you have also staked rep. You can do this with a separate stake`;
         console.log('SHould pass to Toast:', result);
         break;
       default :
@@ -135,7 +158,11 @@ export const eventToastOutput = (tv, ownAddy)=> {
     switch (toastView.event) {
       case 'venuePotDisbursed' :
         result.header='Some of your venue contribution was refunded';
-        result.text=`Called by ${ toastView.by }\nYou received ${ kiloNiceNum(toastView.amount )}TT`
+        result.text=`Called by ${ toastView.by }\nYou received ${ kiloNiceNum(toastView.amount/1000 )}TT`
+        break;
+      case 'thirdPartyRepMined' :
+        result.header='Rep mined';
+        result.text=`${ toastView.user }'s rep is now ${ niceNum(toastView.newRep/1000 )}`;
         break;
       case 'stakeReleased' :
         result.header='Rep stake released';

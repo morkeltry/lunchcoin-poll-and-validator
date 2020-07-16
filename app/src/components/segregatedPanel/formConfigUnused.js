@@ -1,5 +1,5 @@
 export const globalDefaults = {
-  _poll : 'doodle.com/poll/r9rb35fiibvs3aa5', poll : 'doodle.com/poll/r9rb35fiibvs3aa5',
+  _poll : 'doodle.com/poll/pafac68krk4z57gg', poll : 'doodle.com/poll/pafac68krk4z57gg',
   _vt : 1, vt : 1,
 
 };

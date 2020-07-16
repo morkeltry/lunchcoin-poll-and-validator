@@ -31,6 +31,7 @@ import { time ,ms ,toUnixTime ,unixifyTimes ,kiloNiceNum ,niceNum ,niceTime,
 const ether = 1e18;
 const kEther = 1e21;
 let OWN_ADDRESS = '0x000123';
+const forceOwnAddyCheckin = true;
 let t=[];
 let toastClearer;
 
@@ -761,17 +762,20 @@ return( <>
                             <div className="horiz-aligned-elements-container">
                               { stakers.map((staker,stakerNo)=>
                                 <div key={`${stakerNo}:${staker}`} className="w100">
-                                  <span className="address42">
+                                  <span className={ cN(
+                                      'address42',
+                                      staker===ownAddress && 'line__highlight'
+                                    )}>
                                     { staker }
                                   </span>
                                   <span className="w20r">
                                     <input
                                       type="checkbox"
                                       className="modal-checkbox w20r"
-                                      checked= { ownProof[stakerNo] }
+                                      checked= { ownProof[stakerNo] || (forceOwnAddyCheckin && staker===ownAddress) }
                                       onClick= {()=>{
                                         const newProof = [...ownProof];
-                                        newProof[stakerNo]= !ownProof[stakerNo];
+                                        newProof[stakerNo]= !ownProof[stakerNo] || (forceOwnAddyCheckin && staker===ownAddress);
                                         setOwnProof( newProof );
                                       }}
                                     />

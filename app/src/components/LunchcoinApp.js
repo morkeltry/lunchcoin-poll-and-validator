@@ -61,7 +61,7 @@ const LunchcoinApp = props => {
 
   const getLocalCache= ()=> {
     return ['doodle.com/poll/h7phtw5u2thhz9k4'];
-    return ['doodle.com/poll/h7phtw5u2thhz9k4', 'doodle.com/poll/r9rb35fiibvs3aa5'];
+    return ['doodle.com/poll/h7phtw5u2thhz9k4', 'doodle.com/poll/pafac68krk4z57gg'];
   }
 
 // Take an object with objects appearing twice, first under numerical keys with correct JS type,
