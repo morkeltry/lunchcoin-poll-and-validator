@@ -9,7 +9,7 @@ import './modalView.css';
 
 
 const Toast = props => {
-  const { visible, hide,  children } = props;
+  const { visible, hide, error, children } = props;
   if (props.content)
     console.log(props.content);
 
@@ -20,7 +20,7 @@ const Toast = props => {
       classNames="toast"
       unmountOnExit
     >
-      <div className={ cN('toast') } onClick={ hide } >
+      <div className={ cN('toast', error && 'toast__error') } onClick={ hide } >
         { children }
       </div>
     </CSSTransition>

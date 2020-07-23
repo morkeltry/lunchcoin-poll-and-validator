@@ -26,7 +26,7 @@ import { isValidAddressFormat } from "../Web3/accessChain";   // move to chainFo
 import { getPrice } from "../helpers/priceFeed.js";
 import { fetchOnlinePoll } from "../helpers/doodleFetchers.js";
 import { time ,ms ,toUnixTime ,unixifyTimes ,kiloNiceNum ,niceNum ,niceTime,
-  checkInClosingIn, eventToastOutput, prioritiseThirdPartyEvents, eventToastOutputLongFake } from "../helpers/outputFormatting.js";
+  checkInClosingIn, errorToastOutput, eventToastOutput, prioritiseThirdPartyEvents, eventToastOutputLongFake } from "../helpers/outputFormatting.js";
 
 
 const ether = 1e18;
@@ -478,7 +478,7 @@ const LiveEvent = props => {
       if (isValidAddressFormat(addy))
         fetchAndUpdate(addy);
       else {
-        setError(`Could not find your TT address. \nPlease use the Thundercore Hub to use lunchcoin / allow your web3 provider to access your address.${retries && `\nRetrying (${retries})`}`);
+        setError(`Could not find your TT address. \nPlease use the Thundercore Hub to use lunchcoin / allow your web3 provider to access your address.${retries ? `\nRetrying (${retries})` : '' }`);
         if (retries--)
         setTimeout( ()=>{
           setError(null);
@@ -498,8 +498,10 @@ const LiveEvent = props => {
         }
 
         // VV this is incorrect - that error can also signify WS disconnected
-        if (err.message==='connection not open on send()') // || (ConnectionError==='object' && err instanceof ConnectionError))
+        if (err.message==='connection not open on send()') { // || (ConnectionError==='object' && err instanceof ConnectionError)){
           setNoChainError(true)
+          setError((err.message || '').replace('connection not open on send()')+'connection not open on send()');
+        }
         else {
           setWeb3Error(true);
           setError(err.message);
@@ -785,16 +787,17 @@ return( <>
 
           { error &&
             <Toast
+              error
               visible={ ()=>Boolean(error) }
               hide={ ()=>{ setError(null) } }
               accept={ errorButton(error) && errorButton(error).action }
-              content={[ error, eventToastOutput(error) ]}
+              content={[ error, errorToastOutput(error) ]}
             >
               <div className="toast__header">
-                { eventToastOutput(error).header }
+                { errorToastOutput(error).header }
               </div>
               <div className="toast-text">
-                { eventToastOutput(error).text }
+                { errorToastOutput(error).text }
               </div>
 
             </Toast>

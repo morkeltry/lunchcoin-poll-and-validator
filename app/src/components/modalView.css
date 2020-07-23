@@ -215,8 +215,22 @@
   color: #edf;
 }
 
+.toast__error .toast__header {
+  color: #005;
+}
+
 .toast-text {
   color: #fdf;
+}
+
+.toast__error .toast-text {
+  color: #006;
+}
+
+.toast__error {
+  height: 11vh;
+  background-color: #d14e;
+  box-shadow: 0 0 3px #826c, 0 0 6px #826c, 0 0 9px #d05c, 0 0 12px #d05c, 0 0 21px #d05a, 0 0 24px #d058, 0 0 30px #d056, 0 0 45px #d054;
 }
 
 .item-enter {

@@ -2463,7 +2463,7 @@
                           "name": "this",
                           "nodeType": "Identifier",
                           "overloadedDeclarations": [],
-                          "referencedDeclaration": 9412,
+                          "referencedDeclaration": 9410,
                           "src": "2494:4:4",
                           "typeDescriptions": {
                             "typeIdentifier": "t_contract$_PollReference_$5094",
@@ -16690,7 +16690,7 @@
                           "name": "this",
                           "nodeType": "Identifier",
                           "overloadedDeclarations": [],
-                          "referencedDeclaration": 9412,
+                          "referencedDeclaration": 9410,
                           "src": "2494:4:4",
                           "typeDescriptions": {
                             "typeIdentifier": "t_contract$_PollReference_$5094",
@@ -29132,10 +29132,16 @@
       "links": {},
       "address": "0x272F9Ac84e289c7942153DDf98E8dC6F62Cb8D70",
       "transactionHash": "0x6639837ec2e58fe461f9f332e8bfd753f61d5b0074d40aba77218365ae1924a5"
+    },
+    "1595500061093": {
+      "events": {},
+      "links": {},
+      "address": "0x4fB5A3766751d339c83e8e49B9b698a8DA6f5ad4",
+      "transactionHash": "0x4358da8b8115310ef742a7e0b856bb68dfa94cd31f75b50c6f611cebd186c23a"
     }
   },
   "schemaVersion": "3.0.2",
-  "updatedAt": "2020-07-15T22:49:53.421Z",
+  "updatedAt": "2020-07-23T14:03:53.413Z",
   "devdoc": {
     "methods": {}
   },

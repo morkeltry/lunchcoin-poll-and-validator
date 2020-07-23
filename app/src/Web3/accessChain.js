@@ -267,7 +267,7 @@ export function connectToWeb3() {
 export const isValidAddressFormat = address=>
   typeof address==='string'
   && address.substr(0, 2) === "0x"
-  && address.length !== 42 ;
+  && address.length === 42 ;
 
 export function getImplementationAddress() {
     // returns the address of the latest version of the contract
