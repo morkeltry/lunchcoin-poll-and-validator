@@ -4,6 +4,7 @@ import Web3 from "web3";
 import TokenProxyArtifacts from "../contracts/TokenProxy.json";
 import PollArtifacts from "../contracts/PollReference.json";
 import ValidatorArtifacts from "../contracts/MutualAgreement.json";
+import { expectedProductionNetwork, networkName } from "../constants/constants.js"
 
 const envVars = Object.keys(process.env);
 if (envVars.length>2)
@@ -180,7 +181,10 @@ export function connectToWeb3() {
         console.log(`ValidatorArtifacts does not have the current network! ${NETWORK_ID}`);
 
       if (!TokenProxyArtifacts.networks[NETWORK_ID] || !PollArtifacts.networks[NETWORK_ID] || !ValidatorArtifacts.networks[NETWORK_ID])
-        reject (new Error(environment === 'production' ? 'The lunchcoin app is searching for a version of the smart contract which is out of date. This may mean that Lunchcoin is in the process of a contract update, which could take some time' : 'Contract mismatch'));
+        reject (new Error(environment === 'production' ? 'Contract mismatch: The lunchcoin app is searching for a version of the smart contract which is out of date. This may mean that Lunchcoin is in the process of a contract update, which could take some time' : 'Contract mismatch'));
+
+      if (authWeb3Type==='browser' && (NETWORK_ID!==expectedProductionNetwork || otherNetId!==expectedProductionNetwork))
+        reject (new Error `Unexpected network - Connected to ${`${NETWORK_ID}${(NETWORK_ID!==otherNetId)&&` & ${otherNetId}`}`} but expected ${expectedProductionNetwork[networkName]}. \nPlease make sure your web3 provider is enabled and connected to ${expectedProductionNetwork[networkName]}`);
 
       ProxyAddress = TokenProxyArtifacts.networks[NETWORK_ID].address;
       PollAddress = PollArtifacts.networks[NETWORK_ID].address;
@@ -255,6 +259,10 @@ export function connectToWeb3() {
   });
 }
 
+export const isValidAddressFormat = address=>
+  typeof address==='string'
+  && address.substr(0, 2) === "0x"
+  && address.length !== 42 ;
 
 export function getImplementationAddress() {
     // returns the address of the latest version of the contract
@@ -432,11 +440,7 @@ function checkWithABI(currentFunc, functionName, args, resolve, reject) {
                 rv.push(val);
             } else rv.push(parseInt(callValue));
         } else if (inputType === "address") {
-            if (
-                callValue.substr(0, 2) !== "0x" ||
-                callValue.length !== 42 ||
-                callValue.length === 0
-            ) {
+            if ( !isValidAddressFormat(callValue) ) {
                 reject(
                     new Error(
                         `INVALID ARGUMENTS: Only ethereum address can be passed in ${input.name}`
