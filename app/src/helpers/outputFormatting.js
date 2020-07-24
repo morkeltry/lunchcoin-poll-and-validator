@@ -76,6 +76,7 @@ export const errorToastOutput = (eV)=> {
 
   if (!errorView)
     return emptyResult
+  result.text = errorView;
   if (errorView.match(/Could not find your .{0,32}address/i))
     result= {
       header: 'Could not find your address',
@@ -101,6 +102,7 @@ export const errorToastOutput = (eV)=> {
       header: 'Unexpected network',
       text: `Your web3 provider is connected to the wrong network. Please connect to ${networkName[expectedProductionNetwork]}`
     };
+
 
   return result
 }

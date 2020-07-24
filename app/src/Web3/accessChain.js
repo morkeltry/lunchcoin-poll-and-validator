@@ -12,8 +12,8 @@ if (envVars.length>2)
 
 
 
-// const environment = 'production';
-const environment = process.env.REACT_APP_NODE_ENV || process.env.NODE_ENV || 'production';
+const environment = 'production';
+// const environment = process.env.REACT_APP_NODE_ENV || process.env.NODE_ENV || 'production';
 let authWeb3Type = environment==='production' ? 'browser' : 'local';
 
 let providerUrl = {
@@ -41,6 +41,8 @@ let wpUp = true;
 let awaitAccess;
 
 web3 = new Web3(wsProvider);
+web3.deets = `${'local'}, ${providerUrl}, ${web3.utils.version || ''}`;
+console.log(web3);
 if (!web3.eth.net)
   console.log(`Did not get web3.eth.net from ${providerUrl}. Maybe check the port number?`);
 if (environment!== 'production'){
@@ -78,8 +80,10 @@ wsProvider.on('end', e => {
 });
 
 if (authWeb3Type==='browser') {
-  if (window.web3 && window.ethereum)
-    authWeb3 = new Web3(window.ethereum)
+  if (window.web3 && window.ethereum) {
+      authWeb3 = new Web3(window.ethereum);
+      authWeb3.deets = `${'browser'}, ${authWeb3.currentProvider}, ${web3.utils.version}`;
+    }
   else {
     console.log(`Running in production, ${window.web3 ? '': 'lacking window.web3'} ${window.ethereum ? '': 'lacking window.ethereum'}`);
     authWeb3Type = 'local';  // leave it until error checking implemented in LiveTing
@@ -188,8 +192,8 @@ export function connectToWeb3() {
       if (!TokenProxyArtifacts.networks[NETWORK_ID] || !PollArtifacts.networks[NETWORK_ID] || !ValidatorArtifacts.networks[NETWORK_ID])
         return reject( new Error(environment === 'production' ? 'Contract mismatch: The lunchcoin app is searching for a version of the smart contract which is out of date. This may mean that Lunchcoin is in the process of a contract update, which could take some time' : 'Contract mismatch'));
 
-      if (authWeb3Type==='browser' && (NETWORK_ID!==expectedProductionNetwork || otherNetId!==expectedProductionNetwork))
-        return reject( new Error `Unexpected network - Connected to ${`${NETWORK_ID}${(NETWORK_ID!==otherNetId)&&` & ${otherNetId}`}`} but expected ${expectedProductionNetwork[networkName]}. \nPlease make sure your web3 provider is enabled and connected to ${expectedProductionNetwork[networkName]}`);
+      if (authWeb3Type==='browser' && (NETWORK_ID && NETWORK_ID!==expectedProductionNetwork || otherNetId && otherNetId!==expectedProductionNetwork))
+        return reject( new Error (`Unexpected network - Connected to ${`${NETWORK_ID}${(NETWORK_ID!==otherNetId)&&` & ${otherNetId}`}`} but expected ${expectedProductionNetwork[networkName]}. \nPlease make sure your web3 provider is enabled and connected to ${expectedProductionNetwork[networkName]}`));
 
       ProxyAddress = TokenProxyArtifacts.networks[NETWORK_ID].address;
       PollAddress = PollArtifacts.networks[NETWORK_ID].address;
@@ -232,6 +236,7 @@ export function connectToWeb3() {
             break;
           }
 
+          // await metamask
           awaitAccess = awaitAccess
             || ( authWeb3Type==='local' && Promise.resolve() )    // skip awaiting metamask if authWeb3Type==='local'
             || window.ethereum.request && window.ethereum.request({ method: 'eth_requestAccounts' })  // else try new form of metamask enable request
@@ -239,13 +244,23 @@ export function connectToWeb3() {
 
           awaitAccess
             .then((promiseResponse)=>{
-              if (promiseResponse)
-                console.log('Works without this resolve value - this should only resolve to something if metamask is enabled and is new. Heres the resolve value:', promiseResponse);
+              console.log('Works without this resolve value - this should only resolve to something if metamask is enabled and is new. Heres the resolve value:', promiseResponse);
+
+              if (promiseResponse === undefined) {
+                // promiseResponse = undefined when authweb3Type = local
+                if (promiseResponse || window.web3 || window.ethereum) {
+                  console.log(`promiseResponse:${promiseResponse}, window.web3:${window.web3}, window.ethereum:${window.ethereum} were expected to be all undefined. Huh?`);
+                  return reject(new Error('Shouldnt be here :/'));
+                }
+              }
+
               authWeb3.eth.getAccounts((err, accounts) => {
                 // avoid race condition with other bits awaiting awaitAccess
                 // setTimeout(cb, 0) should also work, as it should await whole event loop.
                 setTimeout(()=>{ awaitAccess = null; }, 1);
                 if (err) return reject(err);
+                if (!accounts.length)
+                  return reject(new Error(`No accounts found in the web3 being used for auth (${authWeb3.deets}). ${authWeb3Type==='local' ? 'App may not match its artifacts \n(either 1. recompile the whole app, not just the watched changes or \n2. migrate using local network, not --network production)' : ''}`))
                 availableAccounts = accounts;
                 OWN_ADDRESS = accounts[0];
 
