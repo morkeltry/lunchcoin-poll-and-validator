@@ -175,7 +175,7 @@ const LunchcoinApp = props => {
       setLoadingStatus(false);
     })
       .catch(err=> {
-        if (err.message==='connection not open on send()' || err instanceof ConnectionError)
+        if (err.message==='connection not open on send()') // || (ConnectionError==='object' && err instanceof ConnectionError))
           setNoChainError(true);
       })
 

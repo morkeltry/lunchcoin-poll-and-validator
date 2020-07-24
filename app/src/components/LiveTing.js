@@ -22,10 +22,11 @@ import { connectToWeb3, refetchOwnAddress, getDeets, setOwnAddyforAuthWeb3,
   getImplementationFunctions, getImplementationEvents, runConstructorManuallyFfs,
   callTransaction, sendTransaction, getFromStorage,
   myAccounts, } from "../Web3/accessChain";
+import { isValidAddressFormat } from "../Web3/accessChain";   // move to chainFormatHelpers
 import { getPrice } from "../helpers/priceFeed.js";
 import { fetchOnlinePoll } from "../helpers/doodleFetchers.js";
 import { time ,ms ,toUnixTime ,unixifyTimes ,kiloNiceNum ,niceNum ,niceTime,
-  checkInClosingIn, eventToastOutput, prioritiseThirdPartyEvents, eventToastOutputLongFake } from "../helpers/outputFormatting.js";
+  checkInClosingIn, errorToastOutput, eventToastOutput, prioritiseThirdPartyEvents, eventToastOutputLongFake } from "../helpers/outputFormatting.js";
 
 
 const ether = 1e18;
@@ -102,6 +103,33 @@ const LiveEvent = props => {
   // returns false (ie supress) if any modal is up.
   // the logic is- it's like .filter, not like supress
   const defaultToastFilter = modalView => !Boolean(modalView);
+
+  const errorButtons = [
+    {
+      errorStarts : 'Could not find your TT address',
+      name : 'RETRY',
+      action: ()=> {
+        setError(null);
+        connectToWeb3AndUpdate();
+      }
+    },
+    {
+      errorStarts : 'Unexpected network',
+      name : 'RETRY',
+      action: ()=> {
+        setError(null);
+        connectToWeb3AndUpdate();
+      }
+    },
+
+  ];
+
+  const errorButton= error=> {
+    if (typeof error==='string') {
+      return errorButtons.find(button=> error.startsWith(button.errorStarts));
+    }
+    // if unknown error, return undefined for Toast to use default behaviour (eg dismiss button)
+  }
 
   const catchRelevantEvent = async (result, eventName)=> {
     const { returnValues } = result;
@@ -432,18 +460,11 @@ const LiveEvent = props => {
       });
   }
 
-// ----------------------- useEffect
-
-  useEffect(()=> {
-    getLocalCache();
-    fetchOnlinePoll(pollUrl)
-      .then(poll=> poll.name)
-      .then(setPollName);
+  const connectToWeb3AndUpdate = (retries, ms=5000)=> {
     connectToWeb3().then(addressObj => {
       console.log('\n\nconnectToWeb3 SUCEEDED\n\n');
       getImplementationEvents({ pollUrl, setWatchers:true }, chainEventListeners );
       console.log(addressObj);
-      console.log('which one is ownAddy, which is IMPLEMENTATION_ADDRESS?' );
       if (!addressObj.OWN_ADDRESS)
         console.log(`\n\n\n\nWarning - setOwnAddy(${addressObj.OWN_ADDRESS})\n\n\n\n`);
       console.log(`\n\nsetOwnAddy(${addressObj.OWN_ADDRESS})\n (Previous was ${ownAddress})\n`);
@@ -454,21 +475,49 @@ const LiveEvent = props => {
       runConstructorManuallyFfs();
       return addressObj.OWN_ADDRESS
     }).then(addy=> {
-      fetchAndUpdate(addy);
+      if (isValidAddressFormat(addy))
+        fetchAndUpdate(addy);
+      else {
+        setError(`Could not find your TT address. \nPlease use the Thundercore Hub to use lunchcoin / allow your web3 provider to access your address.${retries ? `\nRetrying (${retries})` : '' }`);
+        if (retries--)
+        setTimeout( ()=>{
+          setError(null);
+          connectToWeb3AndUpdate(retries,ms);
+        }, ms);
+      }
     })
       .catch(err=> {
         // we should be catching here: 105: reject (new Error('no web3 provider'));
         console.log('\n\nconnectToWeb3 FAILED\n\n');
         console.log('fetchAndUpdate gave',err);
+        if (err.message==='no web3 provider') {
+          setError(err.message);
+        }
+        if (err.message.startsWith('Contract mismatch')) {
+          setError(err.message);
+        }
 
         // VV this is incorrect - that error can also signify WS disconnected
-        if (err.message==='connection not open on send()' || err instanceof ConnectionError)
+        if (err.message==='connection not open on send()') { // || (ConnectionError==='object' && err instanceof ConnectionError)){
           setNoChainError(true)
+          setError((err.message || '').replace('connection not open on send()')+'connection not open on send()');
+        }
         else {
           setWeb3Error(true);
           setError(err.message);
         }
       })
+  }
+
+
+// ----------------------- useEffect
+
+  useEffect(()=> {
+    getLocalCache();
+    fetchOnlinePoll(pollUrl)
+      .then(poll=> poll.name)
+      .then(setPollName);
+    connectToWeb3AndUpdate(1);
 
   }, []);
 
@@ -730,6 +779,25 @@ return( <>
               </div>
               <div className="toast-text">
                 { eventToastOutput(toastView).text }
+              </div>
+
+            </Toast>
+          }
+
+
+          { error &&
+            <Toast
+              error
+              visible={ ()=>Boolean(error) }
+              hide={ ()=>{ setError(null) } }
+              accept={ errorButton(error) && errorButton(error).action }
+              content={[ error, errorToastOutput(error) ]}
+            >
+              <div className="toast__header">
+                { errorToastOutput(error).header }
+              </div>
+              <div className="toast-text">
+                { errorToastOutput(error).text }
               </div>
 
             </Toast>

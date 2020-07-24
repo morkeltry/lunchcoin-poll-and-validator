@@ -1,5 +1,7 @@
 import { fetchOnlinePoll } from './doodleFetchers.js';
 
+import { expectedProductionNetwork, networkName } from "../constants/constants.js"
+
 // // internal logging:
 //     event logStuff (string)
 //     event emptyStakeRemoved (string poll, address staker);
@@ -64,6 +66,45 @@ const putState = (key1, index, value)=> {
     gcCheck = 0;
   }
   state[key1][index] = value;
+}
+
+
+export const errorToastOutput = (eV)=> {
+  const errorView = eV.message || eV;
+  const emptyResult = { header: null, text: null };
+  let result = emptyResult;
+
+  if (!errorView)
+    return emptyResult
+  result.text = errorView;
+  if (errorView.match(/Could not find your .{0,32}address/i))
+    result= {
+      header: 'Could not find your address',
+      text: errorView+''
+    };
+  if (errorView==='no web3 provider')
+    result= {
+      header: errorView,
+      text: 'Lunchcoin works with the Thundercore hub, web3 browsers such as Brave, or browesrs using a web3 entension such as Metamask'
+    };
+  if (errorView.startsWith('Contract mismatch'))
+    result= {
+      header: 'Contract mismatch',
+      text: errorView
+    };
+  if (errorView.startsWith('connection not open on send()'))
+    result= {
+      header: 'WSS connection is closed',
+      text: 'If you were already connected, please wait 5 seconds to retry.\n If this is the first connection, check you have allowed a web3 provider to access your address and that it is connected to Thundercore mainnet'
+    };
+  if (errorView.startsWith('Unexpected network'))
+    result= {
+      header: 'Unexpected network',
+      text: `Your web3 provider is connected to the wrong network. Please connect to ${networkName[expectedProductionNetwork]}`
+    };
+
+
+  return result
 }
 
 export const eventToastOutputLongFake = (toastView, ownAddy)=> {

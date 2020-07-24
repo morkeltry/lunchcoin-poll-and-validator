@@ -1,4 +1,9 @@
 
+export const expectedProductionNetwork = 108;
+
+export const networkName = {
+  108  : 'Thundercore mainnet',
+}
 
 // Default poll - used for demo in muliple components, to populate both forms and state
 export const defaultPoll = 'doodle.com/poll/pafac68krk4z57gg';

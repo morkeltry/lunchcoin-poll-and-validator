@@ -4,6 +4,7 @@ import Web3 from "web3";
 import TokenProxyArtifacts from "../contracts/TokenProxy.json";
 import PollArtifacts from "../contracts/PollReference.json";
 import ValidatorArtifacts from "../contracts/MutualAgreement.json";
+import { expectedProductionNetwork, networkName } from "../constants/constants.js"
 
 const envVars = Object.keys(process.env);
 if (envVars.length>2)
@@ -11,8 +12,8 @@ if (envVars.length>2)
 
 
 
-// const environment = 'production';
-const environment = process.env.REACT_APP_NODE_ENV || process.env.NODE_ENV || 'production';
+const environment = 'production';
+// const environment = process.env.REACT_APP_NODE_ENV || process.env.NODE_ENV || 'production';
 let authWeb3Type = environment==='production' ? 'browser' : 'local';
 
 let providerUrl = {
@@ -40,6 +41,8 @@ let wpUp = true;
 let awaitAccess;
 
 web3 = new Web3(wsProvider);
+web3.deets = `${'local'}, ${providerUrl}, ${web3.utils.version || ''}`;
+console.log(web3);
 if (!web3.eth.net)
   console.log(`Did not get web3.eth.net from ${providerUrl}. Maybe check the port number?`);
 if (environment!== 'production'){
@@ -77,8 +80,10 @@ wsProvider.on('end', e => {
 });
 
 if (authWeb3Type==='browser') {
-  if (window.web3 && window.ethereum)
-    authWeb3 = new Web3(window.ethereum)
+  if (window.web3 && window.ethereum) {
+      authWeb3 = new Web3(window.ethereum);
+      authWeb3.deets = `${'browser'}, ${authWeb3.currentProvider}, ${web3.utils.version}`;
+    }
   else {
     console.log(`Running in production, ${window.web3 ? '': 'lacking window.web3'} ${window.ethereum ? '': 'lacking window.ethereum'}`);
     authWeb3Type = 'local';  // leave it until error checking implemented in LiveTing
@@ -142,14 +147,16 @@ const wpIsUp = async (timeout)=> new Promise ((resolve, reject)=> {
 
 export const refetchOwnAddress = ()=> new Promise( async (resolve, reject) => {
   if (!authWeb3.eth)
-    reject (new Error('no web3 provider able to provide account info'));
+    return reject(new Error('no web3 provider able to provide account info'));
   // assume awaitAccess is already a Promise, since refetchOwnAddress should not be called until after connnectToWeb3 has at least been started.
   await awaitAccess;
   authWeb3.eth.getAccounts((err, accounts) => {
     OWN_ADDRESS = accounts[0];
     setTimeout(()=>{ awaitAccess = null; }, 1);
-    if (err) reject(err);
-    resolve(OWN_ADDRESS)
+    if (err)
+      reject(err)
+    else
+      resolve(OWN_ADDRESS)
   });
 })
 
@@ -158,16 +165,19 @@ export function connectToWeb3() {
     let unImplementedAddress;
     let otherNetId;
     if (!web3.eth || !authWeb3.eth)
-      reject (new Error('no web3 provider'));
+      return reject(new Error('no web3 provider'));
     web3.eth.net.getId(async function (err, Id) {
-      if (err) { console.log('err',err); reject(err); }
+      if (err) { console.log('err',err); return reject(err); }
       if (web3!==authWeb3)
-        await authWeb3.eth.net.getId((err, otherNetId)=> {
-          if (err) { console.log('err',err); reject(err); }
-          if (Id!==otherNetId)
-            console.log(`Using network ${Id}for calls but network ${otherNetId} for sends. This going to end badly :/`);
-          return otherNetId;
-        });
+        try {
+          await authWeb3.eth.net.getId((err, otherNetId)=> {
+            if (err) { console.log('err',err); reject(err); }
+            if (Id!==otherNetId)
+              console.log(`Using network ${Id}for calls but network ${otherNetId} for sends. This going to end badly :/`);
+            return otherNetId;
+          });
+        }
+        catch (err) {return reject(err)};
 
       d = new Date();
       console.log(`${time(d)}.${ms(d)}: Network id is ${Id}, tx auth in: ${authWeb3Type}`);
@@ -180,7 +190,10 @@ export function connectToWeb3() {
         console.log(`ValidatorArtifacts does not have the current network! ${NETWORK_ID}`);
 
       if (!TokenProxyArtifacts.networks[NETWORK_ID] || !PollArtifacts.networks[NETWORK_ID] || !ValidatorArtifacts.networks[NETWORK_ID])
-        reject (new Error(environment === 'production' ? 'The lunchcoin app is searching for a version of the smart contract which is out of date. This may mean that Lunchcoin is in the process of a contract update, which could take some time' : 'Contract mismatch'));
+        return reject( new Error(environment === 'production' ? 'Contract mismatch: The lunchcoin app is searching for a version of the smart contract which is out of date. This may mean that Lunchcoin is in the process of a contract update, which could take some time' : 'Contract mismatch'));
+
+      if (authWeb3Type==='browser' && (NETWORK_ID && NETWORK_ID!==expectedProductionNetwork || otherNetId && otherNetId!==expectedProductionNetwork))
+        return reject( new Error (`Unexpected network - Connected to ${`${NETWORK_ID}${(NETWORK_ID!==otherNetId)&&` & ${otherNetId}`}`} but expected ${expectedProductionNetwork[networkName]}. \nPlease make sure your web3 provider is enabled and connected to ${expectedProductionNetwork[networkName]}`));
 
       ProxyAddress = TokenProxyArtifacts.networks[NETWORK_ID].address;
       PollAddress = PollArtifacts.networks[NETWORK_ID].address;
@@ -223,6 +236,7 @@ export function connectToWeb3() {
             break;
           }
 
+          // await metamask
           awaitAccess = awaitAccess
             || ( authWeb3Type==='local' && Promise.resolve() )    // skip awaiting metamask if authWeb3Type==='local'
             || window.ethereum.request && window.ethereum.request({ method: 'eth_requestAccounts' })  // else try new form of metamask enable request
@@ -230,13 +244,23 @@ export function connectToWeb3() {
 
           awaitAccess
             .then((promiseResponse)=>{
-              if (promiseResponse)
-                console.log('Works without this resolve value - this should only resolve to something if metamask is enabled and is new. Heres the resolve value:', promiseResponse);
+              console.log('Works without this resolve value - this should only resolve to something if metamask is enabled and is new. Heres the resolve value:', promiseResponse);
+
+              if (promiseResponse === undefined) {
+                // promiseResponse = undefined when authweb3Type = local
+                if (promiseResponse || window.web3 || window.ethereum) {
+                  console.log(`promiseResponse:${promiseResponse}, window.web3:${window.web3}, window.ethereum:${window.ethereum} were expected to be all undefined. Huh?`);
+                  return reject(new Error('Shouldnt be here :/'));
+                }
+              }
+
               authWeb3.eth.getAccounts((err, accounts) => {
                 // avoid race condition with other bits awaiting awaitAccess
                 // setTimeout(cb, 0) should also work, as it should await whole event loop.
                 setTimeout(()=>{ awaitAccess = null; }, 1);
-                if (err) reject(err);
+                if (err) return reject(err);
+                if (!accounts.length)
+                  return reject(new Error(`No accounts found in the web3 being used for auth (${authWeb3.deets}). ${authWeb3Type==='local' ? 'App may not match its artifacts \n(either 1. recompile the whole app, not just the watched changes or \n2. migrate using local network, not --network production)' : ''}`))
                 availableAccounts = accounts;
                 OWN_ADDRESS = accounts[0];
 
@@ -255,6 +279,10 @@ export function connectToWeb3() {
   });
 }
 
+export const isValidAddressFormat = address=>
+  typeof address==='string'
+  && address.substr(0, 2) === "0x"
+  && address.length === 42 ;
 
 export function getImplementationAddress() {
     // returns the address of the latest version of the contract
@@ -268,7 +296,7 @@ export function getImplementationAddress() {
             console.log('This would happen if you are trying to access the wrong blockchain.');
             console.log('Try migrating the chain again, or copying over the artifacts from the chain you need to use.');
             console.log('the error was:', err);
-            reject(err)
+            return reject(err)
           })
     })
 }
@@ -414,14 +442,14 @@ function checkWithABI(currentFunc, functionName, args, resolve, reject) {
         if (!args[input.name]) {
             console.log(`Will reject from checkWithABI: ${input.name} not found in ${functionName}'s args`,args);
             console.log(` ${input.name}='${args[input.name]}' of type ${typeof args[input.name]}`);
-            reject(new Error("INVALID ARGUMENTS: Invalid Number of arguments"));
+            return reject(new Error("INVALID ARGUMENTS: Invalid Number of arguments"));
         }
         let callValue = args[input.name];
         let inputType = input.type;
         if (inputType.substr(0, 4) === "uint" || inputType.substr(0, 3) === "int") {
             let notNum = isNaN(callValue);
             if (notNum || callValue.length === 0)
-                reject(
+                return reject(
                     new Error(
                         `INVALID ARGUMENTS: Only number can be passed in ${input.name}`
                     )
@@ -432,12 +460,8 @@ function checkWithABI(currentFunc, functionName, args, resolve, reject) {
                 rv.push(val);
             } else rv.push(parseInt(callValue));
         } else if (inputType === "address") {
-            if (
-                callValue.substr(0, 2) !== "0x" ||
-                callValue.length !== 42 ||
-                callValue.length === 0
-            ) {
-                reject(
+            if ( !isValidAddressFormat(callValue) ) {
+                return reject(
                     new Error(
                         `INVALID ARGUMENTS: Only ethereum address can be passed in ${input.name}`
                     )
@@ -573,9 +597,8 @@ export function callTransaction(functionName, args) {
                     })
                     .catch(e2=> {
                       console.log('multiple errors :(');
-                      console.log(`First: `, err);
-                      console.log(`then: `, e2);
-                      reject(err)
+                      console.log(`call error: `, err);
+                      console.log(`reconnect error: `, e2);
                       reject(e2)
                     }) ;
 
