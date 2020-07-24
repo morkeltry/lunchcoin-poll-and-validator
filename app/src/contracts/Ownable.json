@@ -769,7 +769,7 @@
   },
   "networks": {},
   "schemaVersion": "3.0.2",
-  "updatedAt": "2020-07-13T21:38:31.993Z",
+  "updatedAt": "2020-07-24T20:47:00.582Z",
   "devdoc": {
     "author": "Arvind Kalra (github.com/arvindkalra) and Pranav Singhal (github.com/pranav-singhal)",
     "details": "The Ownable contract has an owner address, and provides basic authorization control functions, this simplifies the implementation of \"user permissions\". This adds two-phase ownership control to OpenZeppelin's Ownable class. In this model, the original owner designates a new owner but does not actually transfer ownership. The new owner then accepts ownership and completes the transfer.",

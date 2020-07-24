@@ -9700,39 +9700,21 @@
     "version": "0.5.17+commit.d19bba13.Emscripten.clang"
   },
   "networks": {
-    "108": {
-      "events": {},
-      "links": {},
-      "address": "0x5BB037209183A90Fdeb189ad868Bd2674Cc0e5C4",
-      "transactionHash": "0x5abe45a6f28ae69162112d73e61c145ec22bdba4dbed8bbe47c1e842ec896d48"
-    },
-    "1594674995409": {
-      "events": {},
-      "links": {},
-      "address": "0x05907753b79dbfa4F6a7243b6E20527aa23d4919",
-      "transactionHash": "0x3efd5787a8bf6eea4ccaf405464949c70f5e96cfcb0e45991da8f8d06a7adc3c"
-    },
-    "1594840846629": {
-      "events": {},
-      "links": {},
-      "address": "0x0B620289ce97Cc401D2b43E1Fb33f779a89d91a7",
-      "transactionHash": "0xd903e61fea3c2a4ecc82dbe2167dbedf131de22f53963793186470848f0f446a"
-    },
-    "1594853376942": {
-      "events": {},
-      "links": {},
-      "address": "0x650952bA9b3b1b34418D5C23b5970fdFAE609a30",
-      "transactionHash": "0x2b3a808d81b9cc731fd05ef1fc866409d2a0e8db4fe6e7d583e7f398a416a88f"
-    },
     "1595500061093": {
       "events": {},
       "links": {},
-      "address": "0x703fA84928a4CAb5fFC9634FAf86f30B6a93AA60",
-      "transactionHash": "0x895fa020b8a59637ceba02b384d3564e848f9ee3d52e25fcdaee13207f963091"
+      "address": "0x3b4696e27bfF48BF99a76F3FE500F94f5EBF5AB3",
+      "transactionHash": "0x032ecca3246d21964404878d9303d17f8a52b782327f53d41f17f8260c7dbb4f"
+    },
+    "1595623683511": {
+      "events": {},
+      "links": {},
+      "address": "0x89B4b5A7697c5d0592281ECbBCC734573B333e97",
+      "transactionHash": "0x24a24e3b79f5ee41828c42254cf359f87acd7499280c32a7f465492c524e0c2c"
     }
   },
   "schemaVersion": "3.0.2",
-  "updatedAt": "2020-07-23T14:16:58.262Z",
+  "updatedAt": "2020-07-24T20:48:28.530Z",
   "devdoc": {
     "author": "Arvind Kalra (github.com/arvindkalra) and Pranav Singhal (github.com/pranav-singhal)",
     "methods": {},

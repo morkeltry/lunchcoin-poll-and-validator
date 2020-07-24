@@ -42,7 +42,8 @@ const firstPartyEvents = [
   'staked', 'Placed a stake', 'stakeNotAccepted',   // chain events
   'disreputableStakerIgnored',                      // fakeable chain event
   'zeroStakeAttempt', 'venuePaidWithNoRepStake',    // fake events
-  'proofUpdated', 'repRefund', 'refundFail', 'expiryWasSet', 'availabilityAdded', 'madeVenueContribution'
+  'proofUpdated', 'repRefund', 'refundFail', 'expiryWasSet', 'availabilityAdded', 'madeVenueContribution',
+  'New rep'                                         // Chain interrogation
 ];
 
 const releaseStateIfOver = maxSize=> {
@@ -155,6 +156,10 @@ export const eventToastOutput = (tv, ownAddy)=> {
         result.text=`You contributed ${kiloNiceNum(toastView.venueContrib/1000)}TT for the venue
                       ${ toastView.beneficiary ? ` on behalf of ${toastView.beneficiary}.` : '' }\nYou will not be a staker on the poll unless you have also staked rep. You can do this with a separate stake`;
         console.log('SHould pass to Toast:', result);
+        break;
+      case 'New rep' :
+        result.header='Your rep: ';
+        result.text=`Your rep is: ${niceNum(toastView.rep/1000)}`;
         break;
       default :
         return emptyResult

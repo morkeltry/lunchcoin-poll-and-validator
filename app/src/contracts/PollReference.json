@@ -2463,7 +2463,7 @@
                           "name": "this",
                           "nodeType": "Identifier",
                           "overloadedDeclarations": [],
-                          "referencedDeclaration": 9410,
+                          "referencedDeclaration": 9416,
                           "src": "2494:4:4",
                           "typeDescriptions": {
                             "typeIdentifier": "t_contract$_PollReference_$5094",
@@ -16690,7 +16690,7 @@
                           "name": "this",
                           "nodeType": "Identifier",
                           "overloadedDeclarations": [],
-                          "referencedDeclaration": 9410,
+                          "referencedDeclaration": 9416,
                           "src": "2494:4:4",
                           "typeDescriptions": {
                             "typeIdentifier": "t_contract$_PollReference_$5094",
@@ -29115,39 +29115,21 @@
     "version": "0.5.17+commit.d19bba13.Emscripten.clang"
   },
   "networks": {
-    "108": {
-      "events": {},
-      "links": {},
-      "address": "0xf673461def9Db76eD9AFc2ef3f4fFFFC4eDa262e",
-      "transactionHash": "0xb90b87f561343faf02e7c4f3fe09d62a2181dc79f57f313527d28514d6e441af"
-    },
-    "1594674995409": {
-      "events": {},
-      "links": {},
-      "address": "0xd32B33Ada6A20690bCFCDB023557B5D0D3bBbfd4",
-      "transactionHash": "0x6c1a6ea5bc2d41a7ea6e0e5720edd779014f901d8fa73a85048cca1c9561a2c7"
-    },
-    "1594840846629": {
-      "events": {},
-      "links": {},
-      "address": "0x3F0B03638Ef00a73FD5606d061e331C401dAa9EF",
-      "transactionHash": "0xbe04300574f27a590ea6fa60d30fb21311543fa0e744fe8deb34ba543d30cced"
-    },
-    "1594853376942": {
-      "events": {},
-      "links": {},
-      "address": "0x272F9Ac84e289c7942153DDf98E8dC6F62Cb8D70",
-      "transactionHash": "0x6639837ec2e58fe461f9f332e8bfd753f61d5b0074d40aba77218365ae1924a5"
-    },
     "1595500061093": {
       "events": {},
       "links": {},
-      "address": "0x4fB5A3766751d339c83e8e49B9b698a8DA6f5ad4",
-      "transactionHash": "0x4358da8b8115310ef742a7e0b856bb68dfa94cd31f75b50c6f611cebd186c23a"
+      "address": "0x388B8Ad5C97A445962d7B9a6D39e0830778cAeC3",
+      "transactionHash": "0xe5c784ceedeb4bb0e4876cbb3af285962ab2199b286ad498ca75f8290ba2a755"
+    },
+    "1595623683511": {
+      "events": {},
+      "links": {},
+      "address": "0x7c033821b446E6084A2C0d6536D876534D87Bc11",
+      "transactionHash": "0x0207f1ea5846cdffd6071c278eaa22f5cc1cbdb41b278fdb22d52e58e569f8fc"
     }
   },
   "schemaVersion": "3.0.2",
-  "updatedAt": "2020-07-23T14:16:58.275Z",
+  "updatedAt": "2020-07-24T20:48:28.550Z",
   "devdoc": {
     "methods": {}
   },
