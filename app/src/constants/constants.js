@@ -11,3 +11,5 @@ export const defaultPoll = 'doodle.com/poll/pafac68krk4z57gg';
 // Used in StakeApp demo component - prevents accidentally staking zero rep
 // (though this should normally be allowed, in case venue contributions are made)
 export const alwaysStakeSomeRep = 1;
+
+export var fallbackToLocalGrrWebpack = false;

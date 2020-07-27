@@ -42,7 +42,8 @@ const firstPartyEvents = [
   'staked', 'Placed a stake', 'stakeNotAccepted',   // chain events
   'disreputableStakerIgnored',                      // fakeable chain event
   'zeroStakeAttempt', 'venuePaidWithNoRepStake',    // fake events
-  'proofUpdated', 'repRefund', 'refundFail', 'expiryWasSet', 'availabilityAdded', 'madeVenueContribution'
+  'proofUpdated', 'repRefund', 'refundFail', 'expiryWasSet', 'availabilityAdded', 'madeVenueContribution',
+  'New rep'                                         // Chain interrogation
 ];
 
 const releaseStateIfOver = maxSize=> {
@@ -82,10 +83,20 @@ export const errorToastOutput = (eV)=> {
       header: 'Could not find your address',
       text: errorView+''
     };
+  if (errorView==='Web3 provider rejected')
+    result= {
+      header: errorView,
+      text: 'Lunchcoin requires web3 in order to work. Please allow your web3 provider (eg the Thundercore Hub browser, or Metamask) to connect to your account'
+    };
+  if (errorView==='no web3 access to accounts')
+    result= {
+      header: errorView,
+      text: 'Lunchcoin requires web3 in order to work. Your web3 provider (eg the Metamask extension) may be disabled'
+    };
   if (errorView==='no web3 provider')
     result= {
       header: errorView,
-      text: 'Lunchcoin works with the Thundercore hub, web3 browsers such as Brave, or browesrs using a web3 entension such as Metamask'
+      text: 'Lunchcoin works with the Thundercore hub, web3 browsers such as Brave, or browsers using a web3 extension such as Metamask'
     };
   if (errorView.startsWith('Contract mismatch'))
     result= {
@@ -155,6 +166,10 @@ export const eventToastOutput = (tv, ownAddy)=> {
         result.text=`You contributed ${kiloNiceNum(toastView.venueContrib/1000)}TT for the venue
                       ${ toastView.beneficiary ? ` on behalf of ${toastView.beneficiary}.` : '' }\nYou will not be a staker on the poll unless you have also staked rep. You can do this with a separate stake`;
         console.log('SHould pass to Toast:', result);
+        break;
+      case 'New rep' :
+        result.header='Your rep: ';
+        result.text=`Your rep is: ${niceNum(toastView.rep/1000)}`;
         break;
       default :
         return emptyResult

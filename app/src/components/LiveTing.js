@@ -65,9 +65,11 @@ const LiveEvent = props => {
   const [repStaked, setRepStakedRaw] = useState();
   const [repEverStaked, setRepEverStakedRaw] = useState();
   const [repWas, setRepWasRaw] = useState(0);
+  const [repStakingDone, setRepStakingDone] = useState(null);
   const [venueCost, setVenueCostRaw] = useState(99);
   const [venuePot, setVenuePotRaw] = useState(88);
   const [youPaidForVenue, setYouPaidForVenueRaw] = useState(0);
+  const [venueStakingDone, setVenueStakingDone] = useState(null);
   const [mismatchedProofs, setMismatchedProofs] = useState([]);
   const [repMultiplier, setRepMultiplierRaw] = useState(1.2);
   const [maxRep, setMaxRepRaw] = useState(1000);
@@ -326,10 +328,29 @@ const LiveEvent = props => {
       .catch(err=>{ console.log(`getRep failed`, err); reject(err); });
   })
 
+  const raiseModal = modal=> {
+    switch (modal) {
+      case ('check in') :
+        // setLoading
+        fetchAndUpdateStakerStatus(ownAddress)
+          .then(response=> {
+            console.log(ownAddress, response);
+            if (response.indexOf(ownAddress)>-1) {
+              setModalView('check in');
+              setCaughtEvents([]);
+            }
+          })
+        break;
+      default :
+        setModalView('check in');
+        setCaughtEvents([]);
+    }
+  }
+
 
 // ----------------------- chain access functions (other than those above for useEffect)
 
-  const fetchAndUpdateStakerStatus = (freshAddy)=> {
+  const fetchAndUpdateStakerStatus = (freshAddy)=> new Promise ((resolve, reject)=> {
     callTransaction('getStakerAddresses', {_poll : pollUrl})
       .then(response=>{
         console.log('getStakerAddresses', response);
@@ -345,9 +366,10 @@ const LiveEvent = props => {
                 setCheckedIn(false);
             })
             .catch(err=>{console.log(err);});
+        resolve(response);
       })
       .catch(err=>{console.log(err);});
-  }
+  })
 
 
   const addProofBitByBit = async (args)=>{
@@ -640,24 +662,36 @@ return( <>
                 'Reopen Check-in' : ()=>{ sendTransaction('reopenProofsWindow', {_poll : pollUrl }) },
                 'Fetch from chain (or click pizza)' : ()=>{ fetchAndUpdate(); },
                 'Hide Menu' : ()=>{ setBurgerView(false); },
-                'Pop up toast' : ()=>{ setToastView(!toastView && 'Whoop Whoop'); }
+                'Pop up toast' : ()=>{ setToastView(!toastView && 'Whoop Whoop'); },
+                'Check my rep' : ()=>{
+                  setToastView({event:'New rep', rep: updatedRep });
+                  fetchAndUpdateRep()
+                    .then(rep=> {
+                      setToastView({event:'New rep', rep });
+                    })
+                  },
               }
             }}
           />
 
           <Section
             id='checkin'
-            buttonSuper= { `You are ${ checkedIn ? '' : 'not ' }checked in ${ !checkedIn && checkInIsClosed ? '\nbut check-in is closed' : '' }` }
+            buttonSuper= { `You are ${ (checkedIn) ? '' : 'not ' }checked in ${ !checkedIn && checkInIsClosed ? '\nbut check-in is closed' : '' }` }
             buttonText= { checkedIn ? 'Update check-in proofs' : 'Check In' }
-            buttonAction= { ()=>{ setModalView('check in'); setCaughtEvents([]); } }
-            buttonDisabled= { checkInIsClosed || !checkInClosingIn(checkInCloses) }
+            buttonAction= { ()=>{ raiseModal('check in'); } }
+            buttonDisabled= { checkInIsClosed || !checkInClosingIn(checkInCloses) || stakers.indexOf(ownAddress)===-1 }
           >
-            <div className="strong left-align">
-              <span className="address42"> { ownAddress } </span> (you)
-            </div>
-            <div className="strong right-align">
-              staked <span className="hype hanging"> { niceNum(repStaked/1000) } Rep </span>
-            </div>
+          { repStakingDone
+            ? null
+            : <>
+                <div className="strong left-align">
+                  <span className="address42"> { ownAddress } </span> (you)
+                </div>
+                <div className="strong right-align">
+                  staked <span className="hype hanging"> { niceNum(repStaked/1000) } Rep </span>
+                </div>
+              </>
+          }
           </Section>
 
           <div className="full-width thin-section">
@@ -692,7 +726,7 @@ return( <>
             buttonSuper= { checkInIsClosed || !checkInClosingIn(checkInCloses) ? '' : 'Close check-in cannot be undone' }
             buttonText= { 'Close check-in early' }
             buttonAction= { closeCheckin }
-            buttonDisabled= { checkInIsClosed || !checkInClosingIn(checkInCloses) || proofs.length < stakers.length }
+            buttonDisabled= { checkInIsClosed || !checkInClosingIn(checkInCloses) || proofs.length < stakers.length ||  stakers.indexOf(ownAddress)===-1 }
             buttonHidden= { !checkInClosingIn(checkInCloses) }
           >
             <div className="left-align">
@@ -712,9 +746,12 @@ return( <>
             buttonDisabled= { !checkedIn || !checkInIsClosed ||  !repStaked }
             sectionHidden= { !repEverStaked }
           >
-            <div className="strong right-align">
-              You staked <span className="hype hanging"> { niceNum(repStaked/1000) } Rep </span>
-            </div>
+          { repStakingDone
+            ? null
+            : <div className="strong right-align">
+                You staked <span className="hype hanging"> { niceNum(repStaked/1000) } Rep </span>
+              </div>
+          }
           </Section>
 
           <Section
@@ -728,17 +765,29 @@ return( <>
             sectionHidden= { !youPaidForVenue }
             buttonStyles= { !venueRefundDue(venueCost,youPaidForVenue) && 'button__disabled__venue-refund-special-case'  }
           >
-            <div className="centre-align">
-              Venue cost was { kiloNiceNum(venueCost) }TT
-            </div>
-            <div className="centre-align">
-              You paid <span className="hype hype-small">{ kiloNiceNum(youPaidForVenue) }TT</span>
-            </div>
+          { venueStakingDone
+            ? null
+            : <>
+                <div className="centre-align">
+                  Venue cost was { kiloNiceNum(venueCost) }TT
+                </div>
+                <div className="centre-align">
+                  You paid <span className="hype hype-small">{ kiloNiceNum(youPaidForVenue) }TT</span>
+                </div>
+              </>
+          }
           </Section>
 
 
           { !shouldVSquash(matches) &&
-            <LogoBottom refresh={ ()=>{ fetchAndUpdate(); }} />
+            <LogoBottom refresh={ ()=>{
+              setToastView({event:'New rep', rep: updatedRep });
+              fetchAndUpdateRep()
+                .then(rep=> {
+                  setToastView({event:'New rep', rep });
+                })
+              }}
+            />
           }
 
 
@@ -866,10 +915,16 @@ return( <>
 
                   : <InfoModal
                       modal = { modalView }
-                      clearModal= { modalView === 'reclaim rep'
-                                      ? ()=>{ setRepWas(updatedRep); setModalView(null) }
-                                      : ()=>{ setModalView(null) }
-                                  }
+                      clearModal= { ()=>{
+                                      if (modalView === 'reclaim rep') {
+                                        setRepWas(updatedRep);
+                                        setRepStakingDone('Staking over');
+                                      }
+                                      if (modalView === 'venue refund') {
+                                        setVenueStakingDone(true);
+                                      }
+                                      setModalView(null);
+                                  }}
                       shouldVSquash = { shouldVSquash(matches) }
                       buttonText= { modalView==='venue refund' ? 'Cool!' : 'Whoop whoop!' }
                       loadingText= { modalView==='venue refund' ? 'Waiting for refund confirmations' : `Current rep: ${ niceNum(repWas/1000) }. Updating...` }
