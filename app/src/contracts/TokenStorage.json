@@ -9711,10 +9711,16 @@
       "links": {},
       "address": "0x89B4b5A7697c5d0592281ECbBCC734573B333e97",
       "transactionHash": "0x24a24e3b79f5ee41828c42254cf359f87acd7499280c32a7f465492c524e0c2c"
+    },
+    "1595877133893": {
+      "events": {},
+      "links": {},
+      "address": "0x49a3Ea52C37A601f3875d65b2B75544946d6d197",
+      "transactionHash": "0x3d2842ce9789b49dd5fcb461724727bae01ce5eb8df9000e921d95f60d7f4c6f"
     }
   },
   "schemaVersion": "3.0.2",
-  "updatedAt": "2020-07-24T20:48:28.530Z",
+  "updatedAt": "2020-07-27T19:12:31.598Z",
   "devdoc": {
     "author": "Arvind Kalra (github.com/arvindkalra) and Pranav Singhal (github.com/pranav-singhal)",
     "methods": {},

@@ -83,10 +83,20 @@ export const errorToastOutput = (eV)=> {
       header: 'Could not find your address',
       text: errorView+''
     };
+  if (errorView==='Web3 provider rejected')
+    result= {
+      header: errorView,
+      text: 'Lunchcoin requires web3 in order to work. Please allow your web3 provider (eg the Thundercore Hub browser, or Metamask) to connect to your account'
+    };
+  if (errorView==='no web3 access to accounts')
+    result= {
+      header: errorView,
+      text: 'Lunchcoin requires web3 in order to work. Your web3 provider (eg the Metamask extension) may be disabled'
+    };
   if (errorView==='no web3 provider')
     result= {
       header: errorView,
-      text: 'Lunchcoin works with the Thundercore hub, web3 browsers such as Brave, or browesrs using a web3 entension such as Metamask'
+      text: 'Lunchcoin works with the Thundercore hub, web3 browsers such as Brave, or browsers using a web3 extension such as Metamask'
     };
   if (errorView.startsWith('Contract mismatch'))
     result= {

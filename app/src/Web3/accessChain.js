@@ -4,17 +4,19 @@ import Web3 from "web3";
 import TokenProxyArtifacts from "../contracts/TokenProxy.json";
 import PollArtifacts from "../contracts/PollReference.json";
 import ValidatorArtifacts from "../contracts/MutualAgreement.json";
-import { expectedProductionNetwork, networkName } from "../constants/constants.js"
+import { expectedProductionNetwork, networkName, fallbackToLocalGrrWebpack } from "../constants/constants.js"
+var fallbackToLocal = fallbackToLocalGrrWebpack; // :/
 
 const envVars = Object.keys(process.env);
 if (envVars.length>2)
   console.log(envVars);
 
 
-
 // const environment = 'production';
 const environment = process.env.REACT_APP_NODE_ENV || process.env.NODE_ENV || 'production';
 let authWeb3Type = environment==='production' ? 'browser' : 'local';
+if (environment!=='production')   // || fallbackToLocal set in constants, but we can choose to override here
+  fallbackToLocal = true;
 
 let providerUrl = {
   development : 'ws://127.0.0.1:8545',
@@ -86,7 +88,13 @@ if (authWeb3Type==='browser') {
     }
   else {
     console.log(`Running in production, ${window.web3 ? '': 'lacking window.web3'} ${window.ethereum ? '': 'lacking window.ethereum'}`);
-    authWeb3Type = 'local';  // leave it until error checking implemented in LiveTing
+    if (fallbackToLocal) {
+      authWeb3Type = 'local';  // leave it until error checking implemented in LiveTing
+      console.log('Falling back to local');
+    }
+      // else
+      // hold off generating the error until render and connectToWeb3()
+      // so that connectToWeb3 can return reject with the error, and it can be caught and displayed
   }}
 if (authWeb3Type==='local') {
   authWeb3 = web3;
@@ -166,6 +174,8 @@ export function connectToWeb3() {
     let otherNetId;
     if (!web3.eth || !authWeb3.eth)
       return reject(new Error('no web3 provider'));
+    // TODO: Metamask, when disabled, still reports various web3 info, including getId
+    // If there is a way to
     web3.eth.net.getId(async function (err, Id) {
       if (err) { console.log('err',err); return reject(err); }
       if (web3!==authWeb3)
@@ -260,7 +270,11 @@ export function connectToWeb3() {
                 setTimeout(()=>{ awaitAccess = null; }, 1);
                 if (err) return reject(err);
                 if (!accounts.length)
-                  return reject(new Error(`No accounts found in the web3 being used for auth (${authWeb3.deets}). ${authWeb3Type==='local' ? 'App may not match its artifacts \n(either 1. recompile the whole app, not just the watched changes or \n2. migrate using local network, not --network production)' : ''}`))
+                  return reject(new Error(
+                    (authWeb3Type==='browser')
+                    ? 'no web3 access to accounts'  // should never be the case, as .enable() / .request() should not resolve.
+                    : `No accounts found in the web3 being used for auth (${authWeb3.deets}). ${authWeb3Type==='local' ? 'App may not match its artifacts \n(either 1. recompile the whole app, not just the watched changes or \n2. migrate using local network, not --network production)' : ''}`
+                  ))
                 availableAccounts = accounts;
                 OWN_ADDRESS = accounts[0];
 
@@ -273,6 +287,14 @@ export function connectToWeb3() {
                   ValidatorAddress
                 });
               })
+            })
+            .catch(err=>{
+              console.log('Likely Metamask error:',err);
+              if (err.code===4001)
+                reject(new Error('Web3 provider rejected'));
+              else {
+                reject(new Error(`Web3 error: ${err.message || err.code || err}`));
+              }
             });
       });
     });
