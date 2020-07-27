@@ -172,7 +172,7 @@ export function connectToWeb3() {
   return new Promise( async (resolve, reject) => {
     let unImplementedAddress;
     let otherNetId;
-    if (!web3.eth || !authWeb3.eth)
+    if (!web3.eth || !authWeb3 || !authWeb3.eth)
       return reject(new Error('no web3 provider'));
     // TODO: Metamask, when disabled, still reports various web3 info, including getId
     // If there is a way to
