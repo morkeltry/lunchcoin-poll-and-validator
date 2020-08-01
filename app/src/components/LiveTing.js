@@ -154,7 +154,7 @@ const LiveEvent = props => {
         console.log(`toast not set, ${returnValues.to} || ${returnValues.staker}!=${ownAddy}`);
       }
     // }
-
+ 
   }
 
   const chainEventListeners = {
@@ -231,6 +231,9 @@ const LiveEvent = props => {
         //   setCheckedIn(true);
       })
       .catch(err=>{console.log(err);});
+
+    if (!isValidAddressFormat(freshAddy))
+      return
 
     // Instead get proof(OwnAddy) from storage
     fetchAndUpdateStakerStatus(freshAddy);
@@ -319,6 +322,8 @@ const LiveEvent = props => {
 
   const fetchAndUpdateRep = (staker = ownAddress )=> new Promise((resolve, reject)=> {
     console.log('ownAddy',ownAddress,'getRep', {staker});
+    if (!isValidAddressFormat(staker))
+      return reject(new Error('App is lacking your address'))
     callTransaction('getRep', {staker})
       .then(response=>{
         console.log('setting updatedRep');
@@ -627,11 +632,13 @@ const LiveEvent = props => {
             || (modalView==='venue refund' && caughtEvents.length)
           ) >9 && matches.h880 ;
 
+    // if n===undefined || n>acc.length, slice has no effect ;)
     const accountSetters = (availableAccounts,n)=>{
       const result = {};
       const accounts = new Array(n)
         .fill()
         .map((_,idx)=> availableAccounts[idx])
+        .slice(0,n)
         .forEach(address=> {
           result[address]=()=> {
             if (!address)

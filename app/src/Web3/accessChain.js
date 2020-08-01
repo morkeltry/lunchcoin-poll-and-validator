@@ -37,7 +37,7 @@ const wsProviderOptions = {
 
 
 let web3;
-let authWeb3;
+let authWeb3 = {};
 let wsProvider = new Web3.providers.WebsocketProvider(providerUrl, wsProviderOptions );
 let wpUp = true;
 let awaitAccess;
@@ -95,6 +95,7 @@ if (authWeb3Type==='browser') {
       // else
       // hold off generating the error until render and connectToWeb3()
       // so that connectToWeb3 can return reject with the error, and it can be caught and displayed
+      // NB this will mean that errors will need to be caught in other fns, eg sendTtransaction too
   }}
 if (authWeb3Type==='local') {
   authWeb3 = web3;
@@ -172,7 +173,7 @@ export function connectToWeb3() {
   return new Promise( async (resolve, reject) => {
     let unImplementedAddress;
     let otherNetId;
-    if (!web3.eth || !authWeb3 || !authWeb3.eth)
+    if (!web3.eth || !authWeb3.eth)
       return reject(new Error('no web3 provider'));
     // TODO: Metamask, when disabled, still reports various web3 info, including getId
     // If there is a way to
