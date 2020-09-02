@@ -1,7 +1,6 @@
 ### lunchcoin
 
-##### This is not the boilerplate, but includes some updates to the generic frontend for accessing contract functions
-
+## NB Accessing the app on heroku gives heroku's 'Application error' when starting cold. Just refresh the page!
 
 #### Installation
 Let's assume you'll want truffle and ganache-cli installed globally
