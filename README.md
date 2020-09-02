@@ -2,6 +2,12 @@
 
 ## NB Accessing the app on heroku gives heroku's 'Application error' when starting cold. Just refresh the page!
 
+[Fake Rep mining page (this will eventually be done by accredited 'stars')](https://lunchcoin-v1.herokuapp.com/mine)
+
+[Fake Rep staking page (this will eventually be done using the Doodle overlay proxy)](https://lunchcoin-v1.herokuapp.com/stake)
+
+[App](https://lunchcoin-v1.herokuapp.com/)
+
 #### Installation
 Let's assume you'll want truffle and ganache-cli installed globally
 ```
